@@ -4,12 +4,11 @@ namespace BossMod.Autorotation.Legacy;
 
 public sealed class LegacyGNB : LegacyModule
 {
-    public enum Track { AOE, Gauge, Potion, NoMercy, BloodFest, Gnash, Zone, Bow, RoughDivide }
+    public enum Track { AOE, Gauge, Potion, NoMercy, BloodFest, Gnash, Zone, Bow }
     public enum AOEStrategy { SingleTarget, ForceAOE, Auto }
-    public enum GaugeStrategy { Automatic, Spend, Hold, ForceST, ForceAOE, ForceGF, LightningShotIfNotInMelee, ComboFitBeforeDowntime, MaxGaugeBeforeDowntime, PenultimateComboThenSpend }
+    public enum GaugeStrategy { Automatic, Spend, Hold, ForceST, ForceAOE, ForceGF, ForceReign, LightningShotIfNotInMelee, ComboFitBeforeDowntime, MaxGaugeBeforeDowntime, PenultimateComboThenSpend }
     public enum PotionStrategy { Manual, Immediate, DelayUntilRaidBuffs, Special, Force }
     public enum OffensiveStrategy { Automatic, Delay, Force }
-    public enum RoughDivideStrategy { Automatic, Forbid, NoReserve, Force, ForceReserve, ReserveOne, UseOutsideMelee }
 
     public static RotationModuleDefinition Definition()
     {
@@ -67,15 +66,6 @@ public sealed class LegacyGNB : LegacyModule
             .AddOption(OffensiveStrategy.Delay, "Delay")
             .AddOption(OffensiveStrategy.Force, "Force");
 
-        res.Define(Track.RoughDivide).As<RoughDivideStrategy>("Onslaught", uiPriority: 10)
-            .AddOption(RoughDivideStrategy.Automatic, "Automatic", "Always keep one charge reserved, use other charges under raidbuffs or to prevent overcapping")
-            .AddOption(RoughDivideStrategy.Forbid, "Forbid", "Forbid automatic use")
-            .AddOption(RoughDivideStrategy.NoReserve, "NoReserve", "Do not reserve charges: use all charges if under raidbuffs, otherwise use as needed to prevent overcapping")
-            .AddOption(RoughDivideStrategy.Force, "Force", "Use all charges ASAP")
-            .AddOption(RoughDivideStrategy.ForceReserve, "ForceReserve", "Use all charges except one ASAP")
-            .AddOption(RoughDivideStrategy.ReserveOne, "ReserveOne", "Reserve 1 charge, trying to prevent overcap")
-            .AddOption(RoughDivideStrategy.UseOutsideMelee, "UseOutsideMelee", "Use as gapcloser if outside melee range");
-
         return res;
     }
 
@@ -90,6 +80,9 @@ public sealed class LegacyGNB : LegacyModule
         public bool ReadyToGouge; // 0 if buff not up, max 10
         public bool ReadyToBlast; // 0 if buff not up, max 10
         public float AuroraLeft; // 0 if buff not up, max 18
+        public float ReadyToRaze; // 0 if buff not up, max 10
+        public float ReadyToBreak; // 0 if buff not up, max 30
+        public float ReadyToReign; // 0 if buff not up, max 30
         public int NumTargetsHitByAOE;
         public int MaxCartridges;
 
@@ -105,7 +98,7 @@ public sealed class LegacyGNB : LegacyModule
 
         public override string ToString()
         {
-            return $"ammo={Ammo}, ReadytoBlast={ReadyToBlast}, ReadytoGouge={ReadyToGouge}, ReadytoRip={ReadyToRip}, ReadytoTear={ReadyToTear}, roughdivide={CD(GNB.AID.RoughDivide):f1}, CBT={ComboTimeLeft:f1}, RB={RaidBuffsLeft:f1}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}";
+            return $"ammo={Ammo}, ReadytoBlast={ReadyToBlast}, ReadytoGouge={ReadyToGouge}, ReadytoRip={ReadyToRip}, ReadytoTear={ReadyToTear}, CBT={ComboTimeLeft:f1}, RB={RaidBuffsLeft:f1}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}";
         }
     }
 
@@ -395,12 +388,42 @@ public sealed class LegacyGNB : LegacyModule
             }
         }
 
+        if (gaugeStrategy == GaugeStrategy.ForceReign)
+        {
+            if (_state.Ammo >= 0 && _state.ReadyToReign >= 1 && _state.CD(GNB.AID.GnashingFang) > 0)
+            {
+                if (_state.CD(GNB.AID.Bloodfest) > 90)
+                {
+                    if (_state.GunComboStep == 0)
+                    {
+                        return GNB.AID.ReignOfBeasts;
+                    }
+                    else if (_state.ComboLastMove == GNB.AID.ReignOfBeasts)
+                    {
+                        return GNB.AID.NobleBlood;
+                    }
+                    else if (_state.ComboLastMove == GNB.AID.NobleBlood)
+                    {
+                        return GNB.AID.LionHeart;
+                    }
+                }
+                else if (_state.ComboLastMove == GNB.AID.ReignOfBeasts)
+                {
+                    return GNB.AID.NobleBlood;
+                }
+                else if (_state.ComboLastMove == GNB.AID.NobleBlood)
+                {
+                    return GNB.AID.LionHeart;
+                }
+            }
+        }
+
         if (Service.Config.Get<GNBConfig>().Skscheck && _state.Ammo == _state.MaxCartridges - 1 && _state.ComboLastMove == GNB.AID.BrutalShell && _state.GunComboStep == 0 && _state.CD(GNB.AID.GnashingFang) < 2.5)
             return GNB.AID.SolidBarrel;
         if (!Service.Config.Get<GNBConfig>().Skscheck && _state.Ammo == _state.MaxCartridges - 1 && _state.ComboLastMove == GNB.AID.BrutalShell && _state.GunComboStep == 0 && _state.CD(GNB.AID.GnashingFang) < 2.5 && (_state.CD(GNB.AID.Bloodfest) > 20 && _state.Unlocked(GNB.AID.Bloodfest)))
             return GNB.AID.SolidBarrel;
 
-        if (Service.Config.Get<GNBConfig>().EarlySonicBreak && _state.CD(GNB.AID.NoMercy) > 40 && _state.CD(GNB.AID.SonicBreak) < 0.6f)
+        if (Service.Config.Get<GNBConfig>().EarlySonicBreak && _state.CD(GNB.AID.NoMercy) > 40 && _state.ReadyToBreak >= 1)
             return GNB.AID.SonicBreak;
 
         // Lv30-53 NM proc ST
@@ -464,6 +487,12 @@ public sealed class LegacyGNB : LegacyModule
                 return GNB.AID.SonicBreak;
             if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo >= 2 && _state.RangeToTarget <= 5)
                 return GNB.AID.DoubleDown;
+            if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 17 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                return GNB.AID.ReignOfBeasts;
+            if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.ComboLastMove == GNB.AID.ReignOfBeasts && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                return GNB.AID.NobleBlood;
+            if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.ComboLastMove == GNB.AID.NobleBlood && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                return GNB.AID.LionHeart;
             if (!aoe && _state.CD(GNB.AID.DoubleDown) < _state.GCD && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 1 && _state.CD(GNB.AID.Bloodfest) < 1.9)
                 return GNB.AID.BurstStrike;
             if (aoe && _state.CD(GNB.AID.DoubleDown) < _state.GCD && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 1 && _state.CD(GNB.AID.Bloodfest) < 1.9)
@@ -685,6 +714,36 @@ public sealed class LegacyGNB : LegacyModule
             }
         }
 
+        if (gaugeStrategy == GaugeStrategy.ForceReign)
+        {
+            if (_state.Ammo >= 0 && _state.ReadyToReign >= 1 && _state.CD(GNB.AID.GnashingFang) > 0)
+            {
+                if (_state.CD(GNB.AID.Bloodfest) > 90)
+                {
+                    if (_state.GunComboStep == 0)
+                    {
+                        return GNB.AID.ReignOfBeasts;
+                    }
+                    else if (_state.ComboLastMove == GNB.AID.ReignOfBeasts)
+                    {
+                        return GNB.AID.NobleBlood;
+                    }
+                    else if (_state.ComboLastMove == GNB.AID.NobleBlood)
+                    {
+                        return GNB.AID.LionHeart;
+                    }
+                }
+                else if (_state.ComboLastMove == GNB.AID.ReignOfBeasts)
+                {
+                    return GNB.AID.NobleBlood;
+                }
+                else if (_state.ComboLastMove == GNB.AID.NobleBlood)
+                {
+                    return GNB.AID.LionHeart;
+                }
+            }
+        }
+
         return GetNextUnlockedComboAction(strategy, aoe);
     }
 
@@ -793,44 +852,6 @@ public sealed class LegacyGNB : LegacyModule
         OffensiveStrategy.Force => true,
         _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.BowShock) && _state.CD(GNB.AID.SonicBreak) > _state.AnimationLock && _state.CD(GNB.AID.NoMercy) > 40
     };
-
-    private bool ShouldUseRoughDivide(StrategyValues strategy)
-    {
-        bool OnCD = _state.CD(GNB.AID.NoMercy) > _state.AnimationLock && _state.CD(GNB.AID.GnashingFang) > _state.AnimationLock && _state.CD(GNB.AID.SonicBreak) > _state.AnimationLock && _state.CD(GNB.AID.DoubleDown) > _state.AnimationLock;
-        var roughDivideStrategy = strategy.Option(Track.RoughDivide).As<RoughDivideStrategy>();
-        switch (roughDivideStrategy)
-        {
-            case RoughDivideStrategy.Forbid:
-                return false;
-            case RoughDivideStrategy.Force:
-                return true;
-            case RoughDivideStrategy.ForceReserve:
-                return _state.CD(GNB.AID.RoughDivide) <= _state.AnimationLock;
-            case RoughDivideStrategy.ReserveOne:
-                return _state.CD(GNB.AID.RoughDivide) <= _state.GCD;
-            case RoughDivideStrategy.UseOutsideMelee:
-                return _state.RangeToTarget > 3;
-            case RoughDivideStrategy.NoReserve:
-                return _state.NoMercyLeft > _state.AnimationLock && _state.CD(GNB.AID.RoughDivide) - 30 <= _state.GCD;
-            default:
-                if (!Player.InCombat)
-                    return false; // don't use out of combat
-                if (_state.RangeToTarget > 3)
-                    return false; // don't use out of melee range to prevent fucking up player's position
-                if (_state.PositionLockIn <= _state.AnimationLock)
-                    return false; // forbidden due to state flags
-                if (OnCD && _state.NoMercyLeft > _state.AnimationLock)
-                    return true; // delay until Gnashing Sonic and Doubledown on CD, even if overcapping charges
-                float chargeCapIn = _state.CD(GNB.AID.RoughDivide);
-                if (chargeCapIn < _state.GCD + 2.5)
-                    return true; // if we won't onslaught now, we risk overcapping charges
-                if (roughDivideStrategy != RoughDivideStrategy.NoReserve && _state.CD(GNB.AID.RoughDivide) > 30 + _state.AnimationLock)
-                    return false; // strategy prevents us from using last charge
-                if (_state.RaidBuffsLeft > _state.AnimationLock)
-                    return true; // use now, since we're under raid buffs
-                return chargeCapIn <= _state.RaidBuffsIn; // use if we won't be able to delay until next raid buffs
-        }
-    }
 
     private GNB.AID ChooseRotationBasedOnGauge(StrategyValues strategy, bool aoe)
     {
@@ -1011,10 +1032,6 @@ public sealed class LegacyGNB : LegacyModule
 
     private ActionID GetNextBestOGCD(StrategyValues strategy, float deadline, bool aoe)
     {
-        bool wantRoughDivide = _state.Unlocked(GNB.AID.RoughDivide) && _state.TargetingEnemy && ShouldUseRoughDivide(strategy);
-        if (wantRoughDivide && _state.RangeToTarget > 3)
-            return ActionID.MakeSpell(GNB.AID.RoughDivide);
-
         if (ShouldUsePotion(strategy) && _state.CanWeave(_state.PotionCD, 1.1f, deadline))
             return ActionDefinitions.IDPotionStr;
 
@@ -1055,15 +1072,6 @@ public sealed class LegacyGNB : LegacyModule
             if (aoe && !_state.Unlocked(GNB.AID.FatedCircle) && !_state.Unlocked(GNB.AID.DoubleDown) && !_state.Unlocked(GNB.AID.Bloodfest) && !_state.Unlocked(GNB.AID.Continuation) && !_state.Unlocked(GNB.AID.GnashingFang) && _state.Ammo == 2 && !_state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 2 && _state.CanWeave(GNB.AID.NoMercy, 0.6f, deadline))
                 return ActionID.MakeSpell(GNB.AID.NoMercy);
         }
-
-        if (wantRoughDivide && Service.Config.Get<GNBConfig>().NoMercyRoughDivide && _state.CanWeave(_state.CD(GNB.AID.RoughDivide) - 28.5f, 0.6f, deadline) && _state.NoMercyLeft > _state.AnimationLock && _state.CD(GNB.AID.SonicBreak) > 5.5 && _state.Unlocked(GNB.AID.BurstStrike))
-            return ActionID.MakeSpell(GNB.AID.RoughDivide);
-
-        if (wantRoughDivide && _state.CanWeave(_state.CD(GNB.AID.RoughDivide), 0.6f, deadline) && _state.Unlocked(GNB.AID.SonicBreak) && _state.CD(GNB.AID.SonicBreak) > 5.5)
-            return ActionID.MakeSpell(GNB.AID.RoughDivide);
-
-        if (wantRoughDivide && _state.CanWeave(_state.CD(GNB.AID.RoughDivide), 0.6f, deadline) && !_state.Unlocked(GNB.AID.SonicBreak))
-            return ActionID.MakeSpell(GNB.AID.RoughDivide);
 
         //if (strategy.SpecialActionUse == Strategy.SpecialAction.StanceOn && _state.CanWeave(_state.CD(GNB.AID.RoyalGuard), 0.6f, deadline) && _state.GunComboStep == 0 && !_state.HaveTankStance)
         //    return ActionID.MakeSpell(GNB.AID.RoyalGuard);
