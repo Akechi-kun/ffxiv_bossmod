@@ -747,18 +747,18 @@ public sealed class LegacyGNB : LegacyModule
         return GetNextUnlockedComboAction(strategy, aoe);
     }
 
-    //private bool ShouldSpendGauge(StrategyValues strategy, bool aoe) => strategy.Option(Track.Gauge).As<GaugeStrategy>() switch
-    //{
-    //    GaugeStrategy.Automatic or GaugeStrategy.LightningShotIfNotInMelee => (_state.RaidBuffsLeft > _state.GCD || _state.FightEndIn <= _state.RaidBuffsIn + 10),
-    //    GaugeStrategy.Spend => true,
-    //    GaugeStrategy.ForceST => true,
-    //    GaugeStrategy.ForceAOE => true,
-    //    GaugeStrategy.ForceGF => true,
-    //    GaugeStrategy.Hold => true,
-    //    GaugeStrategy.ComboFitBeforeDowntime => _state.FightEndIn <= _state.GCD + 2.5f * ((aoe ? GetAOEComboLength(_state.ComboLastMove) : GetSTComboLength(_state.ComboLastMove)) - 1),
-    //    GaugeStrategy.PenultimateComboThenSpend => _state.ComboLastMove is GNB.AID.BrutalShell or GNB.AID.DemonSlice,
-    //    _ => true
-    //};
+    private bool ShouldSpendGauge(StrategyValues strategy, bool aoe) => strategy.Option(Track.Gauge).As<GaugeStrategy>() switch
+    {
+        GaugeStrategy.Automatic or GaugeStrategy.LightningShotIfNotInMelee => (_state.RaidBuffsLeft > _state.GCD || _state.FightEndIn <= _state.RaidBuffsIn + 10),
+        GaugeStrategy.Spend => true,
+        GaugeStrategy.ForceST => true,
+        GaugeStrategy.ForceAOE => true,
+        GaugeStrategy.ForceGF => true,
+        GaugeStrategy.Hold => true,
+        GaugeStrategy.ComboFitBeforeDowntime => _state.FightEndIn <= _state.GCD + 2.5f * ((aoe ? GetAOEComboLength(_state.ComboLastMove) : GetSTComboLength(_state.ComboLastMove)) - 1),
+        GaugeStrategy.PenultimateComboThenSpend => _state.ComboLastMove is GNB.AID.BrutalShell or GNB.AID.DemonSlice,
+        _ => true
+    };
 
     private bool ShouldUsePotion(StrategyValues strategy) => strategy.Option(Track.Potion).As<PotionStrategy>() switch
     {
@@ -1075,10 +1075,10 @@ public sealed class LegacyGNB : LegacyModule
 
         //if (strategy.SpecialActionUse == Strategy.SpecialAction.StanceOn && _state.CanWeave(_state.CD(GNB.AID.RoyalGuard), 0.6f, deadline) && _state.GunComboStep == 0 && !_state.HaveTankStance)
         //    return ActionID.MakeSpell(GNB.AID.RoyalGuard);
-
+        //
         //if (strategy.SpecialActionUse == Strategy.SpecialAction.StanceOff && _state.CanWeave(_state.CD(GNB.AID.ReleaseRoyalGuard), 0.6f, deadline) && _state.GunComboStep == 0 && _state.HaveTankStance)
         //    return ActionID.MakeSpell(GNB.AID.ReleaseRoyalGuard);
-
+        //
         if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.CD(GNB.AID.SonicBreak) > 1 && _state.CD(GNB.AID.DoubleDown) > 1)
             return ActionID.MakeSpell(GNB.AID.Aurora);
 
