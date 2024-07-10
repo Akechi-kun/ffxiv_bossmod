@@ -483,7 +483,7 @@ public sealed class LegacyGNB : LegacyModule
 
         if (_state.NoMercyLeft > _state.AnimationLock)
         {
-            if (_state.CD(GNB.AID.SonicBreak) < 0.6f && _state.Unlocked(GNB.AID.SonicBreak))
+            if (_state.ReadyToBreak > 0.6f && _state.Unlocked(GNB.AID.SonicBreak))
                 return GNB.AID.SonicBreak;
             if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo >= 2 && _state.RangeToTarget <= 5)
                 return GNB.AID.DoubleDown;
@@ -497,9 +497,9 @@ public sealed class LegacyGNB : LegacyModule
                 return GNB.AID.BurstStrike;
             if (aoe && _state.CD(GNB.AID.DoubleDown) < _state.GCD && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 1 && _state.CD(GNB.AID.Bloodfest) < 1.9)
                 return GNB.AID.FatedCircle;
-            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD && _state.CD(GNB.AID.SonicBreak) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
+            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD && _state.ReadyToBreak > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
                 return GNB.AID.BurstStrike;
-            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.SonicBreak) > _state.GCD && !_state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
+            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.ReadyToBreak > _state.GCD && !_state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
                 return GNB.AID.BurstStrike;
             if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && !_state.Unlocked(GNB.AID.DoubleDown) && !_state.Unlocked(GNB.AID.SonicBreak) && _state.GunComboStep == 0)
                 return GNB.AID.BurstStrike;
@@ -551,7 +551,7 @@ public sealed class LegacyGNB : LegacyModule
                         return GNB.AID.BurstStrike; // Lv60 AOE BS
                     }
                     if (_state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD &&
-                        _state.CD(GNB.AID.SonicBreak) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown))
+                        _state.ReadyToBreak > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown))
                     {
                         return GNB.AID.FatedCircle; // Lv80 AOE
                     }
@@ -786,7 +786,7 @@ public sealed class LegacyGNB : LegacyModule
             bool isEarlyNoMercy = gnbConfig.EarlyNoMercy;
 
             bool isGnashingFangReady = _state.CD(GNB.AID.GnashingFang) < 2.5 && _state.Unlocked(GNB.AID.GnashingFang);
-            bool isSonicBreakReady = _state.CD(GNB.AID.SonicBreak) < 2.5 && _state.Unlocked(GNB.AID.SonicBreak);
+            bool isSonicBreakReady = _state.ReadyToBreak > 2.5 && _state.Unlocked(GNB.AID.SonicBreak);
             bool isDoubleDownReady = _state.CD(GNB.AID.DoubleDown) < 2.5 && _state.Unlocked(GNB.AID.DoubleDown);
             bool justusewhenever = !_state.Unlocked(GNB.AID.BurstStrike) && _state.TargetingEnemy && _state.RangeToTarget < 5;
 
@@ -821,7 +821,7 @@ public sealed class LegacyGNB : LegacyModule
     {
         OffensiveStrategy.Delay => false,
         OffensiveStrategy.Force => true,
-        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.SonicBreak) && _state.CD(GNB.AID.SonicBreak) > _state.AnimationLock && _state.CD(GNB.AID.NoMercy) > 17
+        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.SonicBreak) && _state.ReadyToBreak > _state.AnimationLock && _state.CD(GNB.AID.NoMercy) > 17
     };
 
     private bool ShouldUseFest(StrategyValues strategy)
@@ -850,7 +850,7 @@ public sealed class LegacyGNB : LegacyModule
     {
         OffensiveStrategy.Delay => false,
         OffensiveStrategy.Force => true,
-        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.BowShock) && _state.CD(GNB.AID.SonicBreak) > _state.AnimationLock && _state.CD(GNB.AID.NoMercy) > 40
+        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.BowShock) && _state.ReadyToBreak > _state.AnimationLock && _state.CD(GNB.AID.NoMercy) > 40
     };
 
     private GNB.AID ChooseRotationBasedOnGauge(StrategyValues strategy, bool aoe)
@@ -960,7 +960,7 @@ public sealed class LegacyGNB : LegacyModule
                     return GNB.AID.BurstStrike; // Lv70 AOE BS
                 }
                 if (_state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD &&
-                    _state.CD(GNB.AID.SonicBreak) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown))
+                    _state.ReadyToBreak > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown))
                 {
                     return GNB.AID.FatedCircle; // Lv80 AOE
                 }
@@ -1079,10 +1079,10 @@ public sealed class LegacyGNB : LegacyModule
         //if (strategy.SpecialActionUse == Strategy.SpecialAction.StanceOff && _state.CanWeave(_state.CD(GNB.AID.ReleaseRoyalGuard), 0.6f, deadline) && _state.GunComboStep == 0 && _state.HaveTankStance)
         //    return ActionID.MakeSpell(GNB.AID.ReleaseRoyalGuard);
         //
-        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.CD(GNB.AID.SonicBreak) > 1 && _state.CD(GNB.AID.DoubleDown) > 1)
+        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.ReadyToBreak > 1 && _state.CD(GNB.AID.DoubleDown) > 1)
             return ActionID.MakeSpell(GNB.AID.Aurora);
 
-        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && !_state.Unlocked(GNB.AID.DoubleDown) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.CD(GNB.AID.SonicBreak) > 1)
+        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && !_state.Unlocked(GNB.AID.DoubleDown) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.ReadyToBreak > 1)
             return ActionID.MakeSpell(GNB.AID.Aurora);
 
         if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && !_state.Unlocked(GNB.AID.DoubleDown) && !_state.Unlocked(GNB.AID.SonicBreak) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1)
