@@ -14,7 +14,7 @@ public sealed class LegacyGNB : LegacyModule
     {
         // TODO: add in "Hold Double Down" option?
         // TODO: think about target overrides where they make sense (ST stuff, esp things like onslaught?)
-        var res = new RotationModuleDefinition("Legacy GNB", "Old pre-refactoring module", "LazyLemo, Akechi-kun", RotationModuleQuality.WIP, BitMask.Build((int)Class.GNB), 100);
+        var res = new RotationModuleDefinition("Legacy GNB", "Old pre-refactoring module", "Akechi-kun", RotationModuleQuality.Basic, BitMask.Build((int)Class.GNB), 100);
 
         res.Define(Track.AOE).As<AOEStrategy>("AOE", uiPriority: 90)
             .AddOption(AOEStrategy.SingleTarget, "ST", "Use single-target rotation")
@@ -28,6 +28,7 @@ public sealed class LegacyGNB : LegacyModule
             .AddOption(GaugeStrategy.ForceST, "ForceST", "Force ST combo") // forces Single Target combo & protects overcap
             .AddOption(GaugeStrategy.ForceAOE, "ForceAOE", "Force AOE combo") // forces AOE combo & protects overcap
             .AddOption(GaugeStrategy.ForceGF, "ForceGF", "Force Gnashing combo") // forces GF combo
+            .AddOption(GaugeStrategy.ForceReign, "ForceReign", "Force Reign combo") // forces Reign combo
             .AddOption(GaugeStrategy.LightningShotIfNotInMelee, "LightningShotIfNotInMelee", "Use Lightning Shot if outside melee")
             .AddOption(GaugeStrategy.ComboFitBeforeDowntime, "ComboFitBeforeDowntime", "Use ST combo if still in ST combo, else use AOE combo") // useful on late phases before downtime
             .AddOption(GaugeStrategy.MaxGaugeBeforeDowntime, "MaxGaugeBeforeDowntime", "Use appropriate rotation to reach max gauge before downtime") // useful on late phases before downtime
