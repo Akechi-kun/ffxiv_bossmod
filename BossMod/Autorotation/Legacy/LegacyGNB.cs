@@ -4,17 +4,17 @@ namespace BossMod.Autorotation.Legacy;
 
 public sealed class LegacyGNB : LegacyModule
 {
-    public enum Track { AOE, Gauge, Potion, NoMercy, BloodFest, Gnash, Zone, Bow }
+    public enum Track { AOE, Gauge, Potion, NM, BloodFest, Gnash, Sonic, Zone, Bow }
     public enum AOEStrategy { SingleTarget, ForceAOE, Auto }
     public enum GaugeStrategy { Automatic, Spend, Hold, ForceST, ForceAOE, ForceGF, ForceReign, LightningShotIfNotInMelee, ComboFitBeforeDowntime, MaxGaugeBeforeDowntime, PenultimateComboThenSpend }
-    public enum PotionStrategy { Manual, Immediate, DelayUntilRaidBuffs, Special, Force }
+    public enum PotionStrategy { Manual, Immediate, Force }
     public enum OffensiveStrategy { Automatic, Delay, Force }
 
     public static RotationModuleDefinition Definition()
     {
         // TODO: add in "Hold Double Down" option?
         // TODO: think about target overrides where they make sense (ST stuff, esp things like onslaught?)
-        var res = new RotationModuleDefinition("Legacy GNB", "Old pre-refactoring module", "Akechi-kun", RotationModuleQuality.Basic, BitMask.Build((int)Class.GNB), 100);
+        var res = new RotationModuleDefinition("Legacy GNB", "Old pre-refactoring module", "Akechi-kun", RotationModuleQuality.WIP, BitMask.Build((int)Class.GNB), 100);
 
         res.Define(Track.AOE).As<AOEStrategy>("AOE", uiPriority: 90)
             .AddOption(AOEStrategy.SingleTarget, "ST", "Use single-target rotation")
@@ -37,17 +37,20 @@ public sealed class LegacyGNB : LegacyModule
         res.Define(Track.Potion).As<PotionStrategy>("Potion", uiPriority: 70)
             .AddOption(PotionStrategy.Manual, "Manual", "Do not use automatically")
             .AddOption(PotionStrategy.Immediate, "Immediate", "Use ASAP, but delay slightly during opener", 270, 30)
-            .AddOption(PotionStrategy.DelayUntilRaidBuffs, "DelayUntilRaidBuffs", "Delay until raidbuffs", 270, 30)
-            .AddOption(PotionStrategy.Special, "Special", "2min / 8min Potion use", 270, 30)
             .AddOption(PotionStrategy.Force, "Force", "Use ASAP", 270, 30)
             .AddAssociatedAction(ActionDefinitions.IDPotionStr);
 
-        res.Define(Track.NoMercy).As<OffensiveStrategy>("NoM", uiPriority: 60)
+        res.Define(Track.NM).As<OffensiveStrategy>("NoM", uiPriority: 60)
             .AddOption(OffensiveStrategy.Automatic, "Automatic")
             .AddOption(OffensiveStrategy.Delay, "Delay")
             .AddOption(OffensiveStrategy.Force, "Force");
 
         res.Define(Track.BloodFest).As<OffensiveStrategy>("Fest", uiPriority: 50)
+            .AddOption(OffensiveStrategy.Automatic, "Automatic")
+            .AddOption(OffensiveStrategy.Delay, "Delay")
+            .AddOption(OffensiveStrategy.Force, "Force");
+
+        res.Define(Track.Sonic).As<OffensiveStrategy>("Sonic", uiPriority: 45)
             .AddOption(OffensiveStrategy.Automatic, "Automatic")
             .AddOption(OffensiveStrategy.Delay, "Delay")
             .AddOption(OffensiveStrategy.Force, "Force");
@@ -82,8 +85,8 @@ public sealed class LegacyGNB : LegacyModule
         public bool ReadyToBlast; // 0 if buff not up, max 10
         public float AuroraLeft; // 0 if buff not up, max 18
         public float ReadyToRaze; // 0 if buff not up, max 10
-        public float ReadyToBreak; // 0 if buff not up, max 30
-        public float ReadyToReign; // 0 if buff not up, max 30
+        public float ReadyToBreakLeft; // 0 if buff not up, max 30
+        public float ReadyToReignLeft; // 0 if buff not up, max 30
         public int NumTargetsHitByAOE;
         public int MaxCartridges;
 
@@ -99,7 +102,7 @@ public sealed class LegacyGNB : LegacyModule
 
         public override string ToString()
         {
-            return $"ammo={Ammo}, ReadytoBlast={ReadyToBlast}, ReadytoGouge={ReadyToGouge}, ReadytoRip={ReadyToRip}, ReadytoTear={ReadyToTear}, CBT={ComboTimeLeft:f1}, RB={RaidBuffsLeft:f1}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}";
+            return $"ammo={Ammo}, ReadytoBlast={ReadyToBlast}, ReadytoGouge={ReadyToGouge}, ReadytoRip={ReadyToRip}, ReadytoTear={ReadyToTear}, ReadytoRaze={ReadyToRaze}, ReadytoReign={ReadyToReignLeft}, ReadytoBreak={ReadyToBreakLeft},CBT={ComboTimeLeft:f1}, RB={RaidBuffsLeft:f1}, PotCD={PotionCD:f1}, GCD={GCD:f3}, ALock={AnimationLock:f3}+{AnimationLockDelay:f3}, lvl={Level}";
         }
     }
 
@@ -391,7 +394,7 @@ public sealed class LegacyGNB : LegacyModule
 
         if (gaugeStrategy == GaugeStrategy.ForceReign)
         {
-            if (_state.Ammo >= 0 && _state.ReadyToReign >= 1 && _state.CD(GNB.AID.GnashingFang) > 0)
+            if (_state.Ammo >= 0 && _state.ReadyToReignLeft >= 1 && _state.CD(GNB.AID.GnashingFang) > 0)
             {
                 if (_state.CD(GNB.AID.Bloodfest) > 90)
                 {
@@ -418,14 +421,6 @@ public sealed class LegacyGNB : LegacyModule
                 }
             }
         }
-
-        if (Service.Config.Get<GNBConfig>().Skscheck && _state.Ammo == _state.MaxCartridges - 1 && _state.ComboLastMove == GNB.AID.BrutalShell && _state.GunComboStep == 0 && _state.CD(GNB.AID.GnashingFang) < 2.5)
-            return GNB.AID.SolidBarrel;
-        if (!Service.Config.Get<GNBConfig>().Skscheck && _state.Ammo == _state.MaxCartridges - 1 && _state.ComboLastMove == GNB.AID.BrutalShell && _state.GunComboStep == 0 && _state.CD(GNB.AID.GnashingFang) < 2.5 && (_state.CD(GNB.AID.Bloodfest) > 20 && _state.Unlocked(GNB.AID.Bloodfest)))
-            return GNB.AID.SolidBarrel;
-
-        if (Service.Config.Get<GNBConfig>().EarlySonicBreak && _state.CD(GNB.AID.NoMercy) > 40 && _state.ReadyToBreak >= 1)
-            return GNB.AID.SonicBreak;
 
         // Lv30-53 NM proc ST
         if (_state.Unlocked(GNB.AID.NoMercy))
@@ -484,34 +479,149 @@ public sealed class LegacyGNB : LegacyModule
 
         if (_state.NoMercyLeft > _state.AnimationLock)
         {
-            if (_state.ReadyToBreak > 0.6f && _state.Unlocked(GNB.AID.SonicBreak))
-                return GNB.AID.SonicBreak;
-            if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo >= 2 && _state.RangeToTarget <= 5)
-                return GNB.AID.DoubleDown;
-            if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 17 && _state.CD(GNB.AID.DoubleDown) >= 40)
-                return GNB.AID.ReignOfBeasts;
-            if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.ComboLastMove == GNB.AID.ReignOfBeasts && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
-                return GNB.AID.NobleBlood;
-            if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.ComboLastMove == GNB.AID.NobleBlood && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
-                return GNB.AID.LionHeart;
+            if (_state.CD(GNB.AID.NoMercy) is <= 60 or >= 40)
+            {
+                // Lv100 NM window
+                if (_state.Unlocked(GNB.AID.ReignOfBeasts))
+                {
+                    if (_state.Unlocked(GNB.AID.SonicBreak))
+                    {
+                        // SB 1min 2cart
+                        if (_state.ReadyToBreakLeft > 17.5 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 0
+                            && _state.CD(GNB.AID.Bloodfest) > 50 && !_state.ReadyToRip
+                            && _state.ComboLastMove == GNB.AID.GnashingFang || _state.CD(GNB.AID.GnashingFang) < 28)
+                            return GNB.AID.SonicBreak;
+                        // SB 1min 3cart
+                        else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 3
+                            && _state.CD(GNB.AID.Bloodfest) > 50)
+                            return GNB.AID.SonicBreak;
+                        // SB 2min 2cart
+                        else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 2
+                            && _state.CD(GNB.AID.Bloodfest) < 30)
+                            return GNB.AID.SonicBreak;
+                    }
+
+                    if (_state.Unlocked(GNB.AID.DoubleDown))
+                    {
+                        // DD 1min 2cart
+                        if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                            && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                            && _state.ComboLastMove == GNB.AID.SolidBarrel && _state.NoMercyLeft < 17.5)
+                            return GNB.AID.DoubleDown;
+                        // DD 1min 3cart
+                        else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                            && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                            && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                            return GNB.AID.DoubleDown;
+                        // DD 2min 2cart
+                        else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                            && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo >= 2 && _state.RangeToTarget <= 5
+                            && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                            return GNB.AID.DoubleDown;
+                    }
+
+                    if (_state.Unlocked(GNB.AID.GnashingFang))
+                    {
+                        // GF 1min
+                        if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                            && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                            && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                            return GNB.AID.GnashingFang;
+                        // GF 2min
+                        if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                            && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                            && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                            return GNB.AID.GnashingFang;
+                    }
+
+                    if (_state.ReadyToReignLeft is > 10 or < 20)
+                    {
+                        // Reign
+                        if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.GunComboStep == 0 && _state.NoMercyLeft < 7.5 && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 17 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                            return GNB.AID.ReignOfBeasts;
+                        if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.GunComboStep == 0 && _state.ComboLastMove == GNB.AID.ReignOfBeasts && _state.NoMercyLeft < 5 && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                            return GNB.AID.NobleBlood;
+                        if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.GunComboStep == 0 && _state.ComboLastMove == GNB.AID.NobleBlood && _state.NoMercyLeft < 2.5 && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                            return GNB.AID.LionHeart;
+                    }
+                }
+
+                // Lv90 NM window
+                if (!_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Unlocked(GNB.AID.DoubleDown))
+                {
+                    if (_state.Unlocked(GNB.AID.SonicBreak))
+                    {
+                        // SB 1min 2cart
+                        if (_state.ReadyToBreakLeft > 17.5 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 0
+                            && _state.CD(GNB.AID.Bloodfest) > 50 && !_state.ReadyToRip
+                            && _state.ComboLastMove == GNB.AID.GnashingFang || _state.CD(GNB.AID.GnashingFang) < 28)
+                            return GNB.AID.SonicBreak;
+                        // SB 1min 3cart
+                        else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 3
+                            && _state.CD(GNB.AID.Bloodfest) > 50)
+                            return GNB.AID.SonicBreak;
+                        // SB 2min 2cart
+                        else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 2
+                            && _state.CD(GNB.AID.Bloodfest) < 30)
+                            return GNB.AID.SonicBreak;
+                    }
+
+                    if (_state.Unlocked(GNB.AID.DoubleDown))
+                    {
+                        // DD 1min 2cart
+                        if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                            && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                            && _state.ComboLastMove == GNB.AID.SolidBarrel && _state.NoMercyLeft < 17.5)
+                            return GNB.AID.DoubleDown;
+                        // DD 1min 3cart
+                        else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                            && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                            && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                            return GNB.AID.DoubleDown;
+                        // DD 2min 2cart
+                        else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                            && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo >= 2 && _state.RangeToTarget <= 5
+                            && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                            return GNB.AID.DoubleDown;
+                    }
+
+                    if (_state.Unlocked(GNB.AID.GnashingFang))
+                    {
+                        // GF 1min
+                        if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                            && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                            && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                            return GNB.AID.GnashingFang;
+                        // GF 2min
+                        if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                            && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                            && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                            return GNB.AID.GnashingFang;
+                    }
+                }
+            }
+
+            // subL80 window
             if (!aoe && _state.CD(GNB.AID.DoubleDown) < _state.GCD && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 1 && _state.CD(GNB.AID.Bloodfest) < 1.9)
                 return GNB.AID.BurstStrike;
             if (aoe && _state.CD(GNB.AID.DoubleDown) < _state.GCD && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 1 && _state.CD(GNB.AID.Bloodfest) < 1.9)
                 return GNB.AID.FatedCircle;
-            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD && _state.ReadyToBreak > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
+            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
                 return GNB.AID.BurstStrike;
-            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.ReadyToBreak > _state.GCD && !_state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
+            if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && !_state.Unlocked(GNB.AID.DoubleDown) && _state.GunComboStep == 0)
                 return GNB.AID.BurstStrike;
             if (!aoe && _state.Ammo >= 1 && _state.CD(GNB.AID.GnashingFang) > _state.GCD && !_state.Unlocked(GNB.AID.DoubleDown) && !_state.Unlocked(GNB.AID.SonicBreak) && _state.GunComboStep == 0)
                 return GNB.AID.BurstStrike;
             if (!_state.Unlocked(GNB.AID.FatedCircle) && !_state.Unlocked(GNB.AID.DoubleDown) && !_state.Unlocked(GNB.AID.Bloodfest) && !_state.Unlocked(GNB.AID.Continuation) && !_state.Unlocked(GNB.AID.GnashingFang) && !_state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo >= 2)
                 return GNB.AID.BurstStrike;
 
+            // ST
             if (!aoe)
             {
                 if (_state.Ammo >= 1 && !_state.Unlocked(GNB.AID.DoubleDown) && !_state.Unlocked(GNB.AID.Bloodfest) && !_state.Unlocked(GNB.AID.Continuation) && !_state.Unlocked(GNB.AID.GnashingFang) && !_state.Unlocked(GNB.AID.SonicBreak))
                     return GNB.AID.BurstStrike;
             }
+
             // AOE
             else if (aoe)
             {
@@ -552,7 +662,7 @@ public sealed class LegacyGNB : LegacyModule
                         return GNB.AID.BurstStrike; // Lv60 AOE BS
                     }
                     if (_state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD &&
-                        _state.ReadyToBreak > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown))
+                        _state.ReadyToBreakLeft == 0 && _state.Unlocked(GNB.AID.DoubleDown))
                     {
                         return GNB.AID.FatedCircle; // Lv80 AOE
                     }
@@ -717,7 +827,7 @@ public sealed class LegacyGNB : LegacyModule
 
         if (gaugeStrategy == GaugeStrategy.ForceReign)
         {
-            if (_state.Ammo >= 0 && _state.ReadyToReign >= 1 && _state.CD(GNB.AID.GnashingFang) > 0)
+            if (_state.Ammo >= 0 && _state.ReadyToReignLeft >= 1 && _state.CD(GNB.AID.GnashingFang) > 0)
             {
                 if (_state.CD(GNB.AID.Bloodfest) > 90)
                 {
@@ -761,56 +871,69 @@ public sealed class LegacyGNB : LegacyModule
     //    _ => true
     //};
 
+    // Pots plan
     private bool ShouldUsePotion(StrategyValues strategy) => strategy.Option(Track.Potion).As<PotionStrategy>() switch
     {
         PotionStrategy.Manual => false,
-        PotionStrategy.Immediate => (!Service.Config.Get<GNBConfig>().EarlyNoMercy && _state.ComboLastMove == GNB.AID.KeenEdge && _state.Ammo == 0) || (_state.CD(GNB.AID.NoMercy) < 5.5 && _state.CD(GNB.AID.Bloodfest) < 15 /*&& strategy.CombatTimer > 30*/) || (Service.Config.Get<GNBConfig>().EarlyNoMercy && _state.CD(GNB.AID.NoMercy) < 5.5 && _state.CD(GNB.AID.Bloodfest) < 15),
-        PotionStrategy.Special => _state.ComboLastMove == GNB.AID.BrutalShell && _state.Ammo == 3 && _state.CD(GNB.AID.NoMercy) < 3 && _state.CD(GNB.AID.Bloodfest) < 15,
+        PotionStrategy.Immediate => (_state.ComboLastMove == GNB.AID.KeenEdge && _state.Ammo == 0) || (_state.CD(GNB.AID.NoMercy) < 5.5 && _state.CD(GNB.AID.Bloodfest) < 15),
         PotionStrategy.Force => true,
         _ => false
     };
 
-    private bool ShouldUseNoMercy(StrategyValues strategy)
+    // NM plan
+    private bool ShouldUseNM(StrategyValues strategy)
     {
-        var noMergyStrategy = strategy.Option(Track.NoMercy).As<OffensiveStrategy>();
-        if (noMergyStrategy == OffensiveStrategy.Delay)
+        var noMercyStrategy = strategy.Option(Track.NM).As<OffensiveStrategy>();
+        if (noMercyStrategy == OffensiveStrategy.Delay)
         {
             return false;
         }
-        else if (noMergyStrategy == OffensiveStrategy.Force)
+        else if (noMercyStrategy == OffensiveStrategy.Force)
         {
             return true;
         }
         else
         {
-            var gnbConfig = Service.Config.Get<GNBConfig>();
-            bool isEarlyNoMercy = gnbConfig.EarlyNoMercy;
-
-            bool isGnashingFangReady = _state.CD(GNB.AID.GnashingFang) < 2.5 && _state.Unlocked(GNB.AID.GnashingFang);
-            bool isSonicBreakReady = _state.ReadyToBreak > 2.5 && _state.Unlocked(GNB.AID.SonicBreak);
-            bool isDoubleDownReady = _state.CD(GNB.AID.DoubleDown) < 2.5 && _state.Unlocked(GNB.AID.DoubleDown);
             bool justusewhenever = !_state.Unlocked(GNB.AID.BurstStrike) && _state.TargetingEnemy && _state.RangeToTarget < 5;
 
-            bool shouldUseEarlyNoMercy = _state.TargetingEnemy && ((!isEarlyNoMercy && _state.ComboLastMove == GNB.AID.BrutalShell) || (isEarlyNoMercy && _state.ComboLastMove == GNB.AID.KeenEdge)) && _state.Unlocked(GNB.AID.Bloodfest) && /*strategy.CombatTimer < 10 &&*/ (_state.Ammo == 0 || _state.Ammo == _state.MaxCartridges) && ((_state.GCD < 0.8 && gnbConfig.Skscheck) || (!gnbConfig.Skscheck));
+            bool shouldUseNoMercy = (Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.NoMercy))
+                // opener
+                && (_state.ComboLastMove == GNB.AID.BrutalShell && _state.Ammo == 0)
+                //1min
+                || ((_state.CD(GNB.AID.NoMercy) <= 2.4 && _state.Ammo >= 2)
+                //2min
+                || ((_state.CD(GNB.AID.NoMercy) <= 2.4 && _state.Ammo == 2) && _state.CD(GNB.AID.Bloodfest) < 10));
 
-            bool shouldUseRegularNoMercy = (!gnbConfig.Skscheck
-                && (isGnashingFangReady || isSonicBreakReady || isDoubleDownReady)
-                && _state.TargetingEnemy
-                && ((_state.Ammo == _state.MaxCartridges)
-                || (_state.Ammo == _state.MaxCartridges - 1 && _state.ComboLastMove == GNB.AID.BrutalShell && _state.CD(GNB.AID.Bloodfest) > 20)
-                || (_state.CD(GNB.AID.Bloodfest) < 15 && _state.Ammo == 1 && _state.Unlocked(GNB.AID.Bloodfest)))) || shouldUseEarlyNoMercy;
-
-            bool shouldUseSksCheck = (gnbConfig.Skscheck && _state.GCD < 0.8
-                && (isGnashingFangReady || isSonicBreakReady || isDoubleDownReady)
-                && _state.TargetingEnemy
-                && (_state.Ammo == _state.MaxCartridges
-                || (_state.CD(GNB.AID.Bloodfest) < 15 && _state.Ammo == 1 && _state.Unlocked(GNB.AID.Bloodfest))
-                || (_state.Ammo == _state.MaxCartridges - 1 && _state.ComboLastMove == GNB.AID.BrutalShell && _state.CD(GNB.AID.Bloodfest) > 20 && _state.Unlocked(GNB.AID.Bloodfest)))) || shouldUseEarlyNoMercy;
-
-            return shouldUseRegularNoMercy || shouldUseSksCheck || justusewhenever;
+            return shouldUseNoMercy || justusewhenever;
         }
     }
 
+    // Sonic plan
+    private bool ShouldUseSonic(StrategyValues strategy)
+    {
+        var SBstrat = strategy.Option(Track.Sonic).As<OffensiveStrategy>();
+        if (SBstrat == OffensiveStrategy.Delay)
+        {
+            return false;
+        }
+        else if (SBstrat == OffensiveStrategy.Force)
+        {
+            return true;
+        }
+        else
+        {
+            bool shouldUseSonicBreak = ((_state.ReadyToBreakLeft > 27.5 && _state.CD(GNB.AID.DoubleDown) < 5 && _state.Ammo >= 3) && _state.CD(GNB.AID.Bloodfest) >= 40)
+                //2cart
+                || (_state.ComboLastMove == GNB.AID.GnashingFang && _state.CD(GNB.AID.DoubleDown) <= 60 && _state.Ammo == 0 && _state.CD(GNB.AID.Bloodfest) >= 40)
+                //2min 2cart
+                || ((_state.ReadyToBreakLeft > 27.5) && (_state.CD(GNB.AID.DoubleDown) < 5) && _state.Ammo == 2
+                && (_state.CD(GNB.AID.Bloodfest) >= 40) && (_state.ComboLastMove == GNB.AID.BurstStrike) && (!_state.ReadyToBlast));
+
+            return shouldUseSonicBreak;
+        }
+    }
+
+    // GF plan
     private bool ShouldUseGnash(StrategyValues strategy) => strategy.Option(Track.Gnash).As<OffensiveStrategy>() switch
     {
         OffensiveStrategy.Delay => false,
@@ -818,42 +941,31 @@ public sealed class LegacyGNB : LegacyModule
         _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.GnashingFang) && _state.CD(GNB.AID.GnashingFang) < 0.6f && _state.Ammo >= 1
     };
 
+    // Zone plan
     private bool ShouldUseZone(StrategyValues strategy) => strategy.Option(Track.Zone).As<OffensiveStrategy>() switch
     {
         OffensiveStrategy.Delay => false,
         OffensiveStrategy.Force => true,
-        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.SonicBreak) && _state.ReadyToBreak > _state.AnimationLock && _state.CD(GNB.AID.NoMercy) > 17
+        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.SonicBreak) && (_state.NoMercyLeft < 17.5 || _state.CD(GNB.AID.NoMercy) > 17)
     };
 
-    private bool ShouldUseFest(StrategyValues strategy)
+    // Bloodfest plan
+    private bool ShouldUseFest(StrategyValues strategy) => strategy.Option(Track.BloodFest).As<OffensiveStrategy>() switch
     {
-        var festStrategy = strategy.Option(Track.Zone).As<OffensiveStrategy>();
-        if (festStrategy == OffensiveStrategy.Delay)
-        {
-            return false;
-        }
-        else if (festStrategy == OffensiveStrategy.Force)
-        {
-            return true;
-        }
-        else
-        {
-            //var gnbConfig = Service.Config.Get<GNBConfig>();
-            //bool isEarlyNoMercy = gnbConfig.EarlyNoMercy;
+        OffensiveStrategy.Delay => false,
+        OffensiveStrategy.Force => true,
+        _ => Player.InCombat && _state.TargetingEnemy && (_state.ComboLastMove == GNB.AID.DoubleDown) && (_state.CD(GNB.AID.Bloodfest) is < 10 or 0)
+    };
 
-            //bool shouldUseEarlyNoMercy = _state.TargetingEnemy && _state.CD(GNB.AID.NoMercy) < _state.AnimationLock && ((!isEarlyNoMercy && _state.ComboLastMove == GNB.AID.BrutalShell) || (isEarlyNoMercy && _state.ComboLastMove == GNB.AID.KeenEdge)) && strategy.CombatTimer < 10 && _state.Ammo == 0 && _state.Unlocked(GNB.AID.Bloodfest);
-            bool inNoMercy = _state.NoMercyLeft > _state.AnimationLock && _state.Unlocked(GNB.AID.Bloodfest);
-            return inNoMercy && _state.Ammo == 0;
-        }
-    }
-
+    // BowShock plan
     private bool ShouldUseBow(StrategyValues strategy) => strategy.Option(Track.Bow).As<OffensiveStrategy>() switch
     {
         OffensiveStrategy.Delay => false,
         OffensiveStrategy.Force => true,
-        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.BowShock) && _state.ReadyToBreak > _state.AnimationLock && _state.CD(GNB.AID.NoMercy) > 40
+        _ => Player.InCombat && _state.TargetingEnemy && _state.Unlocked(GNB.AID.BowShock) && (_state.ComboLastMove == GNB.AID.SonicBreak) && _state.CD(GNB.AID.NoMercy) > 40
     };
 
+    // Gauge option "Build Gauge before Downtime"
     private GNB.AID ChooseRotationBasedOnGauge(StrategyValues strategy, bool aoe)
     {
         int maxGauge = _state.MaxCartridges;
@@ -901,6 +1013,7 @@ public sealed class LegacyGNB : LegacyModule
         return GetNextUnlockedComboAction(strategy, aoe);
     }
 
+    // GCDs
     private GNB.AID GetNextBestGCD(StrategyValues strategy, bool aoe)
     {
         // prepull
@@ -913,6 +1026,129 @@ public sealed class LegacyGNB : LegacyModule
         if (strategy.Option(Track.Gauge).As<GaugeStrategy>() == GaugeStrategy.LightningShotIfNotInMelee && _state.RangeToTarget > 3)
             return GNB.AID.LightningShot;
 
+        if (_state.CD(GNB.AID.NoMercy) is <= 60 or >= 40)
+        {
+            // Lv100 NM window
+            if (_state.Unlocked(GNB.AID.ReignOfBeasts))
+            {
+                if (_state.Unlocked(GNB.AID.SonicBreak))
+                {
+                    // SB 1min 2cart
+                    if (_state.ReadyToBreakLeft > 17.5 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 0
+                        && _state.CD(GNB.AID.Bloodfest) > 50 && !_state.ReadyToRip
+                        && _state.ComboLastMove == GNB.AID.GnashingFang || _state.CD(GNB.AID.GnashingFang) < 28)
+                        return GNB.AID.SonicBreak;
+                    // SB 1min 3cart
+                    else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 3
+                        && _state.CD(GNB.AID.Bloodfest) > 50)
+                        return GNB.AID.SonicBreak;
+                    // SB 2min 2cart
+                    else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 2
+                        && _state.CD(GNB.AID.Bloodfest) < 30)
+                        return GNB.AID.SonicBreak;
+                }
+
+                if (_state.Unlocked(GNB.AID.DoubleDown))
+                {
+                    // DD 1min 2cart
+                    if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                        && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                        && _state.ComboLastMove == GNB.AID.SolidBarrel && _state.NoMercyLeft < 17.5)
+                        return GNB.AID.DoubleDown;
+                    // DD 1min 3cart
+                    else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                        && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                        && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                        return GNB.AID.DoubleDown;
+                    // DD 2min 2cart
+                    else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                        && _state.Ammo >= 2 && _state.RangeToTarget <= 5
+                        && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                        return GNB.AID.DoubleDown;
+                }
+
+                if (_state.Unlocked(GNB.AID.GnashingFang))
+                {
+                    // GF 1min
+                    if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                        && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                        && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                        return GNB.AID.GnashingFang;
+                    // GF 2min
+                    if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                        && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                        && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                        return GNB.AID.GnashingFang;
+                }
+
+                if (_state.ReadyToReignLeft is > 10 or < 20)
+                {
+                    // Reign
+                    if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.GunComboStep == 0 && _state.NoMercyLeft < 7.5 && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 17 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                        return GNB.AID.ReignOfBeasts;
+                    if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.GunComboStep == 0 && _state.ComboLastMove == GNB.AID.ReignOfBeasts && _state.NoMercyLeft < 5 && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                        return GNB.AID.NobleBlood;
+                    if (_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.GunComboStep == 0 && _state.ComboLastMove == GNB.AID.NobleBlood && _state.NoMercyLeft < 2.5 && _state.CD(GNB.AID.Bloodfest) >= 100 && _state.CD(GNB.AID.GnashingFang) > 15 && _state.CD(GNB.AID.DoubleDown) >= 40)
+                        return GNB.AID.LionHeart;
+                }
+            }
+
+            // Lv90 NM window
+            if (!_state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Unlocked(GNB.AID.DoubleDown))
+            {
+                if (_state.Unlocked(GNB.AID.SonicBreak) && ShouldUseSonic(strategy))
+                {
+                    // SB 1min 2cart
+                    if (_state.ReadyToBreakLeft > 17.5 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 0
+                        && _state.CD(GNB.AID.Bloodfest) > 50 && !_state.ReadyToRip
+                        && _state.ComboLastMove == GNB.AID.GnashingFang || _state.CD(GNB.AID.GnashingFang) < 28)
+                        return GNB.AID.SonicBreak;
+                    // SB 1min 3cart
+                    else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 3
+                        && _state.CD(GNB.AID.Bloodfest) > 50)
+                        return GNB.AID.SonicBreak;
+                    // SB 2min 2cart
+                    else if (_state.ReadyToBreakLeft >= 28 && _state.Unlocked(GNB.AID.SonicBreak) && _state.Ammo == 2
+                        && _state.CD(GNB.AID.Bloodfest) < 30)
+                        return GNB.AID.SonicBreak;
+                }
+
+                if (_state.Unlocked(GNB.AID.DoubleDown))
+                {
+                    // DD 1min 2cart
+                    if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                        && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                        && _state.ComboLastMove == GNB.AID.SolidBarrel && _state.NoMercyLeft < 17.5)
+                        return GNB.AID.DoubleDown;
+                    // DD 1min 3cart
+                    else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                        && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo == 3 && _state.RangeToTarget <= 5
+                        && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                        return GNB.AID.DoubleDown;
+                    // DD 2min 2cart
+                    else if (_state.CD(GNB.AID.DoubleDown) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                        && _state.Unlocked(GNB.AID.DoubleDown) && _state.Ammo >= 2 && _state.RangeToTarget <= 5
+                        && _state.ComboLastMove == GNB.AID.SonicBreak && _state.NoMercyLeft < 17.5 && _state.ReadyToBreakLeft == 0)
+                        return GNB.AID.DoubleDown;
+                }
+
+                if (_state.Unlocked(GNB.AID.GnashingFang))
+                {
+                    // GF 1min
+                    if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) > 50
+                        && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                        && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                        return GNB.AID.GnashingFang;
+                    // GF 2min
+                    if (_state.CD(GNB.AID.GnashingFang) < 0.6f && _state.CD(GNB.AID.Bloodfest) < 10
+                        && _state.Unlocked(GNB.AID.ReignOfBeasts) && _state.Ammo == 1 && _state.ReadyToBreakLeft == 0
+                        && _state.ComboLastMove == GNB.AID.DoubleDown && _state.NoMercyLeft <= 12.5 && _state.CD(GNB.AID.DoubleDown) >= 57.5)
+                        return GNB.AID.GnashingFang;
+                }
+            }
+        }
+
+        // ST Logic 80 & below
         if (!aoe)
         {
             if (_state.Ammo >= 2 && !_state.Unlocked(GNB.AID.DoubleDown) &&
@@ -922,7 +1158,7 @@ public sealed class LegacyGNB : LegacyModule
                 return GNB.AID.BurstStrike;
             }
         }
-        // AOE Logic
+        // AOE Logic 80 & below
         else if (aoe)
         {
             if (_state.Ammo >= 2)
@@ -961,7 +1197,7 @@ public sealed class LegacyGNB : LegacyModule
                     return GNB.AID.BurstStrike; // Lv70 AOE BS
                 }
                 if (_state.CD(GNB.AID.GnashingFang) > _state.GCD && _state.CD(GNB.AID.DoubleDown) > _state.GCD &&
-                    _state.ReadyToBreak > _state.GCD && _state.Unlocked(GNB.AID.DoubleDown))
+                    _state.ReadyToBreakLeft >= 0 && _state.Unlocked(GNB.AID.DoubleDown))
                 {
                     return GNB.AID.FatedCircle; // Lv80 AOE
                 }
@@ -999,9 +1235,11 @@ public sealed class LegacyGNB : LegacyModule
         if (_state.NoMercyLeft > _state.AnimationLock)
             return GetNextAmmoAction(strategy, aoe);
 
+        // GF
         if (_state.CD(GNB.AID.GnashingFang) < 0.6f)
             return GetNextAmmoAction(strategy, aoe);
 
+        // GF2&3
         if (_state.GunComboStep > 0)
         {
             if (_state.GunComboStep == 2)
@@ -1025,29 +1263,38 @@ public sealed class LegacyGNB : LegacyModule
         if (strategy.Option(Track.Gauge).As<GaugeStrategy>() == GaugeStrategy.ForceGF)
             return GetNextAmmoAction(strategy, aoe);
 
+        if (strategy.Option(Track.Gauge).As<GaugeStrategy>() == GaugeStrategy.ForceReign)
+            return GetNextAmmoAction(strategy, aoe);
+
         if (strategy.Option(Track.Gauge).As<GaugeStrategy>() == GaugeStrategy.MaxGaugeBeforeDowntime && _state.NoMercyLeft < _state.AnimationLock)
             return ChooseRotationBasedOnGauge(strategy, aoe);
 
         return GetNextUnlockedComboAction(strategy, aoe);
     }
 
+    // oGCDs
     private ActionID GetNextBestOGCD(StrategyValues strategy, float deadline, bool aoe)
     {
+        // Pots
         if (ShouldUsePotion(strategy) && _state.CanWeave(_state.PotionCD, 1.1f, deadline))
             return ActionDefinitions.IDPotionStr;
 
+        // NM
         if (_state.Unlocked(GNB.AID.NoMercy))
         {
-            if (ShouldUseNoMercy(strategy) && _state.CanWeave(GNB.AID.NoMercy, 0.6f, deadline))
+            if (ShouldUseNM(strategy) && _state.CanWeave(GNB.AID.NoMercy, 0.6f, deadline))
                 return ActionID.MakeSpell(GNB.AID.NoMercy);
         }
 
-        if (_state.Unlocked(GNB.AID.DangerZone) && ShouldUseZone(strategy) && _state.CanWeave(GNB.AID.DangerZone, 0.6f, deadline))
+        // Zone
+        if (_state.NoMercyLeft > 0 && (_state.Unlocked(GNB.AID.DangerZone) && ShouldUseZone(strategy) && _state.CanWeave(GNB.AID.DangerZone, 0.6f, deadline)))
             return ActionID.MakeSpell(_state.BestZone);
 
-        if (_state.Unlocked(GNB.AID.BowShock) && ShouldUseBow(strategy) && _state.CanWeave(GNB.AID.BowShock, 0.6f, deadline))
+        // BowShock
+        if ((_state.NoMercyLeft > 0 || _state.CD(GNB.AID.NoMercy) > 17) && _state.Unlocked(GNB.AID.BowShock) && ShouldUseBow(strategy) && _state.CanWeave(GNB.AID.BowShock, 0.6f, deadline))
             return ActionID.MakeSpell(GNB.AID.BowShock);
 
+        // Continuation
         if (_state.ReadyToBlast && _state.Unlocked(GNB.AID.Hypervelocity))
             return ActionID.MakeSpell(_state.BestContinuation);
         if (_state.ReadyToGouge && _state.Unlocked(GNB.AID.Continuation))
@@ -1057,6 +1304,7 @@ public sealed class LegacyGNB : LegacyModule
         if (_state.ReadyToRip && _state.Unlocked(GNB.AID.Continuation))
             return ActionID.MakeSpell(_state.BestContinuation);
 
+        // Bloodfest
         if (_state.Unlocked(GNB.AID.Bloodfest) && _state.CanWeave(GNB.AID.Bloodfest, 0.6f, deadline) && ShouldUseFest(strategy))
             return ActionID.MakeSpell(GNB.AID.Bloodfest);
 
@@ -1074,16 +1322,11 @@ public sealed class LegacyGNB : LegacyModule
                 return ActionID.MakeSpell(GNB.AID.NoMercy);
         }
 
-        //if (strategy.SpecialActionUse == Strategy.SpecialAction.StanceOn && _state.CanWeave(_state.CD(GNB.AID.RoyalGuard), 0.6f, deadline) && _state.GunComboStep == 0 && !_state.HaveTankStance)
-        //    return ActionID.MakeSpell(GNB.AID.RoyalGuard);
-        //
-        //if (strategy.SpecialActionUse == Strategy.SpecialAction.StanceOff && _state.CanWeave(_state.CD(GNB.AID.ReleaseRoyalGuard), 0.6f, deadline) && _state.GunComboStep == 0 && _state.HaveTankStance)
-        //    return ActionID.MakeSpell(GNB.AID.ReleaseRoyalGuard);
-        //
-        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.ReadyToBreak > 1 && _state.CD(GNB.AID.DoubleDown) > 1)
+        // Aurora
+        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.CD(GNB.AID.SonicBreak) > 1 && _state.CD(GNB.AID.DoubleDown) > 1)
             return ActionID.MakeSpell(GNB.AID.Aurora);
 
-        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && !_state.Unlocked(GNB.AID.DoubleDown) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.ReadyToBreak > 1)
+        if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && !_state.Unlocked(GNB.AID.DoubleDown) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1 && _state.ReadyToBreakLeft > 1)
             return ActionID.MakeSpell(GNB.AID.Aurora);
 
         if (_state.CanWeave(_state.CD(GNB.AID.Aurora) - 60, 0.6f, deadline) && _state.Unlocked(GNB.AID.Aurora) && !_state.Unlocked(GNB.AID.DoubleDown) && !_state.Unlocked(GNB.AID.SonicBreak) && _state.AuroraLeft < _state.GCD && _state.CD(GNB.AID.NoMercy) > 1 && _state.CD(GNB.AID.GnashingFang) > 1)
