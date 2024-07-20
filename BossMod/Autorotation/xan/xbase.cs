@@ -50,13 +50,13 @@ public abstract class xbase<AID, TraitID> : LegacyModule where AID : Enum where 
         Hints.ActionsToExecute.Push(ActionID.MakeSpell(aid), target, priority);
     }
 
-    protected void QueueOGCD(Action<float> oGCDFun)
+    protected void QueueOGCD(Action<float> ogcdFun)
     {
         var deadline = _state.GCD > 0 ? _state.GCD : float.MaxValue;
         if (_state.CanWeave(deadline - _state.OGCDSlotLength))
-            oGCDFun(deadline - _state.OGCDSlotLength);
+            ogcdFun(deadline - _state.OGCDSlotLength);
         if (_state.CanWeave(deadline))
-            oGCDFun(deadline);
+            ogcdFun(deadline);
     }
 
     /// <summary>
