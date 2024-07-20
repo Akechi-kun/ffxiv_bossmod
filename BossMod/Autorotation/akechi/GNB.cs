@@ -50,14 +50,6 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
     public bool Unlocked(AID aid) => ActionUnlocked(ActionID.MakeSpell(aid));
     public bool Unlocked(TraitID tid) => TraitUnlocked((uint)tid);
 
-
-    private int GetSTComboLength(AID comboLastMove) => comboLastMove switch
-    {
-        AID.BrutalShell => 1,
-        AID.KeenEdge => 2,
-        _ => 3
-    };
-
     private AID GetNextSTComboAction(AID comboLastMove)
     {
         if (comboLastMove == AID.DemonSlice)
@@ -100,11 +92,7 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         return AID.DemonSlice;
     }
 
-    private const float NMLateWeave = 0.6f;
-
     protected override float GetCastTime(AID aid) => 0;
-
-    private bool HaveTarget => NumAOETargets > 1 || _state.TargetingEnemy;
 
     private void GetNextBestGCD(StrategyValues strategy, Actor? primaryTarget)
     {
@@ -292,31 +280,94 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         }
     }
 
+    private ActionID GetNextBestOGCD(StrategyValues strategy, float deadline, bool aoe)
+    {
+        /*if (ShouldUsePotion(strategy) && _state.CanWeave(_state.PotionCD, 1.1f, deadline))
+            return ActionDefinitions.IDPotionStr; */
+
+        // No Mercy
+        if (Unlocked(AID.NoMercy) && ShouldUseNoMercy(strategy, deadline))
+        {
+            if (_state.CanWeave(AID.NoMercy, 0.6f, deadline))
+            {
+                if ((Unlocked(AID.Bloodfest) && ComboLastMove == AID.BrutalShell && CombatTimer < 30) // Opener conditions
+                    || (!Unlocked(AID.FatedCircle) && !Unlocked(AID.DoubleDown) && !Unlocked(AID.Bloodfest) &&
+                    !Unlocked(AID.Continuation) && !Unlocked(AID.GnashingFang) && !Unlocked(AID.SonicBreak) &&
+                    Ammo == MaxCartridges) // subLv53
+                    || (!Unlocked(AID.FatedCircle) && !Unlocked(AID.DoubleDown) && !Unlocked(AID.Bloodfest) &&
+                    !Unlocked(AID.Continuation) && Unlocked(AID.GnashingFang) && Unlocked(AID.SonicBreak) &&
+                    Ammo == MaxCartridges) // Lv60
+                    || (!Unlocked(AID.DoubleDown) && !Unlocked(AID.FatedCircle) && !Unlocked(AID.Bloodfest) &&
+                    Unlocked(AID.Continuation) &&
+                    Ammo == MaxCartridges) // Lv70
+                    || (!Unlocked(AID.DoubleDown) && Unlocked(AID.FatedCircle) && Unlocked(AID.Bloodfest) &&
+                    Ammo == MaxCartridges) // Lv80
+                    || (Unlocked(AID.DoubleDown) && Ammo == MaxCartridges)) // Lv90+
+                    PushOGCD(AID.NoMercy, Player);
+            }
+        }
+
+        // Zone
+        if (Unlocked(AID.DangerZone) && ShouldUseZone(strategy, deadline))
+        {
+            if (_state.CanWeave(AID.DangerZone, 0.6f, deadline) && NoMercyLeft < 17.5)
+                PushOGCD(BestZone, Player);
+        }
+
+        // Bow Shock
+        if (Unlocked(AID.BowShock) && ShouldUseBowShock(strategy, deadline))
+        {
+            if (_state.CanWeave(AID.BowShock, 0.6f, deadline) && NoMercyLeft < 17.5)
+                PushOGCD(AID.BowShock, Player);
+        }
+
+        // 
+        if (Unlocked(AID.Bloodfest) && ShouldUseBloodfest(strategy, deadline))
+        {
+            if (_state.CanWeave(AID.Bloodfest, 0.6f, deadline) && ShouldUseBloodfest(strategy, deadline))
+                PushOGCD(AID.Bloodfest, Player);
+        }
+
+        // Continuation
+        if ((Unlocked(AID.Continuation) || Unlocked(AID.Hypervelocity)) && (ReadyToBlast || ReadyToRaze || ReadyToGouge || ReadyToTear || ReadyToRip))
+            PushOGCD(BestContinuation, Player);
 
 
-    //      //      //      //      //
+
+        if (_state.CanWeave(_state.CD(AID.Aurora) - 60, 0.6f, deadline) && Unlocked(AID.Aurora) &&
+            (AuroraLeft < _state.GCD && _state.CD(AID.NoMercy) > 1 && _state.CD(AID.GnashingFang) > 1 && _state.CD(AID.SonicBreak) > 1 && _state.CD(AID.DoubleDown) > 1) ||
+            (!Unlocked(AID.DoubleDown) && AuroraLeft < _state.GCD && _state.CD(AID.NoMercy) > 1 && _state.CD(AID.GnashingFang) > 1 && _state.CD(AID.SonicBreak) > 1) ||
+            (!Unlocked(AID.DoubleDown) && !Unlocked(AID.SonicBreak) && AuroraLeft < _state.GCD && _state.CD(AID.NoMercy) > 1 && _state.CD(AID.GnashingFang) > 1) ||
+            (!Unlocked(AID.DoubleDown) && !Unlocked(AID.SonicBreak) && !Unlocked(AID.GnashingFang) && AuroraLeft < _state.GCD && _state.CD(AID.NoMercy) > 1))
+            PushOGCD(AID.Aurora, Player);
+
+
+        return new();
+
+    }
 
     // NM plan
-    private bool ShouldUseNoMercy(StrategyValues strategy)
+    private bool ShouldUseNoMercy(StrategyValues strategy, float deadline)
     {
         if (!Unlocked(AID.NoMercy))
         {
             return false;
         }
-        else if (_state.CD(AID.NoMercy) < 0.6f && Unlocked(AID.NoMercy))
-        {
-            return true;
-        }
         else
         {
-            bool justusewhenever = !Unlocked(AID.BurstStrike) && _state.TargetingEnemy && _state.RangeToTarget < 5;
-
-            bool shouldUseNoMercy = (Player.InCombat && _state.TargetingEnemy && Unlocked(AID.NoMercy));
-
-            if ((CombatTimer > 30 && ComboLastMove == AID.BrutalShell && Ammo == 0) // opener
-                || (_state.CD(AID.NoMercy) <= 2.4 && Ammo >= 2) //1min
-                || ((_state.CD(AID.NoMercy) <= 2.4 && Ammo == 2) && _state.CD(AID.Bloodfest) < 10)) //2min
-                return shouldUseNoMercy || justusewhenever;
+            return ((Unlocked(AID.Bloodfest) && ComboLastMove == AID.BrutalShell && CombatTimer < 30) // Opener conditions
+                    || (!Unlocked(AID.FatedCircle) && !Unlocked(AID.DoubleDown) && !Unlocked(AID.Bloodfest) &&
+                    !Unlocked(AID.Continuation) && !Unlocked(AID.GnashingFang) && !Unlocked(AID.SonicBreak) &&
+                    Ammo == MaxCartridges) // subLv53
+                    || (!Unlocked(AID.FatedCircle) && !Unlocked(AID.DoubleDown) && !Unlocked(AID.Bloodfest) &&
+                    !Unlocked(AID.Continuation) && Unlocked(AID.GnashingFang) && Unlocked(AID.SonicBreak) &&
+                    Ammo == MaxCartridges) // Lv60
+                    || (!Unlocked(AID.DoubleDown) && !Unlocked(AID.FatedCircle) && !Unlocked(AID.Bloodfest) &&
+                    Unlocked(AID.Continuation) &&
+                    Ammo == MaxCartridges) // Lv70
+                    || (!Unlocked(AID.DoubleDown) && Unlocked(AID.FatedCircle) && Unlocked(AID.Bloodfest) &&
+                    Ammo == MaxCartridges) // Lv80
+                    || (Unlocked(AID.DoubleDown) && Ammo == MaxCartridges)); // Lv90+
         }
     }
 
@@ -349,12 +400,8 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         {
             return false;
         }
-        else if (Unlocked(AID.DoubleDown) && Ammo >= 2)
-        {
-            return true;
-        }
 
-        return Player.InCombat && _state.TargetingEnemy && (ComboLastMove == AID.DoubleDown) && _state.CD(AID.Bloodfest) is < 10 or 0;
+        return Player.InCombat && _state.TargetingEnemy && Unlocked(AID.DoubleDown) && Ammo >= 2 && NoMercy;
     }
 
     // GF plan
@@ -364,111 +411,49 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         {
             return false;
         }
-        else if (Unlocked(AID.GnashingFang) && Ammo >= 1 && (NoMercy || _state.CD(AID.GnashingFang) > 17))
-        {
-            return true;
-        }
-        return Player.InCombat && _state.TargetingEnemy && Unlocked(AID.GnashingFang) && _state.CD(AID.GnashingFang) < 0.6f && Ammo >= 1;
+
+        return Player.InCombat && _state.TargetingEnemy && Unlocked(AID.GnashingFang) && _state.CD(AID.GnashingFang) < 0.6f && Ammo >= 1 && (NoMercy || _state.CD(AID.NoMercy) > 17);
     }
 
     // Zone plan
-    private bool ShouldUseZone(StrategyValues strategy) => strategy.Option(Track.Zone).As<OffensiveStrategy>() switch
+    private bool ShouldUseZone(StrategyValues strategy, float deadline)
     {
-        OffensiveStrategy.Delay => false,
-        OffensiveStrategy.Force => true,
-        _ => Player.InCombat && _state.TargetingEnemy && Unlocked(AID.SonicBreak) && (NoMercyLeft < 17.5 || _state.CD(AID.NoMercy) > 17)
-    };
+        if (!Unlocked(AID.BlastingZone))
+        {
+            return false;
+        }
+
+        return Player.InCombat && _state.TargetingEnemy && Unlocked(AID.BlastingZone) && (NoMercyLeft < 17.5 || _state.CD(AID.NoMercy) > 17);
+    }
 
     // Bloodfest plan
-    private bool ShouldUseBloodfest(StrategyValues strategy) => strategy.As<OffensiveStrategy>() switch
+    private bool ShouldUseBloodfest(StrategyValues strategy, float deadline)
     {
-        OffensiveStrategy.Delay => false,
-        OffensiveStrategy.Force => true,
-        _ => Player.InCombat && _state.TargetingEnemy && (ComboLastMove == AID.DoubleDown) && (_state.CD(AID.Bloodfest) is < 10 or 0)
-    };
+        if (!Unlocked(AID.Bloodfest))
+        {
+            return false;
+        }
+
+        return Player.InCombat && _state.TargetingEnemy && Unlocked(AID.Bloodfest) && Ammo == 0 && ComboLastMove == AID.DoubleDown && _state.CD(AID.Bloodfest) is < 10 or 0;
+    }
 
     // BowShock plan
-    private bool ShouldUseBowShock(StrategyValues strategy) => strategy.Option(Track.Bow).As<OffensiveStrategy>() switch
+    private bool ShouldUseBowShock(StrategyValues strategy, float deadline)
     {
-        OffensiveStrategy.Delay => false,
-        OffensiveStrategy.Force => true,
-        _ => Player.InCombat && _state.TargetingEnemy && Unlocked(AID.BowShock) && (ComboLastMove == AID.SonicBreak) && _state.CD(AID.NoMercy) > 40
-    };
-
-    //      //      //      //      //
-    private bool ShouldTechStep(StrategyValues strategy)
-    {
-        if (!Unlocked(AID.TechnicalStep) || _state.CD(AID.TechnicalStep) > _state.GCD || strategy.Option(Track.Buffs).As<OffensiveStrategy>() == OffensiveStrategy.Delay)
-            return false;
-
-        const float TechStepDuration = 5.5f;
-        const float TechFinishDuration = 20f;
-
-        // standard finish must last for the whole burst window now, since tillana doesn't refresh it
-        return NumDanceTargets > 0 && StandardFinishLeft > _state.GCD + TechStepDuration + TechFinishDuration;
-    }
-
-    private bool CanFlow(out AID action)
-    {
-        var act = NumAOETargets > 1 ? AID.Bloodshower : AID.Fountainfall;
-        if (Unlocked(act) && FlowLeft > _state.GCD && HaveTarget)
+        if (!Unlocked(AID.BowShock))
         {
-            action = act;
-            return true;
+            return false;
         }
 
-        action = AID.None;
-        return false;
-    }
-
-    private bool CanSymmetry(out AID action)
-    {
-        var act = NumAOETargets > 1 ? AID.RisingWindmill : AID.ReverseCascade;
-        if (Unlocked(act) && SymmetryLeft > _state.GCD && HaveTarget)
-        {
-            action = act;
-            return true;
-        }
-
-        action = AID.None;
-        return false;
-    }
-
-    private bool ShouldFinishDance(float danceTimeLeft)
-    {
-        if (NextStep != 0)
-            return false;
-        if (danceTimeLeft is > 0 and < FinishDanceWindow)
-            return true;
-
-        return danceTimeLeft > _state.GCD && NumDanceTargets > 0;
-    }
-
-    private bool ShouldSaberDance(StrategyValues strategy, int minimumEsprit)
-    {
-        if (Esprit < 50 || !Unlocked(AID.SaberDance))
-            return false;
-
-        return Esprit >= minimumEsprit && NumRangedAOETargets > 0;
-    }
-
-    private bool ShouldSpendFeathers(StrategyValues strategy)
-    {
-        if (Feathers == 0)
-            return false;
-
-        if (Feathers == 4 || !Unlocked(AID.TechnicalStep))
-            return true;
-
-        return TechFinishLeft > _state.AnimationLock;
+        return Player.InCombat && _state.TargetingEnemy && Unlocked(AID.BowShock) && NoMercyLeft < 17.5;
     }
 
     public override void Exec(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
+        var targeting = strategy.Option(Track.Targeting).As<Targeting>();
+        SelectPrimaryTarget(targeting, ref primaryTarget, range: 25);
         _state.UpdateCommon(primaryTarget, estimatedAnimLockDelay);
         _state.HaveTankStance = Player.FindStatus(SID.RoyalGuard) != null;
-        //if (ComboLastMove == AID.SolidBarrel)
-        //    _state.ComboTimeLeft = 0;
 
         var gauge = GetGauge<GunbreakerGauge>();
         Ammo = gauge.Ammo;
@@ -496,6 +481,5 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         };
 
         GetNextBestGCD(strategy, primaryTarget);
-        QueueOGCD(deadline => GetNextBestOGCD(strategy, primaryTarget, deadline));
     }
 }

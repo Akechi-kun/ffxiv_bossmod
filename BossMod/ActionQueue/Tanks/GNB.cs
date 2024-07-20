@@ -69,9 +69,9 @@ public enum TraitID : uint
     MeleeMastery = 507, // L84
     EnhancedContinuation = 426, // L86
     CartridgeChargeII = 427, // L88
-    NebulaMastery = 50574, // L92
-    EnhancedContinuationII = 50575,// L96
-    EnhancedBloodfest = 50576, // L100
+    NebulaMastery = 574, // L92
+    EnhancedContinuationII = 575,// L96
+    EnhancedBloodfest = 576, // L100
 }
 
 // TODO: regenerate
