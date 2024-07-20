@@ -1,8 +1,8 @@
 ﻿using BossMod.Autorotation.Legacy;
 
-namespace BossMod.Autorotation.xan;
+namespace BossMod.Autorotation.akechi;
 
-// frick you i'll name my class whatever i want
+// thank you xan :)
 #pragma warning disable CS8981
 #pragma warning disable IDE1006
 

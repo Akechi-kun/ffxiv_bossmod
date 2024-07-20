@@ -206,16 +206,16 @@ public sealed class LegacySAM : LegacyModule
         _state.UpdatePositionals(primaryTarget, GetNextPositional(strategy), _state.TrueNorthLeft > _state.GCD);
 
         // TODO: refactor all that, it's kinda senseless now
-        SAM.AID gcd = GetNextBestGCD(strategy);
-        PushResult(gcd, primaryTarget);
+        SAM.AID GCD = GetNextBestGCD(strategy);
+        PushResult(GCD, primaryTarget);
 
-        ActionID ogcd = default;
-        var deadline = _state.GCD > 0 && gcd != default ? _state.GCD : float.MaxValue;
-        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
-        if (!ogcd && _state.CanWeave(deadline)) // second/only ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline);
-        PushResult(ogcd, primaryTarget);
+        ActionID oGCD = default;
+        var deadline = _state.GCD > 0 && GCD != default ? _state.GCD : float.MaxValue;
+        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
+        if (!oGCD && _state.CanWeave(deadline)) // second/only oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline);
+        PushResult(oGCD, primaryTarget);
     }
 
     //protected override void QueueAIActions()
@@ -260,7 +260,7 @@ public sealed class LegacySAM : LegacyModule
         }
         else if (_state.NextTsubameCharge <= _state.GCD)
         {
-            // will have tsubame on next gcd
+            // will have tsubame on next GCD
             return _state.Kaeshi switch
             {
                 KaeshiAction.Goken => SAM.AID.KaeshiGoken,
@@ -501,7 +501,7 @@ public sealed class LegacySAM : LegacyModule
             || _state.RaidBuffsIn > 9000; // general combat, no module active. yolo
     }
 
-    private bool ShouldRefreshHiganbana(StrategyValues strategy, uint gcdsInAdvance = 0)
+    private bool ShouldRefreshHiganbana(StrategyValues strategy, uint GCDsInAdvance = 0)
     {
         var higanbanaStrategy = strategy.Option(Track.Higanbana).As<HiganbanaStrategy>();
         if (higanbanaStrategy == HiganbanaStrategy.Never || !_state.HasCombatBuffs)
@@ -514,7 +514,7 @@ public sealed class LegacySAM : LegacyModule
         if (higanbanaStrategy != HiganbanaStrategy.Eager && _state.FightEndIn > 0 && (_state.FightEndIn - _state.GCD) < 45)
             return _state.MeditationStacks == 2;
 
-        return _state.TargetHiganbanaLeft < (5 + _state.GCD + _state.GCDTime * gcdsInAdvance);
+        return _state.TargetHiganbanaLeft < (5 + _state.GCD + _state.GCDTime * GCDsInAdvance);
     }
 
     private bool CanUseKenki(StrategyValues strategy, int minCost = 25)

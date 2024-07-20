@@ -64,7 +64,7 @@
 
 //    public static ActionID GetNextBestOGCD(State state, Strategy strategy, float deadline)
 //    {
-//        // 1. plenary indulgence, if we're gonna cast aoe gcd heal that will actually heal someone... (TODO: reconsider priority)
+//        // 1. plenary indulgence, if we're gonna cast aoe GCD heal that will actually heal someone... (TODO: reconsider priority)
 //        if (strategy.AOE && strategy.Heal && (strategy.NumRaptureMedica2Targets > 0 || strategy.NumCure3Targets > 0) && state.Unlocked(AID.PlenaryIndulgence) && state.CanWeave(CDGroup.PlenaryIndulgence, 0.6f, deadline))
 //            return ActionID.MakeSpell(AID.PlenaryIndulgence);
 

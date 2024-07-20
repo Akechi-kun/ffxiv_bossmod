@@ -68,7 +68,7 @@ public enum SID : uint
 {
     None = 0,
     LanceCharge = 1864, // applied by Lance Charge to self, damage buff
-    LifeSurge = 116, // applied by Life Surge to self, forced crit for next gcd
+    LifeSurge = 116, // applied by Life Surge to self, forced crit for next GCD
     BattleLitany = 786, // applied by Battle Litany to self
     PowerSurge = 2720, // applied by Disembowel & Sonic Thrust to self, damage buff
     ChaosThrust = 118, // applied by Chaos Thrust to target, dot

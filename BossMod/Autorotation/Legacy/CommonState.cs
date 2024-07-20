@@ -21,7 +21,7 @@ public abstract class CommonState(RotationModule module)
     public float RaidBuffsIn; // estimate time when new raidbuff window starts (if it is smaller than FightEndIn, we try to conserve resources)
     public float PositionLockIn; // time left to use moving abilities (Primal Rend and Onslaught) - we won't use them if it is ==0; setting this to 2.5f will make us use PR asap
     public Positional NextPositional;
-    public bool NextPositionalImminent; // true if next positional will happen on next gcd
+    public bool NextPositionalImminent; // true if next positional will happen on next GCD
     public bool NextPositionalCorrect; // true if correctly positioned for next positional
 
     // both 2.5 max (unless slowed), reduced by gear attributes and certain status effects
@@ -37,18 +37,18 @@ public abstract class CommonState(RotationModule module)
         return slot >= 0 && Module.World.Client.DutyActions[1 - slot] == other ? slot : -1;
     }
 
-    public float GCD => Module.World.Client.Cooldowns[ActionDefinitions.GCDGroup].Remaining; // 2.5 max (decreased by SkS), 0 if not on gcd
+    public float GCD => Module.World.Client.Cooldowns[ActionDefinitions.GCDGroup].Remaining; // 2.5 max (decreased by SkS), 0 if not on GCD
     public float PotionCD => Module.World.Client.Cooldowns[ActionDefinitions.PotionCDGroup].Remaining; // variable max
     public float CD<AID>(AID aid) where AID : Enum => Module.World.Client.Cooldowns[ActionDefinitions.Instance.Spell(aid)!.MainCooldownGroup].Remaining;
 
     public float DutyActionCD(int slot) => slot is >= 0 and < 2 ? Module.World.Client.Cooldowns[ActionDefinitions.DutyAction0CDGroup + slot].Remaining : float.MaxValue;
     public float DutyActionCD(ActionID action) => DutyActionCD(FindDutyActionSlot(action));
 
-    // check whether weaving typical ogcd off cooldown would end its animation lock by the specified deadline
+    // check whether weaving typical oGCD off cooldown would end its animation lock by the specified deadline
     public float OGCDSlotLength => 0.6f + AnimationLockDelay; // most actions have 0.6 anim lock delay, which allows double-weaving oGCDs between GCDs
     public bool CanWeave(float deadline) => AnimationLock + OGCDSlotLength <= deadline; // is it still possible to weave typical oGCD without missing deadline?
-    // check whether weaving ogcd with specified remaining cooldown and lock time would end its animation lock by the specified deadline
-    // deadline is typically either infinity (if we don't care about GCDs) or GCD (for second/only ogcd slot) or GCD-OGCDSlotLength (for first ogcd slot)
+    // check whether weaving oGCD with specified remaining cooldown and lock time would end its animation lock by the specified deadline
+    // deadline is typically either infinity (if we don't care about GCDs) or GCD (for second/only oGCD slot) or GCD-OGCDSlotLength (for first oGCD slot)
     public bool CanWeave(float cooldown, float actionLock, float deadline) => deadline < 10000 ? MathF.Max(cooldown, AnimationLock) + actionLock + AnimationLockDelay <= deadline : cooldown <= AnimationLock;
     public bool CanWeave<AID>(AID aid, float actionLock, float deadline) where AID : Enum => CanWeave(CD(aid), actionLock, deadline);
 

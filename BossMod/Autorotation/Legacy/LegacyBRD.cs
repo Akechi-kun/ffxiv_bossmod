@@ -187,16 +187,16 @@ public sealed class LegacyBRD : LegacyModule
         (_state.BestRainOfDeathTarget, _state.NumRainOfDeathTargets) = _state.Unlocked(BRD.AID.RainOfDeath) ? CheckAOETargeting(aoeStrategy, primaryTarget, 8, NumTargetsHitByRainOfDeath, IsHitByRainOfDeath) : (null, 0);
 
         // TODO: refactor all that, it's kinda senseless now
-        BRD.AID gcd = GetNextBestGCD(strategy);
-        PushResult(gcd, gcd is BRD.AID.QuickNock or BRD.AID.Ladonsbite ? _state.BestLadonsbiteTarget : primaryTarget);
+        BRD.AID GCD = GetNextBestGCD(strategy);
+        PushResult(GCD, GCD is BRD.AID.QuickNock or BRD.AID.Ladonsbite ? _state.BestLadonsbiteTarget : primaryTarget);
 
-        ActionID ogcd = default;
-        var deadline = _state.GCD > 0 && gcd != default ? _state.GCD : float.MaxValue;
-        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
-        if (!ogcd && _state.CanWeave(deadline)) // second/only ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline);
-        PushResult(ogcd, ogcd == ActionID.MakeSpell(BRD.AID.RainOfDeath) ? _state.BestRainOfDeathTarget : primaryTarget);
+        ActionID oGCD = default;
+        var deadline = _state.GCD > 0 && GCD != default ? _state.GCD : float.MaxValue;
+        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
+        if (!oGCD && _state.CanWeave(deadline)) // second/only oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline);
+        PushResult(oGCD, oGCD == ActionID.MakeSpell(BRD.AID.RainOfDeath) ? _state.BestRainOfDeathTarget : primaryTarget);
     }
 
     //protected override void QueueAIActions()
@@ -254,32 +254,32 @@ public sealed class LegacyBRD : LegacyModule
         return dotsLeft > bvCD - 75 && dotsLeft < bvCD - 60;
     }
 
-    // IJ generally has to be used at last possible gcd before dots fall off -or- before major buffs fall off (to snapshot buffs to dots), but in some cases we want to use it earlier:
-    // - 1 gcd earlier if we don't have RA proc (otherwise we might use filler, it would proc RA, then on next gcd we'll have to use IJ to avoid dropping dots and potentially waste another RA)
-    // - 1/2 gcds earlier if we're waiting for more gauge for AA
+    // IJ generally has to be used at last possible GCD before dots fall off -or- before major buffs fall off (to snapshot buffs to dots), but in some cases we want to use it earlier:
+    // - 1 GCD earlier if we don't have RA proc (otherwise we might use filler, it would proc RA, then on next GCD we'll have to use IJ to avoid dropping dots and potentially waste another RA)
+    // - 1/2 GCDs earlier if we're waiting for more gauge for AA
     private bool ShouldUseIronJawsAutomatic(ApexArrowStrategy aaStrategy, OffensiveStrategy baStrategy)
     {
         var refreshDotsDeadline = Math.Min(_state.TargetStormbiteLeft, _state.TargetCausticLeft);
         if (refreshDotsDeadline <= _state.GCD)
             return false; // don't bother, we won't make it...
         if (refreshDotsDeadline <= _state.GCD + 2.5f)
-            return true; // last possible gcd to refresh dots - just use IJ now
+            return true; // last possible GCD to refresh dots - just use IJ now
         if (AreActiveDOTsBuffed())
             return false; // never extend buffed dots early: we obviously don't want to use multiple IJs in a single buff window, and outside buff window we don't want to overwrite buffed ticks, even if that means risking losing a proc
 
         // ok, dots aren't falling off imminently, and they are not buffed - see if we want to ij early and overwrite last ticks
         if (_state.StraightShotLeft <= _state.GCD && refreshDotsDeadline <= _state.GCD + 5 && !ShouldUseApexArrow(aaStrategy) && (_state.BlastArrowLeft <= _state.GCD || baStrategy == OffensiveStrategy.Delay))
-            return true; // refresh 1 gcd early, if we would be forced to cast BS otherwise - if so, we could proc RA and then overwrite it by IJ on next gcd (TODO: i don't really like these conditions...)
+            return true; // refresh 1 GCD early, if we would be forced to cast BS otherwise - if so, we could proc RA and then overwrite it by IJ on next GCD (TODO: i don't really like these conditions...)
         if (_state.BattleVoiceLeft <= _state.GCD)
             return false; // outside buff window, so no more reasons to extend early
 
         // under buffs, we might want to do early IJ, so that AA can be slightly delayed, or so that we don't risk proc overwrites
         int maxRemainingGCDs = 1; // by default, refresh on last possible GCD before we either drop dots or drop major buffs
         if (_state.StraightShotLeft <= _state.GCD)
-            ++maxRemainingGCDs; // 1 extra gcd if we don't have RA proc (if we don't refresh early, we might use filler, which could give us a proc; then on next gcd we'll be forced to IJ to avoid dropping dots, which might give another proc)
+            ++maxRemainingGCDs; // 1 extra GCD if we don't have RA proc (if we don't refresh early, we might use filler, which could give us a proc; then on next GCD we'll be forced to IJ to avoid dropping dots, which might give another proc)
         // if we're almost at the gauge cap, we want to delay AA/BA (but still fit them into buff window), so we want to IJ earlier
-        if (_state.SoulVoice is > 50 and < 100) // best we can hope for over 4 gcds is ~25 gauge (4 ticks + EA) - TODO: improve condition
-            maxRemainingGCDs += _state.Unlocked(BRD.AID.BlastArrow) ? 2 : 1; // 1/2 gcds for AA/BA; only under buffs - outside buffs it's simpler to delay AA
+        if (_state.SoulVoice is > 50 and < 100) // best we can hope for over 4 GCDs is ~25 gauge (4 ticks + EA) - TODO: improve condition
+            maxRemainingGCDs += _state.Unlocked(BRD.AID.BlastArrow) ? 2 : 1; // 1/2 GCDs for AA/BA; only under buffs - outside buffs it's simpler to delay AA
         return _state.BattleVoiceLeft <= _state.GCD + 2.5f * maxRemainingGCDs;
     }
 
@@ -304,7 +304,7 @@ public sealed class LegacyBRD : LegacyModule
         {
             >= 100 => _state.CD(BRD.AID.BattleVoice) >= _state.GCD + 45, // use asap, unless we are unlikely to have 80+ gauge by the next buff window (TODO: reconsider time limit)
             >= 80 => _state.BattleVoiceLeft > _state.GCD
-                ? _state.BattleVoiceLeft < _state.GCD + 5 // under buffs, don't delay AA if doing that will make BA miss buffs (TODO: also don't delay if it can drift barrage past third gcd...)
+                ? _state.BattleVoiceLeft < _state.GCD + 5 // under buffs, don't delay AA if doing that will make BA miss buffs (TODO: also don't delay if it can drift barrage past third GCD...)
                 : _state.CD(BRD.AID.BattleVoice) - _state.GCD is >= 45 and < 55, // outside buffs, delay unless we risk entering a window where next buffs are imminent and we can't AA (TODO: reconsider window size)
             _ => false // never use AA at <80 gauge automatically; assume manual planning for things like end-of-fight or downtimes
         }
@@ -328,7 +328,7 @@ public sealed class LegacyBRD : LegacyModule
     private bool ShouldUsePotion(PotionStrategy strategy) => strategy switch
     {
         PotionStrategy.Manual => false,
-        PotionStrategy.Burst => !Player.InCombat ? _state.CountdownRemaining < 2 : _state.TargetingEnemy && _state.CD(BRD.AID.RagingStrikes) < _state.GCD + 3.5f, // pre-pull or RS ready in 2 gcds (assume pot -> late-weaved WM -> RS)
+        PotionStrategy.Burst => !Player.InCombat ? _state.CountdownRemaining < 2 : _state.TargetingEnemy && _state.CD(BRD.AID.RagingStrikes) < _state.GCD + 3.5f, // pre-pull or RS ready in 2 GCDs (assume pot -> late-weaved WM -> RS)
         PotionStrategy.Force => true,
         _ => false
     };
@@ -421,7 +421,7 @@ public sealed class LegacyBRD : LegacyModule
 
                 // there are cases where we want to prioritize RA over AA/BA:
                 // - if barrage is about to come off CD, we don't want to delay it needlessly
-                // - if delaying RA would force us to IJ on next gcd (potentially overwriting proc)
+                // - if delaying RA would force us to IJ on next GCD (potentially overwriting proc)
                 // we only do that if there are no explicit AA/BA force strategies (in that case we assume just doing AA/BA is more important than wasting a proc)
                 bool highPriorityRA = _state.StraightShotLeft > _state.GCD // RA ready
                     && strategyAA is ApexArrowStrategy.Automatic or ApexArrowStrategy.Delay // no forced AA
@@ -443,7 +443,7 @@ public sealed class LegacyBRD : LegacyModule
             }
             else
             {
-                // pre IJ our gcds are extremely boring: keep dots up and use up straight shot procs asap
+                // pre IJ our GCDs are extremely boring: keep dots up and use up straight shot procs asap
                 // only HS can proc straight shot, so we're not wasting potential procs here
                 // TODO: tweak threshold so that we don't overwrite or miss ticks...
                 // TODO: do we care about reapplying dots early under raidbuffs?..
@@ -503,24 +503,24 @@ public sealed class LegacyBRD : LegacyModule
 
         // apply major buffs
         // RS as soon as we enter WM (or just on CD, if we don't have it yet)
-        // in opener, it end up being late-weaved after WM (TODO: can we weave it extra-late to ensure 9th gcd is buffed?)
-        // in 2-minute bursts, it ends up being early-weaved after first WM gcd (TODO: can we weave it later to ensure 10th gcd is buffed?)
+        // in opener, it end up being late-weaved after WM (TODO: can we weave it extra-late to ensure 9th GCD is buffed?)
+        // in 2-minute bursts, it ends up being early-weaved after first WM GCD (TODO: can we weave it later to ensure 10th GCD is buffed?)
         var strategyRS = strategy.Option(Track.RagingStrikes).As<OffensiveStrategy>();
         if (_state.Unlocked(BRD.AID.RagingStrikes) && ShouldUseRagingStrikes(strategyRS) && _state.CanWeave(BRD.AID.RagingStrikes, 0.6f, deadline))
             return ActionID.MakeSpell(BRD.AID.RagingStrikes);
 
-        // BV+RF 2 gcds after RS (RF first with 1 coda, ? with 2 coda, BV first with 3 coda)
+        // BV+RF 2 GCDs after RS (RF first with 1 coda, ? with 2 coda, BV first with 3 coda)
         // visualization:
         // -GCD               0               GCD
-        //   * -gcd---------- * -gcd---------- * -gcd---------- * -gcd----------
+        //   * -GCD---------- * -GCD---------- * -GCD---------- * -GCD----------
         //   * ---- RS ------ * -------------- * ---- BV - RF - * --------------
         //           ^^^^----------------^^^----------^^^
         //         20s  20s              max          min
         // GCD is slightly smaller than 2.5 during opener, and slightly smaller than 2.1 during reopener (assuming 4-stack AP)
-        // RS should happen in second ogcd slot during opener (t in [-gcd + 1.2, -0.6] == [-1.3 + sksDelta, -0.6], or anywhere during burst (t in [-gcd + 0.6, -0.6] == [-1.5 + sksDelta, -0.6])
+        // RS should happen in second oGCD slot during opener (t in [-GCD + 1.2, -0.6] == [-1.3 + sksDelta, -0.6], or anywhere during burst (t in [-GCD + 0.6, -0.6] == [-1.5 + sksDelta, -0.6])
         // RS buff starts ticking down from 20 at t+erDelay, so we can imagine that RS has effective time-left == 20+erDelay when applied
-        // we want to enable BV/RF between [gcd-0.6, gcd+0.6]
-        // at T=gcd RS buff will have remaining 20+erDelay-(T-t) == [opener] 20+erDelay-(2.5-sksDelta)+[-1.3+sksDelta, -0.6] == 17.5+erDelay+sksDelta+[-1.3+sksDelta, -0.6] == [16.2+sksDelta, 16.9]+erDelay+sksDelta
+        // we want to enable BV/RF between [GCD-0.6, GCD+0.6]
+        // at T=GCD RS buff will have remaining 20+erDelay-(T-t) == [opener] 20+erDelay-(2.5-sksDelta)+[-1.3+sksDelta, -0.6] == 17.5+erDelay+sksDelta+[-1.3+sksDelta, -0.6] == [16.2+sksDelta, 16.9]+erDelay+sksDelta
         //                                                       == [burst]  20+erDelay-(2.1-sksDelta)+[-1.5+sksDelta, -0.6] == 17.9+erDelay+sksDelta+[-1.5+sksDelta, -0.6] == [16.4+sksDelta, 17.3]+erDelay+sksDelta
         // so condition is [opener] RSLeft <= 16.8 + [sksDelta, 0.7]+erDelay+sksDelta
         //                 [burst]  RSLeft <= 17.0 + [sksDelta, 0.9]+erDelay+sksDelta
@@ -540,7 +540,7 @@ public sealed class LegacyBRD : LegacyModule
         // EA - important not to drift (TODO: is it actually better to delay it if we're capped on PP/BL?)
         // we should not be at risk of capping BL (since we spend charges asap in WM/MB anyway)
         // we might risk capping PP, but we should've dealt with that on previous slots by using PP2
-        // TODO: consider clipping gcd to avoid ea drift...
+        // TODO: consider clipping GCD to avoid ea drift...
         var strategyEA = strategy.Option(Track.EmpyrealArrow).As<OffensiveStrategy>();
         if (_state.TargetingEnemy && ShouldUseEmpyrealArrow(strategyEA) && _state.Unlocked(BRD.AID.EmpyrealArrow) && _state.CanWeave(BRD.AID.EmpyrealArrow, 0.6f, deadline))
             return ActionID.MakeSpell(BRD.AID.EmpyrealArrow);
@@ -565,7 +565,7 @@ public sealed class LegacyBRD : LegacyModule
                 bool usePP2 = false;
                 if (_state.CanWeave(BRD.AID.EmpyrealArrow, 0.6f, _state.GCD))
                 {
-                    // we're going to use EA in next ogcd slot before GCD => use PP2 if we won't be able to wait until tick and weave before EA
+                    // we're going to use EA in next oGCD slot before GCD => use PP2 if we won't be able to wait until tick and weave before EA
                     usePP2 = !_state.CanWeave(nextProcIn, 0.6f, _state.CD(BRD.AID.EmpyrealArrow));
                 }
                 else if (_state.CD(BRD.AID.EmpyrealArrow) < _state.GCD + 1.2f)

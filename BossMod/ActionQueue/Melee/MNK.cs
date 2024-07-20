@@ -66,7 +66,7 @@ public enum TraitID : uint
     EnhancedThunderclap = 431, // L84, third charge
     MeleeMastery = 518, // L84, potency increase
     FlintStrikeMastery = 512, // L86, flint strike -> rising phoenix upgrade
-    EnhancedBrotherhood = 432, // L88, gives chakra for each gcd under brotherhood buff
+    EnhancedBrotherhood = 432, // L88, gives chakra for each GCD under brotherhood buff
     TornadoKickMastery = 513, // L90, tornado kick -> phantom rush upgrade
 }
 

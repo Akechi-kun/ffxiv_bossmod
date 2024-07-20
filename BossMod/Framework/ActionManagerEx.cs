@@ -149,8 +149,8 @@ public unsafe sealed class ActionManagerEx : IDisposable
 
     public float GCD()
     {
-        var gcd = _inst->GetRecastGroupDetail(ActionDefinitions.GCDGroup);
-        return gcd->Total - gcd->Elapsed;
+        var GCD = _inst->GetRecastGroupDetail(ActionDefinitions.GCDGroup);
+        return GCD->Total - GCD->Elapsed;
     }
 
     public ActionID GetDutyAction(ushort slot)

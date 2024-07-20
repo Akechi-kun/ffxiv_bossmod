@@ -267,16 +267,16 @@ public sealed class LegacyMNK : LegacyModule
         _state.UpdatePositionals(primaryTarget, GetNextPositional(strategy), _state.TrueNorthLeft > _state.GCD);
 
         // TODO: refactor all that, it's kinda senseless now
-        MNK.AID gcd = GetNextBestGCD(strategy);
-        PushResult(gcd, primaryTarget);
+        MNK.AID GCD = GetNextBestGCD(strategy);
+        PushResult(GCD, primaryTarget);
 
-        ActionID ogcd = default;
-        var deadline = _state.GCD > 0 && gcd != default ? _state.GCD : float.MaxValue;
-        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength, deadline);
-        if (!ogcd && _state.CanWeave(deadline)) // second/only ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline, deadline);
-        PushResult(ogcd, primaryTarget);
+        ActionID oGCD = default;
+        var deadline = _state.GCD > 0 && GCD != default ? _state.GCD : float.MaxValue;
+        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength, deadline);
+        if (!oGCD && _state.CanWeave(deadline)) // second/only oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline, deadline);
+        PushResult(oGCD, primaryTarget);
     }
 
     //protected override void QueueAIActions()
@@ -475,24 +475,24 @@ public sealed class LegacyMNK : LegacyModule
 
         var curForm = GetEffectiveForm(strategy);
 
-        var gcdsUntilCoeurl = curForm switch
+        var GCDsUntilCoeurl = curForm switch
         {
             Form.Coeurl => 3,
             Form.Raptor => 4,
             _ => 5
         };
 
-        var isCastingGcd = _state.AttackGCDTime - 0.500 < _state.GCD;
+        var isCastingGCD = _state.AttackGCDTime - 0.500 < _state.GCD;
         var formIsPending = _state.FormLeft == 1000;
         // the previous form sticks around for about 200ms before being updated. this results in an off-by-one error
         // in the refresh calculation that causes an annoying flickering effect in the positionals predictor.
         // if we know a form swap is imminent, bump the predicted GCD count back.
         // if PB is active, the current "form" is updated instantly since it's based on job gauge instead of a status effect,
         // so skip the adjustment
-        if (isCastingGcd && !formIsPending && _state.PerfectBalanceLeft == 0)
-            gcdsUntilCoeurl -= 1;
+        if (isCastingGCD && !formIsPending && _state.PerfectBalanceLeft == 0)
+            GCDsUntilCoeurl -= 1;
 
-        var willDemolish = _state.Unlocked(MNK.AID.Demolish) && NeedDemolishRefresh(strategy, gcdsUntilCoeurl);
+        var willDemolish = _state.Unlocked(MNK.AID.Demolish) && NeedDemolishRefresh(strategy, GCDsUntilCoeurl);
 
         return (willDemolish ? Positional.Rear : Positional.Flank, curForm == Form.Coeurl);
     }
@@ -675,7 +675,7 @@ public sealed class LegacyMNK : LegacyModule
             //      pre-PB demolish will fall off for multiple GCDs;
             //      so early non-demo solar is the only way to prevent clipping
 
-            // TODO: full demo is more potency than any single gcd, so we should use opo before demo if a refresh is imminent
+            // TODO: full demo is more potency than any single GCD, so we should use opo before demo if a refresh is imminent
             var isBH2 = _state.FireLeft == 0 && (forcedSolar || !_state.HasSolar) && _state.Unlocked(MNK.AID.RiddleOfFire);
             if (isBH2)
                 return canRaptor ? Form.Raptor : canCoeurl ? Form.Coeurl : Form.OpoOpo;
@@ -828,7 +828,7 @@ public sealed class LegacyMNK : LegacyModule
 
         // bhood 2 window: natural demolish happens in the middle of RoF. it's possible that only the blitz itself
         // gets the RoF buff, so BH2 consists of
-        // 1. PB -> "weak" non-OPO gcds until RoF is active
+        // 1. PB -> "weak" non-OPO GCDs until RoF is active
         // 2. RoF -> RP
         // 3. opo, DF, demolish
         // 4. PB -> lunar
@@ -843,7 +843,7 @@ public sealed class LegacyMNK : LegacyModule
         return LogWhy(false, "PB", "fallback");
     }
 
-    private bool ShouldUseTrueNorth(StrategyValues strategy, float lastOgcdDeadline)
+    private bool ShouldUseTrueNorth(StrategyValues strategy, float lastOGCDDeadline)
     {
         var tnStrategy = strategy.Option(Track.TrueNorth).As<OffensiveStrategy>();
         if (tnStrategy == OffensiveStrategy.Delay || _state.TrueNorthLeft > _state.AnimationLock)
@@ -857,7 +857,7 @@ public sealed class LegacyMNK : LegacyModule
 
         // always late weave true north if possible (it's annoying for it to be used immediately)
         // but prioritize Riddle of Fire over it
-        if (ShouldUseRoF(strategy, lastOgcdDeadline))
+        if (ShouldUseRoF(strategy, lastOGCDDeadline))
             return positionalIsWrong;
         else
             return positionalIsWrong && _state.GCD <= 0.800;
@@ -879,7 +879,7 @@ public sealed class LegacyMNK : LegacyModule
     // UseAOE is only true if enemies are in range
     private bool HaveTarget() => _state.TargetingEnemy || _state.UseAOE;
 
-    private bool NeedDemolishRefresh(StrategyValues strategy, int gcds)
+    private bool NeedDemolishRefresh(StrategyValues strategy, int GCDs)
     {
         // don't care
         if (_state.UseAOE)
@@ -892,7 +892,7 @@ public sealed class LegacyMNK : LegacyModule
         if (demolishStrategy == OffensiveStrategy.Delay)
             return false;
 
-        if (WillStatusExpire(gcds, _state.TargetDemolishLeft))
+        if (WillStatusExpire(GCDs, _state.TargetDemolishLeft))
             // snap is 280 (if flank) potency
             // demo is 310 (if rear) potency after 3 ticks: 100 + 70 * 3
             // TODO: this should actually be calculating from the time when we expect to refresh demolish, rather than naively adding duration to the current one, but it probably works for most purposes?
@@ -901,7 +901,7 @@ public sealed class LegacyMNK : LegacyModule
         return false;
     }
 
-    private bool NeedDFRefresh(StrategyValues strategy, int gcds)
+    private bool NeedDFRefresh(StrategyValues strategy, int GCDs)
     {
         var dfStrategy = strategy.Option(Track.DisciplinedFist).As<OffensiveStrategy>();
         if (dfStrategy == OffensiveStrategy.Force)
@@ -910,11 +910,11 @@ public sealed class LegacyMNK : LegacyModule
         if (dfStrategy == OffensiveStrategy.Delay)
             return false;
 
-        return WillStatusExpire(gcds, _state.DisciplinedFistLeft);
+        return WillStatusExpire(GCDs, _state.DisciplinedFistLeft);
     }
 
-    private bool WillStatusExpire(int gcds, float statusDuration)
-        => statusDuration < _state.GCD + _state.AttackGCDTime * gcds;
+    private bool WillStatusExpire(int GCDs, float statusDuration)
+        => statusDuration < _state.GCD + _state.AttackGCDTime * GCDs;
 
     private bool CanSolar(StrategyValues strategy) => strategy.Option(Track.NextNadi).As<NadiChoice>() switch
     {

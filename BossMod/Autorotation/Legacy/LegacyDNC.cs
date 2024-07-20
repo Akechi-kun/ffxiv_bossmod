@@ -206,22 +206,22 @@ public sealed class LegacyDNC : LegacyModule
         _state.NumStarfallTargets = primaryTarget == null ? 0 : NumStarfallTargets(primaryTarget);
 
         // TODO: refactor all that, it's kinda senseless now
-        DNC.AID gcd = GetNextBestGCD(strategy);
-        PushResult(gcd, primaryTarget);
+        DNC.AID GCD = GetNextBestGCD(strategy);
+        PushResult(GCD, primaryTarget);
 
-        var deadline = _state.GCD > 0 && gcd != default ? _state.GCD : float.MaxValue;
+        var deadline = _state.GCD > 0 && GCD != default ? _state.GCD : float.MaxValue;
         if (_state.AutoPartner && _state.Unlocked(DNC.AID.ClosedPosition) && StatusLeft(DNC.SID.ClosedPosition) == 0 && _state.CanWeave(DNC.AID.ClosedPosition, 0.6f, deadline) && FindDancePartner() is var partner && partner != null)
         {
             PushResult(ActionID.MakeSpell(DNC.AID.ClosedPosition), partner);
         }
         else
         {
-            ActionID ogcd = default;
-            if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-                ogcd = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
-            if (!ogcd && _state.CanWeave(deadline)) // second/only ogcd slot
-                ogcd = GetNextBestOGCD(strategy, deadline);
-            PushResult(ogcd, primaryTarget);
+            ActionID oGCD = default;
+            if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
+                oGCD = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
+            if (!oGCD && _state.CanWeave(deadline)) // second/only oGCD slot
+                oGCD = GetNextBestOGCD(strategy, deadline);
+            PushResult(oGCD, primaryTarget);
         }
     }
 

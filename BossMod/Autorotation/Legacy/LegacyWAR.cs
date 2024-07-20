@@ -150,16 +150,16 @@ public sealed class LegacyWAR : LegacyModule
         };
 
         // TODO: refactor all that, it's kinda senseless now
-        WAR.AID gcd = GetNextBestGCD(strategy, aoe);
-        PushResult(gcd, primaryTarget);
+        WAR.AID GCD = GetNextBestGCD(strategy, aoe);
+        PushResult(GCD, primaryTarget);
 
-        ActionID ogcd = default;
-        var deadline = _state.GCD > 0 && gcd != default ? _state.GCD : float.MaxValue;
-        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength, aoe);
-        if (!ogcd && _state.CanWeave(deadline)) // second/only ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline, aoe);
-        PushResult(ogcd, primaryTarget);
+        ActionID oGCD = default;
+        var deadline = _state.GCD > 0 && GCD != default ? _state.GCD : float.MaxValue;
+        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength, aoe);
+        if (!oGCD && _state.CanWeave(deadline)) // second/only oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline, aoe);
+        PushResult(oGCD, primaryTarget);
     }
 
     //protected override void QueueAIActions(ActionQueue queue)
@@ -265,7 +265,7 @@ public sealed class LegacyWAR : LegacyModule
         _ => true
     };
 
-    private bool ShouldUseInfuriate(InfuriateStrategy strategy, GCDStrategy gcdStrategy, bool aoe)
+    private bool ShouldUseInfuriate(InfuriateStrategy strategy, GCDStrategy GCDStrategy, bool aoe)
     {
         switch (strategy)
         {
@@ -295,7 +295,7 @@ public sealed class LegacyWAR : LegacyModule
                         return false;
 
                     // with IR, main purpose of infuriate is to generate gauge to burn in spend mode
-                    if (ShouldSpendGauge(gcdStrategy, aoe))
+                    if (ShouldSpendGauge(GCDStrategy, aoe))
                         return true;
 
                     // don't delay if we risk overcapping stacks
@@ -482,9 +482,9 @@ public sealed class LegacyWAR : LegacyModule
 
         // 1. if it is the last CD possible for PR/NC, don't waste them
         bool aggressive = false; // TODO: strategy? or don't care?
-        float gcdDelay = _state.GCD + (aggressive ? 0 : 2.5f);
-        float secondGCDIn = gcdDelay + 2.5f;
-        float thirdGCDIn = gcdDelay + 5f;
+        float GCDDelay = _state.GCD + (aggressive ? 0 : 2.5f);
+        float secondGCDIn = GCDDelay + 2.5f;
+        float thirdGCDIn = GCDDelay + 5f;
         if (primalRendWindow > _state.GCD && primalRendWindow < secondGCDIn)
             return WAR.AID.PrimalRend;
         if (primalRuinationWindow > _state.GCD && primalRuinationWindow < secondGCDIn)
@@ -540,12 +540,12 @@ public sealed class LegacyWAR : LegacyModule
         }
 
         // 4. if we're delaying Infuriate due to gauge, cast FC asap (7.5 for FC)
-        if (_state.Gauge > 50 && _state.Unlocked(WAR.AID.Infuriate) && _state.CD(WAR.AID.Infuriate) <= gcdDelay + 7.5)
+        if (_state.Gauge > 50 && _state.Unlocked(WAR.AID.Infuriate) && _state.CD(WAR.AID.Infuriate) <= GCDDelay + 7.5)
             return GetNextFCAction(aoe);
 
         // 5. if we have >50 gauge, IR is imminent, and not spending gauge now will cause us to overcap infuriate, spend gauge asap
-        // 30 seconds is for FC + IR + 3xFC - this is 4 gcds (10 sec) and 4 FCs (another 20 sec)
-        if (_state.Gauge > 50 && _state.Unlocked(WAR.AID.Infuriate) && _state.CD(WAR.AID.Infuriate) <= gcdDelay + 30 && irCD < secondGCDIn)
+        // 30 seconds is for FC + IR + 3xFC - this is 4 GCDs (10 sec) and 4 FCs (another 20 sec)
+        if (_state.Gauge > 50 && _state.Unlocked(WAR.AID.Infuriate) && _state.CD(WAR.AID.Infuriate) <= GCDDelay + 30 && irCD < secondGCDIn)
             return GetNextFCAction(aoe);
 
         // 6. if there is no chance we can delay PR until next raid buffs, just cast it now
@@ -573,10 +573,10 @@ public sealed class LegacyWAR : LegacyModule
             return GetNextFCAction(aoe);
 
         // TODO: reconsider min time left...
-        return GetNextUnlockedComboAction(_state, strategyGCD == GCDStrategy.ForceSpend ? 0 : gcdDelay + 12.5f, aoe);
+        return GetNextUnlockedComboAction(_state, strategyGCD == GCDStrategy.ForceSpend ? 0 : GCDDelay + 12.5f, aoe);
     }
 
-    // window-end is either GCD or GCD - time-for-second-ogcd; we are allowed to use ogcds only if their animation lock would complete before window-end
+    // window-end is either GCD or GCD - time-for-second-oGCD; we are allowed to use oGCDs only if their animation lock would complete before window-end
     private ActionID GetNextBestOGCD(StrategyValues strategy, float deadline, bool aoe)
     {
         // 0. onslaught as a gap-filler - this should be used asap even if we're delaying GCD, since otherwise we'll probably end up delaying it even more

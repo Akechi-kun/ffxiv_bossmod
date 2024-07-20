@@ -96,7 +96,7 @@ public class ColumnPlayerActions : Timeline.ColumnGroup
                     }
                 }
                 if (actionDef.MainCooldownGroup == ActionDefinitions.GCDGroup)
-                    effectDuration = Math.Min(effectDuration, 0.6f); // TODO: this is a hack, reconsider... the problem is that sometimes actions apply statuses that are then refreshed, that usually happens for gcds...
+                    effectDuration = Math.Min(effectDuration, 0.6f); // TODO: this is a hack, reconsider... the problem is that sometimes actions apply statuses that are then refreshed, that usually happens for GCDs...
                 if (effectDuration > 0)
                 {
                     col.AddHistoryEntryRange(enc.Time.Start, effectStart, effectDuration, actionName, 0x8000ff00).TooltipExtra = effectTooltip;
@@ -240,7 +240,7 @@ public class ColumnPlayerActions : Timeline.ColumnGroup
             }
         }
 
-        // add partially finished cooldown: we're either just spending another charge, or we're starting new cooldown slightly earlier than expected (due to high sks for gcd, or due to client-server timing differences)
+        // add partially finished cooldown: we're either just spending another charge, or we're starting new cooldown slightly earlier than expected (due to high sks for GCD, or due to client-server timing differences)
         if (data.ChargesOnCooldown > 0)
         {
             // assertion: timestamp < data.ChargeCooldownEnd

@@ -145,9 +145,9 @@
 //            deadline += 0.4f + _state.AnimationLockDelay;
 
 //        ActionQueue.Entry res = default;
-//        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
+//        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
 //            res = GetNextBestOGCD(deadline - _state.OGCDSlotLength);
-//        if (!res.Action && _state.CanWeave(deadline)) // second/only ogcd slot
+//        if (!res.Action && _state.CanWeave(deadline)) // second/only oGCD slot
 //            res = GetNextBestOGCD(deadline);
 //        return res;
 //    }
@@ -160,7 +160,7 @@
 //        if (_strategy.BestSTHeal.Target != null && _strategy.BestSTHeal.HPRatio <= 0 && _state.Unlocked(AID.Benediction) && _state.CanWeave(CDGroup.Benediction, 0.6f, deadline))
 //            return MakeResult(AID.Benediction, _strategy.BestSTHeal.Target);
 
-//        // swiftcast, if can't cast any gcd (TODO: current check is not very good...)
+//        // swiftcast, if can't cast any GCD (TODO: current check is not very good...)
 //        if (deadline >= 10000 && _strategy.ForceMovementIn < 5 && _state.Unlocked(AID.Swiftcast) && _state.CanWeave(CDGroup.Swiftcast, 0.6f, deadline))
 //            return MakeResult(AID.Swiftcast, Player);
 

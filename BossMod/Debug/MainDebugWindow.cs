@@ -256,9 +256,9 @@ class MainDebugWindow(WorldState ws, RotationModuleManager autorot, ActionManage
             var sksMod = 130 * (paramGrow.BaseSpeed - sksValue) / paramGrow.LevelModifier + 1000;
             var spsMod = 130 * (paramGrow.BaseSpeed - spsValue) / paramGrow.LevelModifier + 1000;
             var hasteValue = uiState->PlayerState.Attributes[47];
-            ImGui.TextUnformatted($"SKS: value={sksValue}, mod={sksMod}, gcd={2500 * sksMod / 1000}");
-            ImGui.TextUnformatted($"SPS: value={spsValue}, mod={spsMod}, gcd={2500 * spsMod / 1000}");
-            ImGui.TextUnformatted($"Haste: value={hasteValue}, gcd-sks={2500 * sksMod / 1000 * hasteValue / 100}, gcd-sps={2500 * spsMod / 1000 * hasteValue / 100}");
+            ImGui.TextUnformatted($"SKS: value={sksValue}, mod={sksMod}, GCD={2500 * sksMod / 1000}");
+            ImGui.TextUnformatted($"SPS: value={spsValue}, mod={spsMod}, GCD={2500 * spsMod / 1000}");
+            ImGui.TextUnformatted($"Haste: value={hasteValue}, GCD-sks={2500 * sksMod / 1000 * hasteValue / 100}, GCD-sps={2500 * spsMod / 1000 * hasteValue / 100}");
         }
 
         ImGui.BeginTable("attrs", 2);

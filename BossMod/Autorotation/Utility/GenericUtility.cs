@@ -41,8 +41,8 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
     // returns 0 if not needed, or current LB level
     protected int LBLevelToExecute(LBOption option)
     {
-        // note: limit break's animation lock is very long, so we're guaranteed to delay next gcd at least a bit => priority has to be higher than gcd
-        // note: while we could arguably delay that until right after next gcd, it's too risky, let the user deal with it by planning carefully...
+        // note: limit break's animation lock is very long, so we're guaranteed to delay next GCD at least a bit => priority has to be higher than GCD
+        // note: while we could arguably delay that until right after next GCD, it's too risky, let the user deal with it by planning carefully...
         if (option == LBOption.None)
             return 0;
         var curLevel = World.Party.LimitBreakMax > 0 ? World.Party.LimitBreakCur / World.Party.LimitBreakMax : 0;

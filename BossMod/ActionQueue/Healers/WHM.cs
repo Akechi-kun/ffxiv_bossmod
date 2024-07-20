@@ -81,8 +81,8 @@ public enum SID : uint
     Dia = 1871, // applied by Dia to target, dot
     Medica2 = 150, // applied by Medica2 to targets, hot
     Freecure = 155, // applied by Cure1 to self, next cure2 is free
-    Swiftcast = 167, // applied by Swiftcast to self, next gcd is instant
-    ThinAir = 1217, // applied by Thin Air to self, next gcd costs no mp
+    Swiftcast = 167, // applied by Swiftcast to self, next GCD is instant
+    ThinAir = 1217, // applied by Thin Air to self, next GCD costs no mp
     LucidDreaming = 1204, // applied by Lucid Dreaming to self, mp regen
     DivineBenison = 1218, // applied by Divine Benison to target, shield
     Confession = 1219, // applied by Plenary Indulgence to self, heal buff

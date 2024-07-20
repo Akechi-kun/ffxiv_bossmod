@@ -21,17 +21,17 @@ public sealed class ActionQueue
         // priorities > Minimal and < VeryLow should be used for ??? (don't know good usecases)
         public const float VeryLow = 1000; // only use this action if there is nothing else to press
         // priorities > VeryLow and < Low should be used for actions that can be safely delayed without affecting dps (eg. ability with charges when there is no risk of overcapping or losing raidbuffs any time soon)
-        public const float Low = 2000; // only use this action if it won't delay dps action (eg. delay if there are any ogcds that need to be used)
-        // priorities > Low and < Medium should be used for normal ogcds that are part of the rotation
-        public const float Medium = 3000; // use this action in first possible ogcd slot, unless there's some hugely important rotational ogcd; you should always have at least 1 slot per gcd to execute Medium actions
-        // priorities > Medium and < High should be used for ogcds that can't be delayed (eg. GNB continuation); code should be careful not to queue more than one such action per gcd window
-        public const float High = 4000; // use this action asap, unless it would delay gcd (that is - in first possible ogcd slot); careless use could severely affect dps
-        // priorities > High and < VeryHigh should be used for gcds, or any other actions that need to delay gcd
-        public const float VeryHigh = 5000; // drop everything and use this action asap, delaying gcd if needed; almost guaranteed to severely affect dps
+        public const float Low = 2000; // only use this action if it won't delay dps action (eg. delay if there are any oGCDs that need to be used)
+        // priorities > Low and < Medium should be used for normal oGCDs that are part of the rotation
+        public const float Medium = 3000; // use this action in first possible oGCD slot, unless there's some hugely important rotational oGCD; you should always have at least 1 slot per GCD to execute Medium actions
+        // priorities > Medium and < High should be used for oGCDs that can't be delayed (eg. GNB continuation); code should be careful not to queue more than one such action per GCD window
+        public const float High = 4000; // use this action asap, unless it would delay GCD (that is - in first possible oGCD slot); careless use could severely affect dps
+        // priorities > High and < VeryHigh should be used for GCDs, or any other actions that need to delay GCD
+        public const float VeryHigh = 5000; // drop everything and use this action asap, delaying GCD if needed; almost guaranteed to severely affect dps
         // priorities > VeryHigh should not be used by general code
 
-        public const float ManualOGCD = 4001; // manually pressed ogcd should be higher priority than any non-gcd, but lower than any gcd
-        public const float ManualGCD = 4999; // manually pressed gcd should be higher priority than any gcd; it's still lower priority than VeryHigh, since presumably that action is planned to delay gcd
+        public const float ManualOGCD = 4001; // manually pressed oGCD should be higher priority than any non-GCD, but lower than any GCD
+        public const float ManualGCD = 4999; // manually pressed GCD should be higher priority than any GCD; it's still lower priority than VeryHigh, since presumably that action is planned to delay GCD
         public const float ManualEmergency = 9000; // this action should be used asap, because user is spamming it
     }
 

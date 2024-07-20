@@ -118,7 +118,7 @@ public sealed class LegacyDRG : LegacyModule
         //}
         _state.TargetChaosThrustLeft = _state.StatusDetails(primaryTarget, _state.ExpectedChaoticSpring, Player.InstanceID).Left;
 
-        // TODO: auto select aoe target for ogcds
+        // TODO: auto select aoe target for oGCDs
         var aoeStrategy = strategy.Option(Track.AOE).As<AOEStrategy>();
         (_state.BestAOEGCDTarget, _state.NumAOEGCDTargets) = _state.Unlocked(DRG.AID.DoomSpike) ? CheckAOETargeting(aoeStrategy, primaryTarget, 10, NumTargetsHitByAOEGCD, IsHitByAOEGCD) : (null, 0);
         _state.UseAOERotation = _state.NumAOEGCDTargets >= 3 && (_state.Unlocked(DRG.AID.SonicThrust) || _state.PowerSurgeLeft > _state.GCD); // TODO: better AOE condition
@@ -126,16 +126,16 @@ public sealed class LegacyDRG : LegacyModule
         _state.UpdatePositionals(primaryTarget, GetNextPositional(), _state.TrueNorthLeft > _state.GCD || _state.RightEyeLeft > _state.GCD);
 
         // TODO: refactor all that, it's kinda senseless now
-        DRG.AID gcd = GetNextBestGCD(strategy);
-        PushResult(gcd, gcd is DRG.AID.DoomSpike or DRG.AID.DraconianFury or DRG.AID.SonicThrust or DRG.AID.CoerthanTorment ? _state.BestAOEGCDTarget : primaryTarget);
+        DRG.AID GCD = GetNextBestGCD(strategy);
+        PushResult(GCD, GCD is DRG.AID.DoomSpike or DRG.AID.DraconianFury or DRG.AID.SonicThrust or DRG.AID.CoerthanTorment ? _state.BestAOEGCDTarget : primaryTarget);
 
-        ActionID ogcd = default;
-        var deadline = _state.GCD > 0 && gcd != default ? _state.GCD : float.MaxValue;
-        //if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-        //    ogcd = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
-        if (!ogcd && _state.CanWeave(deadline)) // second/only ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline, gcd);
-        PushResult(ogcd, ogcd == ActionID.MakeSpell(DRG.AID.DragonSight) ? DRG.Definitions.FindBestDragonSightTarget(World, Player) : primaryTarget);
+        ActionID oGCD = default;
+        var deadline = _state.GCD > 0 && GCD != default ? _state.GCD : float.MaxValue;
+        //if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
+        //    oGCD = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength);
+        if (!oGCD && _state.CanWeave(deadline)) // second/only oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline, GCD);
+        PushResult(oGCD, oGCD == ActionID.MakeSpell(DRG.AID.DragonSight) ? DRG.Definitions.FindBestDragonSightTarget(World, Player) : primaryTarget);
     }
 
     //protected override void QueueAIActions()
@@ -174,23 +174,23 @@ public sealed class LegacyDRG : LegacyModule
             // L50-55: at this point, we have 3-action buff and pure damage combos
             // damage combo (vorpal + full) is 170+250+400 = 820 potency
             // buff combo (disembowel + chaos) is 170+210+260+40*N = 640+40*N potency (assuming positional, -40 otherwise), where N is num ticks
-            // dot is 8 ticks (24 sec), assuming 2.5 gcd, we can either do 1:2 rotation (9 gcds = 22.5s => reapplying dot at ~1.5 left) or 1:3 rotation (12 gcds = 30s => dropping a dot for 6 seconds)
-            // these seem to be really close (285 vs 284.44 p/gcd); balance recommends 1:3 rotation however
+            // dot is 8 ticks (24 sec), assuming 2.5 GCD, we can either do 1:2 rotation (9 GCDs = 22.5s => reapplying dot at ~1.5 left) or 1:3 rotation (12 GCDs = 30s => dropping a dot for 6 seconds)
+            // these seem to be really close (285 vs 284.44 p/GCD); balance recommends 1:3 rotation however
             // we use dot duration rather than buff duration, because it works for two-target scenario
 
             // L56-57: at this point, we have 3-action buff and 4-action damage combos
             // damage combo (vorpal + full + f&c) is 170+250+400+300 = 1120 potency (asssuming positional)
             // buff combo (disembowel + chaos) is same 640+40*N potency as above
-            // most logical is 1:2 rotation (11 gcds = 27.5s => dropping a dot for 3.5s), since 1:1 would clip 3 ticks
+            // most logical is 1:2 rotation (11 GCDs = 27.5s => dropping a dot for 3.5s), since 1:1 would clip 3 ticks
             // it also works nicely for 2 targets (25s rotation, meaning almost full dot uptime on both targets)
 
             // L58-63: at this point, we have 4-action buff and pure damage combos
             // damage combo (vorpal + full + f&c) is same 1120 potency as above
             // buff combo (disembowel + chaos + wheeling) is +300 = 940+40*N potency
-            // most logical is 1:2 rotation (12 gcds = 30s => dropping a dot for 6s), since 1:1 would clip 2 ticks
+            // most logical is 1:2 rotation (12 GCDs = 30s => dropping a dot for 6s), since 1:1 would clip 2 ticks
 
             // L64+: at this point, we have 5-action buff and pure damage combos
-            // most logical is 1:1 rotation (10 gcds = 25s => dropping a dot for 1s)
+            // most logical is 1:1 rotation (10 GCDs = 25s => dropping a dot for 1s)
 
             // if we use buff combo, next dot refresh be second action - that's 2.5s + however many ticks we are ok with overwriting (0 in all cases, for now)
             return !_state.ForbidDOTs && _state.TargetChaosThrustLeft < secondActionIn + 2.5f;
@@ -198,7 +198,7 @@ public sealed class LegacyDRG : LegacyModule
         else if (_state.Unlocked(DRG.AID.Disembowel))
         {
             // at this point we have 2-action buff combo and 2 or 3-action pure damage combo
-            // if we execute pure damage combo, next chance to disembowel will be in GCD-remaining (vorpal) + N (full, if unlocked, then true, then disembowel) gcds
+            // if we execute pure damage combo, next chance to disembowel will be in GCD-remaining (vorpal) + N (full, if unlocked, then true, then disembowel) GCDs
             // we want to avoid dropping power surge buff, so that disembowel is still buffed
             var damageComboLength = _state.Unlocked(DRG.AID.FullThrust) ? 3 : 2;
             return _state.PowerSurgeLeft < secondActionIn + 2.5f * damageComboLength;
@@ -429,7 +429,7 @@ public sealed class LegacyDRG : LegacyModule
                 return ActionID.MakeSpell(DRG.AID.DragonSight);
             if (_state.Unlocked(DRG.AID.BattleLitany) && _state.CanWeave(DRG.AID.BattleLitany, 0.6f, deadline))
                 return ActionID.MakeSpell(DRG.AID.BattleLitany);
-            // life surge on most damaging gcd
+            // life surge on most damaging GCD
             if (_state.Unlocked(DRG.AID.LifeSurge) && _state.CanWeave(_state.CD(DRG.AID.LifeSurge) - 45, 0.6f, deadline) && UseLifeSurge())
                 return ActionID.MakeSpell(DRG.AID.LifeSurge);
 

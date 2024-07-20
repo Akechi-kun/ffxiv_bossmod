@@ -87,9 +87,9 @@ public static class UIStrategyValue
             Base priorities are the following:
             * Very Low (1000) - action will be used only if there is nothing else to press.
             * Low (2000) - action will be used only if it won't delay any dps action (it might delay eg. spending a second charge when there is no risk of overcapping).
-            * Medium (3000) - action will be used in next possible ogcd slot, but it won't delay gcd or any extremely important ogcds; you can expect to have at least 1 slot for medium actions per gcd.
-            * High (4000) - action will be used in the next possible ogcd slot; it won't delay gcd, but might break the rotation in some cases if not used carefully.
-            * Very High (5000) - action will be used asap; will delay gcd if needed.
+            * Medium (3000) - action will be used in next possible oGCD slot, but it won't delay GCD or any extremely important oGCDs; you can expect to have at least 1 slot for medium actions per GCD.
+            * High (4000) - action will be used in the next possible oGCD slot; it won't delay GCD, but might break the rotation in some cases if not used carefully.
+            * Very High (5000) - action will be used asap; will delay GCD if needed.
             """);
 
         if (overridePriority)

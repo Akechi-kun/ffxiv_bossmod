@@ -67,7 +67,7 @@
 //    {
 //        // 1. potion - TODO
 
-//        // 2. fight or flight, if off gcd and late-weaving, after first combo action
+//        // 2. fight or flight, if off GCD and late-weaving, after first combo action
 //        if (state.Unlocked(AID.FightOrFlight) && state.ComboLastMove == (aoe ? AID.TotalEclipse : AID.FastBlade) && state.CanWeave(CDGroup.FightOrFlight, 0.6f, deadline) && state.GCD <= 1.0f)
 //            return ActionID.MakeSpell(AID.FightOrFlight);
 

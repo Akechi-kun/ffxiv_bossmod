@@ -66,7 +66,7 @@ public sealed class MCH(RotationModuleManager manager, Actor player) : xbase<AID
             if (Unlocked(AID.HeatBlast))
                 PushGCD(AID.HeatBlast, primaryTarget);
 
-            // we don't use any other gcds during overheat
+            // we don't use any other GCDs during overheat
             return;
         }
 

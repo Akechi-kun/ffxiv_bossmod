@@ -100,8 +100,8 @@ namespace UIDev
                 strategy.RaidBuffsIn = t < BuffWindowOffset ? 0 : (BuffWindowOffset + nextBuffCycleIndex * BuffWindowFreq - t);
 
                 var action = t == 0 && state.GCD == 0 && StartWithTomahawk && state.Unlocked(AID.Tomahawk) ? ActionID.MakeSpell(AID.Tomahawk) : GetNextBestAction(state, strategy, AOERotation);
-                (var mistake, var ogcd) = Cast(state, action, ref t);
-                DrawActionRow(action, !ogcd, mistake, t, state, strategy);
+                (var mistake, var oGCD) = Cast(state, action, ref t);
+                DrawActionRow(action, !oGCD, mistake, t, state, strategy);
             }
 
             ImGui.EndTable();
@@ -110,11 +110,11 @@ namespace UIDev
         public ActionID GetNextBestAction(Rotation.State state, Rotation.Strategy strategy, bool aoe)
         {
             ActionID res = new();
-            if (state.AnimationLock + 2 * state.OGCDSlotLength <= state.GCD) // first ogcd slot
+            if (state.AnimationLock + 2 * state.OGCDSlotLength <= state.GCD) // first oGCD slot
                 res = Rotation.GetNextBestOGCD(state, strategy, state.GCD - state.OGCDSlotLength, aoe);
-            if (!res && state.AnimationLock + state.OGCDSlotLength <= state.GCD) // second/only ogcd slot
+            if (!res && state.AnimationLock + state.OGCDSlotLength <= state.GCD) // second/only oGCD slot
                 res = Rotation.GetNextBestOGCD(state, strategy, state.GCD, aoe);
-            if (!res) // gcd
+            if (!res) // GCD
                 res = ActionID.MakeSpell(Rotation.GetNextBestGCD(state, strategy, aoe));
             return res;
         }

@@ -141,16 +141,16 @@ public sealed class LegacyGNB : LegacyModule
         };
 
         // TODO: refactor all that, it's kinda senseless now
-        GNB.AID gcd = GetNextBestGCD(strategy, aoe);
-        PushResult(gcd, primaryTarget);
+        GNB.AID GCD = GetNextBestGCD(strategy, aoe);
+        PushResult(GCD, primaryTarget);
 
-        ActionID ogcd = default;
-        var deadline = _state.GCD > 0 && gcd != default ? _state.GCD : float.MaxValue;
-        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength, aoe);
-        if (!ogcd && _state.CanWeave(deadline)) // second/only ogcd slot
-            ogcd = GetNextBestOGCD(strategy, deadline, aoe);
-        PushResult(ogcd, primaryTarget);
+        ActionID oGCD = default;
+        var deadline = _state.GCD > 0 && GCD != default ? _state.GCD : float.MaxValue;
+        if (_state.CanWeave(deadline - _state.OGCDSlotLength)) // first oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline - _state.OGCDSlotLength, aoe);
+        if (!oGCD && _state.CanWeave(deadline)) // second/only oGCD slot
+            oGCD = GetNextBestOGCD(strategy, deadline, aoe);
+        PushResult(oGCD, primaryTarget);
     }
 
     //protected override void QueueAIActions()

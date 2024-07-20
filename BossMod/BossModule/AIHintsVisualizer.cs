@@ -85,7 +85,7 @@ public class AIHintsVisualizer(AIHints hints, WorldState ws, Actor player, ulong
             // see whether we need to move target
             // TODO: think more about keeping uptime while tanking, this is tricky...
             var desiredToTarget = target.Actor.Position - target.DesiredPosition;
-            if (desiredToTarget.LengthSq() > 4 /* && gcd check*/)
+            if (desiredToTarget.LengthSq() > 4 /* && GCD check*/)
             {
                 var dest = target.DesiredPosition - adjRange * desiredToTarget.Normalized();
                 return NavigationDecision.Build(_naviCtx, ws, hints, player, dest, 0.5f, new(), Positional.Any);
