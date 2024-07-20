@@ -1,4 +1,5 @@
-﻿using BossMod.Autorotation;
+﻿using BossMod.AI;
+using BossMod.Autorotation;
 using Dalamud.Common;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Conditions;
@@ -58,6 +59,7 @@ public sealed class Plugin : IDalamudPlugin
         MultiboxUnlock.Exec();
         Network.IDScramble.Initialize();
         Camera.Instance = new();
+        AIMove.Instance = new();
 
         Service.Config.Initialize();
         Service.Config.LoadFromFile(dalamud.ConfigFile);
@@ -77,16 +79,16 @@ public sealed class Plugin : IDalamudPlugin
         _amex = new(_ws, _hints);
         _wsSync = new(_ws, _amex);
         _rotation = new(_rotationDB, _bossmod, _hints, _amex);
-        _ai = new(_rotation);
+        _ai = new(_rotation, _amex);
         _broadcast = new();
-        _ipc = new(_rotation);
+        _ipc = new(_rotation, _amex);
 
         _configUI = new(Service.Config, _ws, _rotationDB);
         _wndBossmod = new(_bossmod);
         _wndBossmodHints = new(_bossmod);
         _wndReplay = new(_ws, _rotationDB.Plans, new(dalamud.ConfigDirectory.FullName + "/replays"));
-        _wndRotation = new(_rotation, () => OpenConfigUI("Presets"));
-        _wndDebug = new(_ws, _rotation);
+        _wndRotation = new(_rotation, _amex, () => OpenConfigUI("Presets"));
+        _wndDebug = new(_ws, _rotation, _amex);
 
         dalamud.UiBuilder.DisableAutomaticUiHide = true;
         dalamud.UiBuilder.Draw += DrawUI;
@@ -163,7 +165,7 @@ public sealed class Plugin : IDalamudPlugin
         _bossmod.Update();
         _hintsBuilder.Update(_hints, PartyState.PlayerSlot);
         _amex.QueueManualActions();
-        _rotation.Update();
+        _rotation.Update(_amex.AnimationLockDelayEstimate);
         _ai.Update();
         _broadcast.Update();
         _amex.FinishActionGather();

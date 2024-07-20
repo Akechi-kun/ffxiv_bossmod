@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.JobGauge.Types;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
 
 namespace BossMod.Autorotation.Legacy;
 
@@ -122,12 +122,12 @@ public sealed class LegacyWAR : LegacyModule
         _state = new(this);
     }
 
-    public override void Execute(StrategyValues strategy, Actor? primaryTarget)
+    public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
-        _state.UpdateCommon(primaryTarget);
+        _state.UpdateCommon(primaryTarget, estimatedAnimLockDelay);
         _state.HaveTankStance = Player.FindStatus(WAR.SID.Defiance) != null;
 
-        _state.Gauge = Service.JobGauges.Get<WARGauge>().BeastGauge;
+        _state.Gauge = GetGauge<WarriorGauge>().BeastGauge;
         _state.SurgingTempestLeft = _state.StatusDetails(Player, WAR.SID.SurgingTempest, Player.InstanceID).Left;
         _state.NascentChaosLeft = _state.StatusDetails(Player, WAR.SID.NascentChaos, Player.InstanceID).Left;
         _state.PrimalRendLeft = _state.StatusDetails(Player, WAR.SID.PrimalRend, Player.InstanceID).Left;

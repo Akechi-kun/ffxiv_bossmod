@@ -138,7 +138,7 @@ public abstract class BossModule : IDisposable
         }
     }
 
-    public void Draw(float cameraAzimuth, int pcSlot, bool includeText, bool includeArena)
+    public void Draw(Angle cameraAzimuth, int pcSlot, bool includeText, bool includeArena)
     {
         var pc = Raid[pcSlot];
         if (pc == null)
@@ -232,6 +232,10 @@ public abstract class BossModule : IDisposable
         Service.Log($"[ModuleError] [{GetType().Name}] [{comp?.GetType().Name}] {message}");
         Error.Fire(this, comp, message);
     }
+
+    // utility to calculate expected time when cast finishes (plus an optional delay); returns fallback value if argument is null
+    // for whatever reason, npc spells have reported remaining cast time consistently 0.3s smaller than reality - this delta is added automatically, in addition to optional delay
+    public DateTime CastFinishAt(ActorCastInfo? cast, float extraDelay = 0, DateTime fallback = default) => cast != null ? WorldState.FutureTime(cast.NPCRemainingTime + extraDelay) : fallback;
 
     // called during update if module is not yet active, should return true if it is to be activated
     // default implementation activates if primary target is both targetable and in combat

@@ -329,7 +329,10 @@ public sealed class ReplayParserLog : IDisposable
             [new("CLRJ"u8)] = ParseClientActionReject,
             [new("CDN+"u8)] = () => ParseClientCountdown(true),
             [new("CDN-"u8)] = () => ParseClientCountdown(false),
-            [new("CLCD"u8)] = ParseCooldown,
+            [new("CLAL"u8)] = ParseClientAnimationLock,
+            [new("CLCB"u8)] = ParseClientCombo,
+            [new("CLST"u8)] = ParseClientPlayerStats,
+            [new("CLCD"u8)] = ParseClientCooldown,
             [new("CLDA"u8)] = ParseClientDutyActions,
             [new("CLBH"u8)] = ParseClientBozjaHolster,
             [new("CLAF"u8)] = ParseClientActiveFate,
@@ -348,7 +351,7 @@ public sealed class ReplayParserLog : IDisposable
 
         if (_version is > 0 and < 5 && _input is TextInput ti && _legacyPrevTS < ti.Timestamp)
         {
-            _builder.AddOp(new WorldState.OpFrameStart(new() { Timestamp = ti.Timestamp }, default, 0));
+            _builder.AddOp(new WorldState.OpFrameStart(new() { Timestamp = ti.Timestamp }, default, default, default));
             _legacyPrevTS = ti.Timestamp;
         }
 
@@ -380,7 +383,7 @@ public sealed class ReplayParserLog : IDisposable
         var frame = new FrameState();
         var prevUpdateTime = TimeSpan.FromMilliseconds(_input.ReadDouble());
         _input.ReadVoid();
-        var gauge = _input.CanRead() ? _input.ReadULong(true) : 0;
+        var gauge = new ClientState.Gauge(_input.CanRead() ? _input.ReadULong(true) : 0, _version >= 18 ? _input.ReadULong(true) : 0);
         if (_version >= 10)
         {
             frame.QPC = _input.ReadULong(false);
@@ -405,9 +408,9 @@ public sealed class ReplayParserLog : IDisposable
             frame.Index = ++_legacyFrameIndex;
             frame.Duration = frame.DurationRaw = (float)(ti.Timestamp - _legacyPrevTS).TotalSeconds;
             frame.TickSpeedMultiplier = 1;
-            _legacyPrevTS = ti.Timestamp;
         }
-        return new(frame, prevUpdateTime, gauge);
+        _legacyPrevTS = frame.Timestamp;
+        return new(frame, prevUpdateTime, gauge, _version >= 16 ? _input.ReadAngle() : default);
     }
 
     private WorldState.OpUserMarker ParseUserMarker() => new(_input.ReadString());
@@ -537,14 +540,23 @@ public sealed class ReplayParserLog : IDisposable
             var action = _input.ReadAction();
             var target = _input.ReadActorID();
             var loc = _input.ReadVec3();
-            var (finishAt, totalTime) = _input.ReadTimePair();
+            float elapsedTime, totalTime;
+            if (_version >= 17)
+            {
+                (elapsedTime, totalTime) = _input.ReadFloatPair();
+            }
+            else
+            {
+                (var finishAt, totalTime) = _input.ReadTimePair();
+                elapsedTime = totalTime + action.CastTimeExtra() - (float)(finishAt - _legacyPrevTS).TotalSeconds;
+            }
             cast = new()
             {
                 Action = action,
                 TargetID = target,
                 Location = loc,
+                ElapsedTime = elapsedTime,
                 TotalTime = totalTime,
-                FinishAt = finishAt,
                 Interruptible = _input.CanRead() && _input.ReadBool(),
                 Rotation = _input.CanRead() ? _input.ReadAngle() : default,
             };
@@ -571,8 +583,8 @@ public sealed class ReplayParserLog : IDisposable
     private ActorState.OpEventObjectAnimation ParseActorEventObjectAnimation() => new(_input.ReadActorID(), _input.ReadUShort(true), _input.ReadUShort(true));
     private ActorState.OpPlayActionTimelineEvent ParseActorPlayActionTimelineEvent() => new(_input.ReadActorID(), _input.ReadUShort(true));
     private ActorState.OpEventNpcYell ParseActorEventNpcYell() => new(_input.ReadActorID(), _input.ReadUShort(false));
-    private PartyState.OpModify ParsePartyModify() => new(_input.ReadInt(), _input.ReadULong(true), _input.ReadULong(true));
-    private PartyState.OpModify ParsePartyLeave() => new(_input.ReadInt(), 0, 0);
+    private PartyState.OpModify ParsePartyModify() => new(_input.ReadInt(), new(_input.ReadULong(true), _input.ReadULong(true), _version >= 15 && _input.ReadBool(), _version < 15 ? "" : _input.ReadString()));
+    private PartyState.OpModify ParsePartyLeave() => new(_input.ReadInt(), new(0, 0, false, ""));
     private PartyState.OpLimitBreakChange ParsePartyLimitBreak() => new(_input.ReadInt(), _input.ReadInt());
 
     private ClientState.OpActionRequest ParseClientActionRequest()
@@ -603,8 +615,11 @@ public sealed class ReplayParserLog : IDisposable
     }
 
     private ClientState.OpCountdownChange ParseClientCountdown(bool start) => new(start ? _input.ReadFloat() : null);
+    private ClientState.OpAnimationLockChange ParseClientAnimationLock() => new(_input.ReadFloat());
+    private ClientState.OpComboChange ParseClientCombo() => new(new(_input.ReadUInt(false), _input.ReadFloat()));
+    private ClientState.OpPlayerStatsChange ParseClientPlayerStats() => new(new(_input.ReadInt(), _input.ReadInt(), _input.ReadInt()));
 
-    private ClientState.OpCooldown ParseCooldown()
+    private ClientState.OpCooldown ParseClientCooldown()
     {
         var reset = _input.ReadBool();
         List<(int, Cooldown)> cooldowns = [];

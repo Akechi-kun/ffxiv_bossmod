@@ -55,7 +55,7 @@ public sealed class WorldState
     public IEnumerable<Operation> CompareToInitial()
     {
         if (CurrentTime != default)
-            yield return new OpFrameStart(Frame, default, 0);
+            yield return new OpFrameStart(Frame, default, Client.GaugePayload, Client.CameraAzimuth);
         if (CurrentZone != 0 || CurrentCFCID != 0)
             yield return new OpZoneChange(CurrentZone, CurrentCFCID);
         foreach (var (k, v) in RSVEntries)
@@ -74,23 +74,28 @@ public sealed class WorldState
 
     // implementation of operations
     public Event<OpFrameStart> FrameStarted = new();
-    public sealed record class OpFrameStart(FrameState Frame, TimeSpan PrevUpdateTime, ulong GaugePayload) : Operation
+    public sealed record class OpFrameStart(FrameState Frame, TimeSpan PrevUpdateTime, ClientState.Gauge GaugePayload, Angle CameraAzimuth) : Operation
     {
         protected override void Exec(WorldState ws)
         {
             ws.Frame = Frame;
+            ws.Client.CameraAzimuth = CameraAzimuth;
+            ws.Client.GaugePayload = GaugePayload;
             ws.Client.Tick(Frame.Duration);
+            ws.Actors.Tick(Frame.Duration);
             ws.FrameStarted.Fire(this);
         }
         public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("FRAM"u8)
             .Emit(PrevUpdateTime.TotalMilliseconds, "f3")
             .Emit()
-            .Emit(GaugePayload, "X16")
+            .Emit(GaugePayload.Low, "X16")
+            .Emit(GaugePayload.High, "X16")
             .Emit(Frame.QPC)
             .Emit(Frame.Index)
             .Emit(Frame.DurationRaw)
             .Emit(Frame.Duration)
-            .Emit(Frame.TickSpeedMultiplier);
+            .Emit(Frame.TickSpeedMultiplier)
+            .Emit(CameraAzimuth);
     }
 
     public Event<OpUserMarker> UserMarkerAdded = new();

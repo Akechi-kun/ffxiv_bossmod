@@ -8,7 +8,7 @@ public sealed class ClassRPRUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: RPR", "Planner support for utility actions", "lazylemo", RotationModuleQuality.WIP, BitMask.Build((int)Class.RPR), 90);
+        var res = new RotationModuleDefinition("Utility: RPR", "Planner support for utility actions", "lazylemo", RotationModuleQuality.WIP, BitMask.Build((int)Class.RPR), 100);
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.ArcaneCrest, "ArcaneCrest", "", 600, RPR.AID.ArcaneCrest, 5);
@@ -16,7 +16,7 @@ public sealed class ClassRPRUtility(RotationModuleManager manager, Actor player)
         return res;
     }
 
-    public override void Execute(StrategyValues strategy, Actor? primaryTarget)
+    public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
         ExecuteShared(strategy, IDLimitBreak3);
         ExecuteSimple(strategy.Option(Track.ArcaneCrest), RPR.AID.ArcaneCrest, Player);

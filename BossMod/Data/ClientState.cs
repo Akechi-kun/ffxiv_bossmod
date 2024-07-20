@@ -33,10 +33,18 @@ public record struct Cooldown(float Elapsed, float Total)
 public sealed class ClientState
 {
     public readonly record struct Fate(uint ID, Vector3 Center, float Radius);
+    public record struct Combo(uint Action, float Remaining);
+    public record struct Gauge(ulong Low, ulong High);
+    public record struct Stats(int SkillSpeed, int SpellSpeed, int Haste);
 
     public const int NumCooldownGroups = 82;
 
     public float? CountdownRemaining;
+    public Angle CameraAzimuth; // updated every frame by the frame-start event
+    public Gauge GaugePayload; // updated every frame by the frame-start event
+    public float AnimationLock;
+    public Combo ComboState;
+    public Stats PlayerStats;
     public readonly Cooldown[] Cooldowns = new Cooldown[NumCooldownGroups];
     public readonly ActionID[] DutyActions = new ActionID[2];
     public readonly byte[] BozjaHolster = new byte[(int)BozjaHolsterID.Count]; // number of copies in holster per item
@@ -46,6 +54,15 @@ public sealed class ClientState
     {
         if (CountdownRemaining != null)
             yield return new OpCountdownChange(CountdownRemaining);
+
+        if (AnimationLock > 0)
+            yield return new OpAnimationLockChange(AnimationLock);
+
+        if (ComboState.Remaining > 0)
+            yield return new OpComboChange(ComboState);
+
+        if (PlayerStats != default)
+            yield return new OpPlayerStatsChange(PlayerStats);
 
         var cooldowns = Cooldowns.Select((v, i) => (i, v)).Where(iv => iv.v.Total > 0).ToList();
         if (cooldowns.Count > 0)
@@ -63,6 +80,16 @@ public sealed class ClientState
     {
         if (CountdownRemaining != null)
             CountdownRemaining = CountdownRemaining.Value - dt;
+
+        if (AnimationLock > 0)
+            AnimationLock = Math.Max(0, AnimationLock - dt);
+
+        if (ComboState.Remaining > 0)
+        {
+            ComboState.Remaining -= dt;
+            if (ComboState.Remaining <= 0)
+                ComboState = default;
+        }
 
         // TODO: update cooldowns only if 'timestop' status is not active...
         foreach (ref var cd in Cooldowns.AsSpan())
@@ -114,6 +141,39 @@ public sealed class ClientState
             else
                 output.EmitFourCC("CDN-"u8);
         }
+    }
+
+    public Event<OpAnimationLockChange> AnimationLockChanged = new();
+    public sealed record class OpAnimationLockChange(float Value) : WorldState.Operation
+    {
+        protected override void Exec(WorldState ws)
+        {
+            ws.Client.AnimationLock = Value;
+            ws.Client.AnimationLockChanged.Fire(this);
+        }
+        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("CLAL"u8).Emit(Value);
+    }
+
+    public Event<OpComboChange> ComboChanged = new();
+    public sealed record class OpComboChange(Combo Value) : WorldState.Operation
+    {
+        protected override void Exec(WorldState ws)
+        {
+            ws.Client.ComboState = Value;
+            ws.Client.ComboChanged.Fire(this);
+        }
+        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("CLCB"u8).Emit(Value.Action).Emit(Value.Remaining);
+    }
+
+    public Event<OpPlayerStatsChange> PlayerStatsChanged = new();
+    public sealed record class OpPlayerStatsChange(Stats Value) : WorldState.Operation
+    {
+        protected override void Exec(WorldState ws)
+        {
+            ws.Client.PlayerStats = Value;
+            ws.Client.PlayerStatsChanged.Fire(this);
+        }
+        public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("CLST"u8).Emit(Value.SkillSpeed).Emit(Value.SpellSpeed).Emit(Value.Haste);
     }
 
     public Event<OpCooldown> CooldownsChanged = new();

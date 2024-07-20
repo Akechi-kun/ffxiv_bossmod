@@ -8,7 +8,7 @@ public sealed class ClassDNCUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: DNC", "Planner support for utility actions", "xan", RotationModuleQuality.WIP, BitMask.Build((int)Class.DNC), 90);
+        var res = new RotationModuleDefinition("Utility: DNC", "Planner support for utility actions", "xan", RotationModuleQuality.WIP, BitMask.Build((int)Class.DNC), 100);
         DefineShared(res, IDLimitBreak3);
 
         // TODO: en avant (not sure how it can be planned really...)
@@ -19,7 +19,7 @@ public sealed class ClassDNCUtility(RotationModuleManager manager, Actor player)
         return res;
     }
 
-    public override void Execute(StrategyValues strategy, Actor? primaryTarget)
+    public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
         ExecuteShared(strategy, IDLimitBreak3);
         ExecuteSimple(strategy.Option(Track.CuringWaltz), DNC.AID.CuringWaltz, Player);

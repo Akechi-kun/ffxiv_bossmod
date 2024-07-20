@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.JobGauge.Types;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
 
 namespace BossMod.Autorotation.Legacy;
 
@@ -89,14 +89,14 @@ public sealed class LegacyDRG : LegacyModule
         _state = new(this);
     }
 
-    public override void Execute(StrategyValues strategy, Actor? primaryTarget)
+    public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
-        _state.UpdateCommon(primaryTarget);
+        _state.UpdateCommon(primaryTarget, estimatedAnimLockDelay);
 
-        var gauge = Service.JobGauges.Get<DRGGauge>();
+        var gauge = GetGauge<DragoonGauge>();
         _state.FirstmindFocusCount = gauge.FirstmindsFocusCount;
         _state.EyeCount = gauge.EyeCount;
-        _state.LifeOfTheDragonLeft = gauge.IsLOTDActive ? gauge.LOTDTimer * 0.001f : 0;
+        _state.LifeOfTheDragonLeft = gauge.LotdState != 0 ? gauge.LotdTimer * 0.001f : 0;
 
         _state.FangAndClawBaredLeft = _state.StatusDetails(Player, DRG.SID.FangAndClawBared, Player.InstanceID).Left;
         _state.WheelInMotionLeft = _state.StatusDetails(Player, DRG.SID.WheelInMotion, Player.InstanceID).Left;

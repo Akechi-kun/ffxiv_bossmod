@@ -89,7 +89,7 @@ public abstract class RotationModule(RotationModuleManager manager, Actor player
     public AIHints Hints => Manager.Hints;
 
     // the main entry point of the module - given a set of strategy values, fill the queue with a set of actions to execute
-    public abstract void Execute(StrategyValues strategy, Actor? primaryTarget);
+    public abstract void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay);
 
     public virtual string DescribeState() => "";
 
@@ -102,11 +102,23 @@ public abstract class RotationModule(RotationModuleManager manager, Actor player
 
     public bool TraitUnlocked(uint id)
     {
-        var unlock = Service.LuminaRow<Lumina.Excel.GeneratedSheets.Trait>(id)?.Quest.Row ?? 0;
-        return ActionDefinitions.Instance.UnlockCheck?.Invoke(unlock) ?? true;
+        var trait = Service.LuminaRow<Lumina.Excel.GeneratedSheets.Trait>(id);
+        var unlock = trait?.Quest.Row ?? 0;
+        var level = trait?.Level ?? 0;
+        return Player.Level >= level && (ActionDefinitions.Instance.UnlockCheck?.Invoke(unlock) ?? true);
     }
 
     // utility to resolve the target overrides; returns null on failure - in this case module is expected to run smart-targeting logic
     // expected usage is `ResolveTargetOverride(strategy) ?? CustomSmartTargetingLogic(...)`
     protected Actor? ResolveTargetOverride(in StrategyValue strategy) => Manager.ResolveTargetOverride(strategy);
+
+    // TODO: reconsider...
+    protected unsafe T GetGauge<T>() where T : unmanaged
+    {
+        T res = default;
+        ((ulong*)&res)[1] = World.Client.GaugePayload.Low;
+        if (sizeof(T) > 16)
+            ((ulong*)&res)[2] = World.Client.GaugePayload.High;
+        return res;
+    }
 }

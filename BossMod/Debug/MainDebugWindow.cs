@@ -6,12 +6,12 @@ using ImGuiNET;
 
 namespace BossMod;
 
-class MainDebugWindow(WorldState ws, RotationModuleManager autorot) : UIWindow("Boss mod debug UI", false, new(300, 200))
+class MainDebugWindow(WorldState ws, RotationModuleManager autorot, ActionManagerEx amex) : UIWindow("Boss mod debug UI", false, new(300, 200))
 {
     private readonly DebugObjects _debugObjects = new();
     private readonly DebugParty _debugParty = new();
     private readonly DebugGraphics _debugGraphics = new();
-    private readonly DebugAction _debugAction = new(ws, autorot.ActionManager);
+    private readonly DebugAction _debugAction = new(ws, amex);
     private readonly DebugHate _debugHate = new();
     //private readonly DebugInput _debugInput = new(autorot);
     private readonly DebugAutorotation _debugAutorot = new(autorot);
@@ -64,17 +64,13 @@ class MainDebugWindow(WorldState ws, RotationModuleManager autorot) : UIWindow("
         {
             DrawCastingEnemiesList();
         }
-        if (ImGui.CollapsingHeader("Party (dalamud)"))
+        if (ImGui.CollapsingHeader("Party"))
         {
-            _debugParty.DrawPartyDalamud();
-        }
-        if (ImGui.CollapsingHeader("Party (custom)"))
-        {
-            _debugParty.DrawPartyCustom(false);
+            _debugParty.Draw(false);
         }
         if (ImGui.CollapsingHeader("Party (duty recorder)"))
         {
-            _debugParty.DrawPartyCustom(true);
+            _debugParty.Draw(true);
         }
         if (ImGui.CollapsingHeader("Autorotation"))
         {
@@ -88,7 +84,7 @@ class MainDebugWindow(WorldState ws, RotationModuleManager autorot) : UIWindow("
         {
             _debugGraphics.DrawWatchedMods();
         }
-        if (Camera.Instance != null && ImGui.CollapsingHeader("Matrices"))
+        if (ImGui.CollapsingHeader("Matrices"))
         {
             _debugGraphics.DrawMatrices();
         }
@@ -207,7 +203,7 @@ class MainDebugWindow(WorldState ws, RotationModuleManager autorot) : UIWindow("
 
     private unsafe void DrawTargets()
     {
-        var cursorPos = autorot.ActionManager.GetWorldPosUnderCursor();
+        var cursorPos = amex.GetWorldPosUnderCursor();
         ImGui.TextUnformatted($"World pos under cursor: {(cursorPos == null ? "n/a" : Utils.Vec3String(cursorPos.Value))}");
 
         var selfPos = Service.ClientState.LocalPlayer?.Position ?? new();
@@ -250,6 +246,21 @@ class MainDebugWindow(WorldState ws, RotationModuleManager autorot) : UIWindow("
         }
 
         var uiState = UIState.Instance();
+        var level = (uint)uiState->PlayerState.CurrentLevel;
+        var paramGrow = Service.LuminaRow<Lumina.Excel.GeneratedSheets.ParamGrow>(level);
+        if (paramGrow != null)
+        {
+            ImGui.TextUnformatted($"Level: {level}, baseSpeed={paramGrow.BaseSpeed}, levelMod={paramGrow.LevelModifier}");
+            var sksValue = uiState->PlayerState.Attributes[45];
+            var spsValue = uiState->PlayerState.Attributes[46];
+            var sksMod = 130 * (paramGrow.BaseSpeed - sksValue) / paramGrow.LevelModifier + 1000;
+            var spsMod = 130 * (paramGrow.BaseSpeed - spsValue) / paramGrow.LevelModifier + 1000;
+            var hasteValue = uiState->PlayerState.Attributes[47];
+            ImGui.TextUnformatted($"SKS: value={sksValue}, mod={sksMod}, gcd={2500 * sksMod / 1000}");
+            ImGui.TextUnformatted($"SPS: value={spsValue}, mod={spsMod}, gcd={2500 * spsMod / 1000}");
+            ImGui.TextUnformatted($"Haste: value={hasteValue}, gcd-sks={2500 * sksMod / 1000 * hasteValue / 100}, gcd-sps={2500 * spsMod / 1000 * hasteValue / 100}");
+        }
+
         ImGui.BeginTable("attrs", 2);
         ImGui.TableSetupColumn("Index");
         ImGui.TableSetupColumn("Value");

@@ -40,7 +40,7 @@ public sealed record class ActionDefinition(ActionID ID)
     public int MaxChargesAtCap = 1; // TODO: this actually depends on unlocked traits...
     public float InstantAnimLock = 0.6f; // animation lock if ability is instant-cast
     public float CastAnimLock = 0.1f; // animation lock if ability is non-instant
-    public ConditionDelegate? Condition; // optional condition, if it returns false, action is not executed
+    public ConditionDelegate? ForbidExecute; // optional condition, if it returns true, action is not executed
     public SmartTargetDelegate? SmartTarget; // optional target transformation for 'smart targeting' feature
     public TransformAngleDelegate? TransformAngle; // optional facing angle transformation
 
@@ -147,19 +147,6 @@ public sealed class ActionDefinitions : IDisposable
     public static Actor? FindEsunaTarget(WorldState ws) => ws.Party.WithoutSlot().FirstOrDefault(p => p.Statuses.Any(s => Utils.StatusIsRemovable(s.ID)));
     public static Actor? SmartTargetEsunable(WorldState ws, Actor player, Actor? primaryTarget, AIHints hints) => SmartTargetFriendly(primaryTarget) ?? FindEsunaTarget(ws) ?? player;
 
-    // see ActionManager.GetSpellIdForAction
-    public uint ActionSpellId(ActionID aid) => aid.Type switch
-    {
-        ActionType.Spell => aid.ID,
-        ActionType.Item => ItemData(aid.ID)?.ItemAction.Value?.Type ?? 0,
-        ActionType.KeyItem => Service.LuminaRow<Lumina.Excel.GeneratedSheets.EventItem>(aid.ID)?.Action.Row ?? 0,
-        ActionType.Ability => 2, // 'interaction'
-        ActionType.General => Service.LuminaRow<Lumina.Excel.GeneratedSheets.GeneralAction>(aid.ID)?.Action.Row ?? 0, // note: duty action 1/2 (26/27) use special code
-        ActionType.Mount => 4, // 'mount'
-        ActionType.Ornament => 20061, // 'accessorize'
-        _ => 0
-    };
-
     public BitMask SpellAllowedClasses(Lumina.Excel.GeneratedSheets.Action? data)
     {
         BitMask res = default;
@@ -208,7 +195,7 @@ public sealed class ActionDefinitions : IDisposable
         return res;
     }
     public ActionTargets SpellAllowedTargets(uint spellId) => SpellAllowedTargets(ActionData(spellId));
-    public ActionTargets ActionAllowedTargets(ActionID aid) => SpellAllowedTargets(ActionSpellId(aid));
+    public ActionTargets ActionAllowedTargets(ActionID aid) => SpellAllowedTargets(aid.SpellId());
 
     // see ActionManager.GetActionRange
     // note that actions with range == -1 use data from equipped weapon; currently all weapons for phys-ranged classes have range 25, others have range 3
@@ -220,7 +207,7 @@ public sealed class ActionDefinitions : IDisposable
         return range >= 0 ? range : isPhysRanged ? 25 : 3;
     }
     public int SpellRange(uint spellId, bool isPhysRanged = false) => SpellRange(ActionData(spellId), isPhysRanged);
-    public int ActionRange(ActionID aid, bool isPhysRanged = false) => SpellRange(ActionSpellId(aid), isPhysRanged);
+    public int ActionRange(ActionID aid, bool isPhysRanged = false) => SpellRange(aid.SpellId(), isPhysRanged);
 
     // see ActionManager.GetCastTimeAdjusted
     public float SpellBaseCastTime(Lumina.Excel.GeneratedSheets.Action? data) => (data?.Cast100ms ?? 0) * 0.1f;
@@ -229,13 +216,13 @@ public sealed class ActionDefinitions : IDisposable
     {
         ActionType.Item => ItemData(aid.ID)?.CastTimes ?? 2,
         ActionType.KeyItem => Service.LuminaRow<Lumina.Excel.GeneratedSheets.EventItem>(aid.ID)?.CastTime ?? 0,
-        ActionType.Spell or ActionType.Mount or ActionType.Ornament => SpellBaseCastTime(ActionSpellId(aid)),
+        ActionType.Spell or ActionType.Mount or ActionType.Ornament => SpellBaseCastTime(aid.SpellId()),
         _ => 0
     };
 
     public int SpellMainCDGroup(Lumina.Excel.GeneratedSheets.Action? data) => (data?.CooldownGroup ?? 0) - 1;
     public int SpellMainCDGroup(uint spellId) => SpellMainCDGroup(ActionData(spellId));
-    public int ActionMainCDGroup(ActionID aid) => SpellMainCDGroup(ActionSpellId(aid));
+    public int ActionMainCDGroup(ActionID aid) => SpellMainCDGroup(aid.SpellId());
 
     public int SpellExtraCDGroup(Lumina.Excel.GeneratedSheets.Action? data) => (data?.AdditionalCooldownGroup ?? 0) - 1;
     public int SpellExtraCDGroup(uint spellId) => SpellExtraCDGroup(ActionData(spellId));
@@ -300,7 +287,6 @@ public sealed class ActionDefinitions : IDisposable
             CastTime = castTime,
             MainCooldownGroup = cdgroup,
             Cooldown = cooldown,
-            InstantAnimLock = 1.1f
         };
         var aidHQ = new ActionID(ActionType.Item, baseId + 1000000);
         _definitions[aidHQ] = new(aidHQ)
@@ -310,7 +296,6 @@ public sealed class ActionDefinitions : IDisposable
             CastTime = castTime,
             MainCooldownGroup = cdgroup,
             Cooldown = cooldown * 0.9f,
-            InstantAnimLock = 1.1f
         };
     }
 

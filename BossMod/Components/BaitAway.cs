@@ -132,8 +132,8 @@ public class BaitAwayTethers(BossModule module, AOEShape shape, uint tetherID, A
         if (target == null)
             return (null, null);
 
-        var (player, enemy) = source.Type == ActorType.Player ? (source, target) : (target, source);
-        if (player.Type != ActorType.Player || enemy.Type == ActorType.Player)
+        var (player, enemy) = source.Type is ActorType.Player or ActorType.DutySupport ? (source, target) : (target, source);
+        if (!(player.Type is ActorType.Player or ActorType.DutySupport) || enemy.Type == ActorType.Player)
         {
             ReportError($"Unexpected tether pair: {source.InstanceID:X} -> {target.InstanceID:X}");
             return (null, null);
@@ -144,7 +144,7 @@ public class BaitAwayTethers(BossModule module, AOEShape shape, uint tetherID, A
 }
 
 // component for mechanics requiring icon targets to bait their aoe away from raid
-public class BaitAwayIcon(BossModule module, AOEShape shape, uint iconID, ActionID aid = default, float activationDelay = 5.1f) : GenericBaitAway(module, aid)
+public class BaitAwayIcon(BossModule module, AOEShape shape, uint iconID, ActionID aid = default, float activationDelay = 5.1f, bool centerAtTarget = false) : GenericBaitAway(module, aid, centerAtTarget: centerAtTarget)
 {
     public AOEShape Shape = shape;
     public uint IID = iconID;
@@ -175,7 +175,7 @@ public class BaitAwayCast(BossModule module, ActionID aid, AOEShape shape, bool 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action == WatchedAction && WorldState.Actors.Find(spell.TargetID) is var target && target != null)
-            CurrentBaits.Add(new(caster, target, Shape, spell.NPCFinishAt));
+            CurrentBaits.Add(new(caster, target, Shape, Module.CastFinishAt(spell)));
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)
@@ -215,7 +215,7 @@ public class BaitAwayChargeCast(BossModule module, ActionID aid, float halfWidth
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
         if (spell.Action == WatchedAction && WorldState.Actors.Find(spell.TargetID) is var target && target != null)
-            CurrentBaits.Add(new(caster, target, new AOEShapeRect(0, HalfWidth), spell.NPCFinishAt));
+            CurrentBaits.Add(new(caster, target, new AOEShapeRect(0, HalfWidth), Module.CastFinishAt(spell)));
     }
 
     public override void OnCastFinished(Actor caster, ActorCastInfo spell)

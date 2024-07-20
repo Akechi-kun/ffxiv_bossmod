@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.JobGauge.Types;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
 
 namespace BossMod.Autorotation.Legacy;
 
@@ -155,18 +155,18 @@ public sealed class LegacyBRD : LegacyModule
         _state = new(this);
     }
 
-    public override void Execute(StrategyValues strategy, Actor? primaryTarget)
+    public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
-        _state.UpdateCommon(primaryTarget);
+        _state.UpdateCommon(primaryTarget, estimatedAnimLockDelay);
         if (_state.AnimationLockDelay < 0.1f)
             _state.AnimationLockDelay = 0.1f; // TODO: reconsider; we generally don't want triple weaves or extra-late proc weaves
 
-        var gauge = Service.JobGauges.Get<BRDGauge>();
-        _state.ActiveSong = (Song)gauge.Song;
+        var gauge = GetGauge<BardGauge>();
+        _state.ActiveSong = (Song)((byte)gauge.SongFlags & 3);
         _state.ActiveSongLeft = gauge.SongTimer * 0.001f;
         _state.Repertoire = gauge.Repertoire;
         _state.SoulVoice = gauge.SoulVoice;
-        _state.NumCoda = gauge.Coda.Count(c => c != default);
+        _state.NumCoda = BitOperations.PopCount((uint)gauge.SongFlags & 0x70);
 
         _state.StraightShotLeft = _state.StatusDetails(Player, BRD.SID.StraightShotReady, Player.InstanceID, 30).Left;
         _state.BlastArrowLeft = _state.StatusDetails(Player, BRD.SID.BlastArrowReady, Player.InstanceID, 10).Left;

@@ -8,7 +8,7 @@ public sealed class ClassSAMUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: SAM", "Planner support for utility actions", "xan", RotationModuleQuality.WIP, BitMask.Build((int)Class.SAM), 90);
+        var res = new RotationModuleDefinition("Utility: SAM", "Planner support for utility actions", "xan", RotationModuleQuality.WIP, BitMask.Build((int)Class.SAM), 100);
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.ThirdEye, "ThirdEye", "", 600, SAM.AID.ThirdEye, 4);
@@ -16,7 +16,7 @@ public sealed class ClassSAMUtility(RotationModuleManager manager, Actor player)
         return res;
     }
 
-    public override void Execute(StrategyValues strategy, Actor? primaryTarget)
+    public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
         ExecuteShared(strategy, IDLimitBreak3);
         ExecuteSimple(strategy.Option(Track.ThirdEye), SAM.AID.ThirdEye, Player);

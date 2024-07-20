@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.JobGauge.Types;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
 
 namespace BossMod.Autorotation.Legacy;
 
@@ -120,18 +120,18 @@ public sealed class LegacyRPR : LegacyModule
         _state = new(this);
     }
 
-    public override void Execute(StrategyValues strategy, Actor? primaryTarget)
+    public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay)
     {
-        _state.UpdateCommon(primaryTarget);
+        _state.UpdateCommon(primaryTarget, estimatedAnimLockDelay);
         _state.HasSoulsow = Player.FindStatus(RPR.SID.Soulsow) != null;
 
-        var gauge = Service.JobGauges.Get<RPRGauge>();
+        var gauge = GetGauge<ReaperGauge>();
         _state.LemureShroudCount = gauge.LemureShroud;
         _state.VoidShroudCount = gauge.VoidShroud;
         _state.ShroudGauge = gauge.Shroud;
         _state.SoulGauge = gauge.Soul;
-        if (_state.ComboLastMove == RPR.AID.InfernalSlice)
-            _state.ComboTimeLeft = 0;
+        //if (_state.ComboLastMove == RPR.AID.InfernalSlice)
+        //    _state.ComboTimeLeft = 0;
 
         _state.SoulReaverLeft = _state.StatusDetails(Player, RPR.SID.SoulReaver, Player.InstanceID).Left;
         _state.ImmortalSacrificeLeft = _state.StatusDetails(Player, RPR.SID.ImmortalSacrifice, Player.InstanceID).Left;
