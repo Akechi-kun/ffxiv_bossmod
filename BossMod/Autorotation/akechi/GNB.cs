@@ -1,6 +1,7 @@
 ﻿using BossMod.GNB;
 using Dalamud.Game.ClientState.JobGauge.Types;
 using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+using FFXIVClientStructs.FFXIV.Common.Lua;
 
 namespace BossMod.Autorotation.akechi;
 
@@ -83,18 +84,9 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
                     PushGCD(AID.DoubleDown, primaryTarget);
             }
 
-            // Reign
-            if (Unlocked(AID.ReignOfBeasts) && ShouldUseReign(strategy))
-            {
-                if (_state.CD(AID.Bloodfest) >= 90 && _state.CD(AID.DoubleDown) >= 40 && _state.CD(AID.GnashingFang) > 0 && GunComboStep == 0)
-                    PushGCD(AID.ReignOfBeasts, primaryTarget);
-            }
-
             // BurstStrike
             if (Unlocked(AID.BurstStrike) && ShouldUseBurstStrike(strategy))
             {
-                if (_state.CD(AID.DoubleDown) > 40 && _state.CD(AID.GnashingFang) > 10 && !ReadyToReign)
-                    PushGCD(AID.BurstStrike, primaryTarget);
                 if (Ammo >= 2 && !Unlocked(AID.FatedCircle) && !Unlocked(AID.DoubleDown))
                 {
                     PushGCD(AID.BurstStrike, primaryTarget); // Lv30-72 AOE BS
@@ -138,9 +130,9 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
             if (Ammo >= 2 && GunComboStep == 0)
             {
                 if (_state.CD(AID.GnashingFang) > _state.GCD && _state.CD(AID.DoubleDown) > _state.GCD &&
-                    ReadyToBreakLeft >= 0 && Unlocked(AID.DoubleDown))
+                    ReadyToBreakLeft >= 0 && Unlocked(AID.DoubleDown) && !Unlocked(AID.ReignOfBeasts))
                 {
-                    PushGCD(AID.FatedCircle, primaryTarget); // Lv80 AOE
+                    PushGCD(AID.FatedCircle, primaryTarget); // Lv90 AOE
                 }
                 if (_state.CD(AID.GnashingFang) > _state.GCD && Unlocked(AID.FatedCircle) &&
                     !Unlocked(AID.DoubleDown) && !Unlocked(AID.SonicBreak))
@@ -158,11 +150,27 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         if (Unlocked(AID.Continuation) && (ReadyToBlast || ReadyToRaze || ReadyToGouge || ReadyToTear || ReadyToRip))
             PushOGCD(BestContinuation, primaryTarget);
 
-        // Reign 23
-        if (Unlocked(AID.NobleBlood) && ComboLastMove == AID.ReignOfBeasts)
-            PushGCD(AID.NobleBlood, primaryTarget);
-        if (Unlocked(AID.LionHeart) && ComboLastMove == AID.NobleBlood)
-            PushGCD(AID.LionHeart, primaryTarget);
+        // ReignOfBeasts
+        if (Unlocked(AID.ReignOfBeasts) && ShouldUseBeasts(strategy) && GunComboStep == 0)
+        {
+            if (_state.CD(AID.NoMercy) > 40 && _state.CD(AID.DoubleDown) > 0
+                && _state.CD(AID.GnashingFang) > 0)
+                PushGCD(AID.ReignOfBeasts, primaryTarget);
+        }
+
+        // NobleBlood
+        if (Unlocked(AID.ReignOfBeasts) && ShouldUseNoble(strategy) && GunComboStep == 0)
+        {
+            if (ComboLastMove == AID.ReignOfBeasts && _state.CD(AID.DoubleDown) > 0)
+                PushGCD(AID.NobleBlood, primaryTarget);
+        }
+
+        // LionHeart
+        if (Unlocked(AID.ReignOfBeasts) && ShouldUseLion(strategy) && GunComboStep == 0)
+        {
+            if (ComboLastMove == AID.NobleBlood && _state.CD(AID.DoubleDown) > 0)
+                PushGCD(AID.LionHeart, primaryTarget);
+        }
 
         // GF2&3
         if (GunComboStep > 0)
@@ -227,7 +235,7 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         // Bloodfest
         if (ShouldUseBloodfest(strategy, primaryTarget))
         {
-            if (_state.CanWeave(AID.Bloodfest, 0.6f, deadline))
+            if (_state.CanWeave(AID.Bloodfest, 0.6f, deadline) && Ammo == 0 && NoMercy)
                 PushOGCD(AID.Bloodfest, primaryTarget);
         }
 
@@ -283,7 +291,7 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
             return false;
         }
 
-        return Unlocked(AID.Bloodfest) && Ammo == 0;
+        return Unlocked(AID.Bloodfest) && Ammo == 0 && NoMercy;
     }
 
     // Sonic plan
@@ -310,26 +318,44 @@ public sealed class GNB(RotationModuleManager manager, Actor player) : xbase<AID
         return Unlocked(AID.DoubleDown) && Ammo >= 2 && NoMercy;
     }
 
-    // Reign plan
-    private bool ShouldUseReign(StrategyValues strategy)
+    // RoB plan
+    private bool ShouldUseBeasts(StrategyValues strategy)
     {
         if (!Unlocked(AID.ReignOfBeasts))
         {
             return false;
         }
 
-        return (_state.CD(AID.Bloodfest) >= 90 && GunComboStep == 0 && _state.CD(AID.DoubleDown) >= 40 && _state.CD(AID.GnashingFang) > 0);
+        return (_state.CD(AID.Bloodfest) >= 90) && Unlocked(AID.ReignOfBeasts);
+    }
+    private bool ShouldUseNoble(StrategyValues strategy)
+    {
+        if (!Unlocked(AID.ReignOfBeasts))
+        {
+            return false;
+        }
+
+        return (_state.CD(AID.Bloodfest) >= 90) && ComboLastMove == (AID.ReignOfBeasts);
+    }
+    private bool ShouldUseLion(StrategyValues strategy)
+    {
+        if (!Unlocked(AID.ReignOfBeasts))
+        {
+            return false;
+        }
+
+        return (_state.CD(AID.Bloodfest) >= 90 && ComboLastMove == (AID.NobleBlood));
     }
 
     // BS plan
     private bool ShouldUseBurstStrike(StrategyValues strategy)
     {
-        if (!Unlocked(AID.BurstStrike))
+        if (!Unlocked(AID.BurstStrike) || ComboLastMove == AID.ReignOfBeasts || ComboLastMove == AID.NobleBlood)
         {
             return false;
         }
 
-        return Unlocked(AID.BurstStrike) && !ReadyToReign && ((Ammo >= 1 && NoMercy) || (Ammo == MaxCartridges && ComboLastMove == AID.BrutalShell));
+        return Unlocked(AID.BurstStrike) && ((Ammo >= 1 && NoMercy) || (Ammo == MaxCartridges && ComboLastMove == AID.BrutalShell));
     }
 
     // GF plan
