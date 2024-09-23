@@ -1,31 +1,28 @@
-This is the general format of how fights should be made.
-The formatting is very similar to how Limiana's plugin "Splatoon" does their presets.
-
-# [Raid Title (Difficulty)] - "[Raid Boss]"
+# The Omega Protocol (Ultimate)
 
 ## Main-Tank (T1/MT)
 
 ### PLD
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### WAR
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### DRK
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### GNB
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
@@ -33,25 +30,25 @@ _Contributor:_ `You`
 
 ### PLD
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### WAR
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### DRK
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### GNB
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
@@ -59,25 +56,25 @@ _Contributor:_ `You`
 
 ### WHM
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### AST
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### SCH 
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### SGE
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
@@ -85,36 +82,36 @@ _Contributor:_ `You`
 
 ### MNK
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### DRG
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 ### NIN
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### SAM
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### RPR
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### VPR
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
@@ -122,42 +119,42 @@ _Contributor:_ `You`
 
 ### BRD
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### MCH
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### DNC
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### BLM
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### SMN
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### RDM
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
 
 ### PCT
 ```
-[Insert Code here]
+ 
 ```
 _Contributor:_ `You`
