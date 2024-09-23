@@ -92,4 +92,13 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="PlannerPresets\2.x ARealmReborn\" />
+    <Folder Include="PlannerPresets\3.x Heavensward\" />
+    <Folder Include="PlannerPresets\6.x Endwalker\" />
+    <Folder Include="PlannerPresets\4.x Stormblood\" />
+    <Folder Include="PlannerPresets\7.x Dawntrail\" />
+    <Folder Include="PlannerPresets\5.x Shadowbringers\" />
+  </ItemGroup>
 </Project>
