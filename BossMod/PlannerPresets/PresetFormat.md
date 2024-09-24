@@ -1,4 +1,5 @@
 This is the general format of how fights should be made.
+
 The formatting is very similar to how Limiana's plugin "Splatoon" does their presets.
 
 # [Raid Title (Difficulty)] - "[Raid Boss]"
