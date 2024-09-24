@@ -1,4 +1,4 @@
-# Dragonsong's Reprise (Ultimate)
+# Pandæmonium: Asphodelos (Savage) - "Hesperos"
 
 ## Main-Tank (T1/MT)
 
@@ -6,25 +6,25 @@
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### WAR
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### DRK
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### GNB
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ## Off-Tank (T2/OT)
 
@@ -32,25 +32,25 @@ _Contributor:_ `You`
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### WAR
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### DRK
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### GNB
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ## Healer (H1/H2)
 
@@ -58,25 +58,25 @@ _Contributor:_ `You`
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### AST
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### SCH 
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### SGE
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ## Melee DPS (D1/D2/M1/M2)
 
@@ -84,36 +84,36 @@ _Contributor:_ `You`
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### DRG
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 ### NIN
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### SAM
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### RPR
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### VPR
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ## Ranged DPS (D3/D4/R1/R2)
 
@@ -121,40 +121,40 @@ _Contributor:_ `You`
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### MCH
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### DNC
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### BLM
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### SMN
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### RDM
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`
 
 ### PCT
 ```
  
 ```
-_Contributor:_ `You`
+_Contributor:_ `N/A`

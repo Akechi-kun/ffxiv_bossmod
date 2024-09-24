@@ -98,9 +98,6 @@
     <Folder Include="PlannerPresets\3.x Heavensward\" />
     <Folder Include="PlannerPresets\4.x Stormblood\Savage\" />
     <Folder Include="PlannerPresets\5.x Shadowbringers\Savage\" />
-    <Folder Include="PlannerPresets\6.x Endwalker\Criterion\" />
-    <Folder Include="PlannerPresets\6.x Endwalker\Savage\" />
     <Folder Include="PlannerPresets\7.x Dawntrail\Criterion\" />
-    <Folder Include="PlannerPresets\7.x Dawntrail\Ultimate\" />
   </ItemGroup>
 </Project>
