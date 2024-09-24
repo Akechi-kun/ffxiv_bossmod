@@ -2,7 +2,6 @@
 > In order to use these presets correctly:
 > - The specified fight _must_ be fully supported inside the CD Planner
 > - The specified job _must_ have support for its respective modules (Utility:XXX, StandardXXX, etc)
-> - You are using the _original_ version of Boss Mod - Presets made on /vbm are incompatible with the Reborn fork
 
 # Cooldown Planner Presets
 
