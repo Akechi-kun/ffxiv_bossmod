@@ -36,7 +36,7 @@ If the fight is fully supported, then you may check our directory for presets an
 
 ## Importing Presets
 
-When you hae found your specified preset, you may hit this button here to copy it to your clipboard:
+When you have found your specified preset, you may hit this button here to copy it to your clipboard:
 
 ![image](https://github.com/user-attachments/assets/3daec4c5-9d00-417a-9921-845076600583)
 
