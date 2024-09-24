@@ -8,7 +8,7 @@
 
 This is a repository of Cooldown Planner presets for Boss Mod, created and shared by various members of the [Puni.sh Discord server](https://discord.gg/Zzrcc8kmvy).  If you’d like to contribute your own plan to this collection, we welcome your input!
 
-In this `PlannerPresets` directory of folders, you will find all different types of content presets that exist for all supported content. You may navigate through to find other .md files containing information for you to import presets with.
+In this `PlannerPresets` directory of folders, you will find all different types of content presets that exist for all supported content. You may navigate through to find other `.md` files containing code for you to import presets with.
 
 ## What is a Cooldown Planner Preset?
 
@@ -31,16 +31,16 @@ Not Glowing Red? No support & can't be planned.
 ![image](https://github.com/user-attachments/assets/40aee7bd-22e5-48e8-8cdd-898e4b5acf87)
 
 
-If the fight is fully supported, then you may check our directory for presets and import them directly.
+If the fight is fully supported, then you may check our directory for presets to see what's available and import them directly.
 
 
 ## Importing Presets
 
-When you have found your specified preset, you may hit this button here to copy it to your clipboard:
+When you have found your specified preset, you may hit this button here to copy it to your clipboard: 
 
 ![image](https://github.com/user-attachments/assets/3daec4c5-9d00-417a-9921-845076600583)
 
-Once copied, you may go into the respecive fight's Cooldown Planner window and click this button next:
+Once copied, you may go into the respecive fight's Cooldown Planner window and click `Import from Clipboard` or this button next:
 
 ![image](https://github.com/user-attachments/assets/2519ef73-c0ee-4d88-a518-0702efa8077f)
 
@@ -49,14 +49,11 @@ Voila. You are finished with importing a preset. Feel free to make any relative 
 ## Exporting Presets
 
 If you would like to contribute your plan, then you are more than welcome!
-In The Cooldown Planner window, click this button here to copy it to your clipboard:
+
+In the Cooldown Planner window, click `Export to Clipboard` or this button here to copy it to your clipboard:
 
 ![image](https://github.com/user-attachments/assets/c283b389-642b-44fa-af95-50b0765014ea)
 
-Depending on the situation we may have more than one, we will decide to keep the best plan available on display for best outcomes. 
+Depending on the situation, if multiple plans are available, we will select the most effective one to display for the most optimal outcomes. This ensures that the strategies provided are as accurate as can be, maximizing efficiency and effectiveness. 
 
-## Presets
-
-## Presets
-
-## Presets
+Your feedback and insights are always welcome as we strive to enhance our approach!
