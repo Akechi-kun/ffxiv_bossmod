@@ -15,7 +15,7 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: DRK", "Planner support for utility actions", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.DRK), 100);
+        var res = new RotationModuleDefinition("Utility: DRK", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.DRK), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
         DefineSimpleConfig(res, Track.DarkMind, "DarkMind", "DMind", 450, DRK.AID.DarkMind, 10); //120s CD, 15s duration
@@ -63,13 +63,13 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
             TBNStrategy.Force => DRK.AID.TheBlackestNight,
             _ => default
         };
-        if (tbnight != default)
+        if (tbnight != default && Player.HPMP.CurMP >= 3000)
             Hints.ActionsToExecute.Push(ActionID.MakeSpell(DRK.AID.TheBlackestNight), tbnTarget, tbn.Priority(), tbn.Value.ExpireIn);
 
         //Oblation execution
         var obl = strategy.Option(Track.Oblation);
         var oblTarget = ResolveTargetOverride(obl.Value) ?? primaryTarget ?? Player; //Smart-Targets Co-Tank if set to Automatic, if no Co-Tank then targets self
-        var oblStatus = StatusDetails(oblTarget, DRK.SID.Oblation, Player.InstanceID, 20).Left > 1; //Checks if status is present
+        var oblStatus = TargetStatusCheck(oblTarget, DRK.SID.Oblation); //Checks if status is present
         var oblat = obl.As<OblationStrategy>() switch
         {
             OblationStrategy.Force => DRK.AID.Oblation,

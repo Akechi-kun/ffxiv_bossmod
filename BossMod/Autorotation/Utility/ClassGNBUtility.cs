@@ -14,7 +14,7 @@ public sealed class ClassGNBUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: GNB", "Planner support for utility actions", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.GNB), 100); //How we plan our use of Utility skills
+        var res = new RotationModuleDefinition("Utility: GNB", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.GNB), 100); //How we plan our use of Utility skills
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove); //Stance & LB
 
         DefineSimpleConfig(res, Track.Camouflage, "Camouflage", "Camo", 450, GNB.AID.Camouflage, 20); //90s CD, 20s duration
@@ -52,8 +52,8 @@ public sealed class ClassGNBUtility(RotationModuleManager manager, Actor player)
 
         //Aurora execution
         var aur = strategy.Option(Track.Aurora);
-        var aurTarget = ResolveTargetOverride(aur.Value) ?? primaryTarget; //Smart-Targeting
-        var aurStatus = StatusDetails(aurTarget, GNB.SID.Aurora, Player.InstanceID, 18).Left > 1; //Checks if status is present
+        var aurTarget = ResolveTargetOverride(aur.Value) ?? primaryTarget ?? Player; //Smart-Targeting
+        var aurStatus = TargetStatusCheck(aurTarget, GNB.SID.Aurora); //Checks if status is present
         var aurora = aur.As<AuroraStrategy>() switch
         {
             AuroraStrategy.Force => GNB.AID.Aurora,
