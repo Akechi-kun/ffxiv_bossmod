@@ -67,6 +67,8 @@ class ReplayDetailsWindow : UIWindow
             MoveTo(_curTime + (curFrame - _prevFrame) * _playSpeed);
         _prevFrame = curFrame;
 
+        var resetPF = false;
+
         DrawControlRow();
         DrawTimelineRow();
         ImGui.TextUnformatted($"Num loaded modules: {_mgr.LoadedModules.Count}, num active modules: {_mgr.LoadedModules.Count(m => m.StateMachine.ActiveState != null)}, active module: {_mgr.ActiveModule?.GetType()}");
@@ -75,11 +77,10 @@ class ReplayDetailsWindow : UIWindow
         ImGui.DragFloat("Camera azimuth", ref _azimuth, 1, -180, 180);
         ImGui.SameLine();
         ImGui.Checkbox("Override", ref _azimuthOverride);
-        _hintsBuilder.Update(_hints, _povSlot);
+        _hintsBuilder.Update(_hints, _povSlot, float.MaxValue);
+        _rmm.Update(0, false);
         if (_mgr.ActiveModule != null)
         {
-            _rmm.Update(0, float.MaxValue, false);
-
             var drawTimerPre = DateTime.Now;
             _mgr.ActiveModule.Draw(_azimuthOverride ? _azimuth.Degrees() : _mgr.WorldState.Client.CameraAzimuth, _povSlot, true, true);
             var drawTimerPost = DateTime.Now;
@@ -96,6 +97,8 @@ class ReplayDetailsWindow : UIWindow
 
             if (ImGui.CollapsingHeader("Plan execution"))
             {
+                resetPF |= UIRotationWindow.DrawRotationSelector(_rmm);
+
                 if (ImGui.Button("Timeline"))
                 {
                     _ = new StateMachineWindow(_mgr.ActiveModule);
@@ -110,6 +113,7 @@ class ReplayDetailsWindow : UIWindow
                     {
                         plans.SelectedIndex = newSel;
                         _rotationDB.Plans.ModifyManifest(_mgr.ActiveModule.GetType(), _mgr.WorldState.Party.Player()?.Class ?? Class.None);
+                        resetPF = true;
                     }
 
                     ImGui.SameLine();
@@ -146,7 +150,7 @@ class ReplayDetailsWindow : UIWindow
             }
         }
 
-        DrawPartyTable();
+        resetPF |= DrawPartyTable();
         DrawEnemyTables();
         DrawAllActorsTable();
         DrawAI();
@@ -155,6 +159,9 @@ class ReplayDetailsWindow : UIWindow
             _events.Draw();
         if (ImGui.CollapsingHeader("Analysis"))
             _analysis.Draw();
+
+        if (resetPF)
+            ResetPF();
     }
 
     private void DrawControlRow()
@@ -287,11 +294,12 @@ class ReplayDetailsWindow : UIWindow
         }
     }
 
-    private void DrawPartyTable()
+    private bool DrawPartyTable()
     {
         if (!ImGui.CollapsingHeader("Party"))
-            return;
+            return false;
 
+        var resetPF = false;
         ImGui.BeginTable("party", 11, ImGuiTableFlags.Resizable);
         ImGui.TableSetupColumn("POV", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoResize, 25);
         ImGui.TableSetupColumn("Class", ImGuiTableColumnFlags.WidthFixed | ImGuiTableColumnFlags.NoResize, 30);
@@ -315,7 +323,7 @@ class ReplayDetailsWindow : UIWindow
             if (ImGui.Checkbox("###POV", ref isPOV) && isPOV)
             {
                 _povSlot = slot;
-                ResetPF();
+                resetPF = true;
             }
 
             ImGui.TableNextColumn();
@@ -339,6 +347,7 @@ class ReplayDetailsWindow : UIWindow
             ImGui.PopID();
         }
         ImGui.EndTable();
+        return resetPF;
     }
 
     private void DrawEnemyTables()
@@ -416,12 +425,7 @@ class ReplayDetailsWindow : UIWindow
         if (player == null)
             return;
 
-        if (_pfVisu == null)
-        {
-            var playerAssignment = Service.Config.Get<PartyRolesConfig>()[_mgr.WorldState.Party.Members[_povSlot].ContentId];
-            var pfTank = playerAssignment == PartyRolesConfig.Assignment.MT || playerAssignment == PartyRolesConfig.Assignment.OT && !_mgr.WorldState.Party.WithoutSlot().Any(p => p != player && p.Role == Role.Tank);
-            _pfVisu = new(_hints, _mgr.WorldState, player, player.TargetID, e => (e, _pfTargetRadius, _pfPositional, pfTank));
-        }
+        _pfVisu ??= new(_hints, _mgr.WorldState, player, _pfTargetRadius);
         _pfVisu.Draw(_pfTree);
 
         bool rebuild = false;

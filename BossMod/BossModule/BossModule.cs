@@ -219,8 +219,8 @@ public abstract class BossModule : IDisposable
 
     public void CalculateAIHints(int slot, Actor actor, PartyRolesConfig.Assignment assignment, AIHints hints)
     {
-        hints.Center = Center;
-        hints.Bounds = Bounds;
+        hints.PathfindMapCenter = Center;
+        hints.PathfindMapBounds = Bounds;
         foreach (var comp in _components)
             comp.AddAIHints(slot, actor, assignment, hints);
         CalculateModuleAIHints(slot, actor, assignment, hints);
@@ -243,6 +243,10 @@ public abstract class BossModule : IDisposable
     // called during update if module is not yet active, should return true if it is to be activated
     // default implementation activates if primary target is both targetable and in combat
     protected virtual bool CheckPull() { return PrimaryActor.IsTargetable && PrimaryActor.InCombat; }
+
+    // called during update if module is active; should return true if module is to be reset (i.e. deleted and new instance recreated for same actor)
+    // default implementation never resets, but it's useful for outdoor bosses that can be leashed
+    public virtual bool CheckReset() => false;
 
     protected virtual void UpdateModule() { }
     protected virtual void DrawArenaBackground(int pcSlot, Actor pc) { } // before modules background
