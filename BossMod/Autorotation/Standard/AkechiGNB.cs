@@ -1,4 +1,8 @@
-﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+﻿using BossMod.Endwalker.Dungeon.D03Vanaspati.D031Snatcher;
+using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+using static BossMod.Actor;
+using static BossMod.ActorCastEvent;
+using static BossMod.Autorotation.xan.MNK;
 
 namespace BossMod.Autorotation;
 //Contribution by Akechi
@@ -15,9 +19,9 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         Burst,           //Burst damage actions
         Potion,          //Potion usage tracking
         LightningShot,   //Ranged attack tracking
+        GnashingFang,    //Gnashing Fang action tracking
         NoMercy,         //No Mercy ability tracking
         SonicBreak,      //Sonic Break ability tracking
-        GnashingFang,    //Gnashing Fang action tracking
         DoubleDown,      //Double Down ability tracking
         BurstStrike,     //Burst Strike ability tracking
         FatedCircle,     //Fated Circle ability tracking
@@ -65,28 +69,6 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         Forbid          //Prohibit the use of Lightning Shot
     }
 
-    //Defines different offensive strategies that dictate how abilities and resources are used during combat
-    public enum NoMercyStrategy
-    {
-        Automatic,      //Automatically decide when to use offensive abilities
-        OnCD,
-        LateWeave,
-        Force,          //Force the use of offensive abilities regardless of conditions
-        Force2cart,          //Force the use of offensive abilities regardless of conditions
-        Force3cart,          //Force the use of offensive abilities regardless of conditions
-        Delay           //Delay the use of offensive abilities for strategic reasons
-    }
-
-    public enum SonicBreakStrategy
-    {
-        Automatic,      //Automatically decide when to use offensive abilities
-        EarlySB,
-        MidSB,
-        LateSB,
-        Force,          //Force the use of offensive abilities regardless of conditions
-        Delay           //Delay the use of offensive abilities for strategic reasons
-    }
-
     //Defines the strategy for using Gnashing Fang in combos, allowing for different behaviors based on combat scenarios
     public enum GnashingStrategy
     {
@@ -95,6 +77,17 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         ForceClaw,        //Force the use of Savage Claw action when in combo
         ForceTalon,       //Force the use of Wicked Talon action when in combo
         Delay             //Delay the use of Gnashing Fang for strategic reasons
+    }
+
+    //Defines the strategy for using No Mercy, allowing for different behaviors based on combat scenarios
+    public enum NoMercyStrategy
+    {
+        Automatic,      //Automatically decide when to use No Mercy
+        Force,          //Force the use of No Mercy regardless of conditions
+        ForceLW,        //Force the use of No Mercy in next possible 2nd oGCD slot
+        Force2,         //Force the use of No Mercy when 2 cartridges are available
+        Force3,         //Force the use of No Mercy when 3 cartridges are available
+        Delay           //Delay the use of No Mercy for strategic reasons
     }
 
     //Defines different offensive strategies that dictate how abilities and resources are used during combat
@@ -119,7 +112,7 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             .AddOption(AOEStrategy.FocusAoE, "AoE", "Use AoE rotation (without overcap protection)")
             .AddOption(AOEStrategy.Auto, "Auto", "Use AoE rotation if 3+ targets would be hit, otherwise use ST rotation; break combo if necessary")
             .AddOption(AOEStrategy.AutoFinishCombo, "Auto Finish Combo", "Use AoE rotation if 3+ targets would be hit, otherwise use ST rotation; finish combo before switching")
-            .AddOption(AOEStrategy.GenerateDowntime, "Generate before Downtime", "Estimates time until disengagement & determines which combo is best to generate carts appropriately before downtime")
+            .AddOption(AOEStrategy.GenerateDowntime, "Generate before Downtime", "Estimates time until disengagement & determines when to use ST or AoE combo to generate carts appropriately before downtime")
             ;
 
         //Burst strategy
@@ -145,27 +138,6 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             .AddOption(LightningShotStrategy.Forbid, "Forbid", "Do not use at all")
             .AddAssociatedActions(GNB.AID.LightningShot);
 
-        //NoMercy strategy
-        res.Define(Track.NoMercy).As<NoMercyStrategy>("No Mercy", "N.Mercy", uiPriority: 170)
-            .AddOption(NoMercyStrategy.Automatic, "Automatic", "Use normally")
-            .AddOption(NoMercyStrategy.OnCD, "OnCD (SlowGNB)", "Use on cooldown (SlowGNB)", 60, 20, ActionTargets.Self, 2)
-            .AddOption(NoMercyStrategy.LateWeave, "Late-Weave (FastGNB)", "Use only as late-weave (FastGNB)", 60, 20, ActionTargets.Self, 2)
-            .AddOption(NoMercyStrategy.Force, "Force", "Force use ASAP (even during downtime)", 60, 20, ActionTargets.Self, 2)
-            .AddOption(NoMercyStrategy.Force2cart, "Force (2 carts)", "Force use as soon as you have 2 cartridges", 60, 20, ActionTargets.Self, 2)
-            .AddOption(NoMercyStrategy.Force3cart, "Force (3 carts)", "Force use as soon as you have 3 cartridges", 60, 20, ActionTargets.Self, 2)
-            .AddOption(NoMercyStrategy.Delay, "Delay", "Delay", 0, 0, ActionTargets.None, 2)
-            .AddAssociatedActions(GNB.AID.NoMercy);
-
-        //SonicBreak strategy
-        res.Define(Track.SonicBreak).As<SonicBreakStrategy>("Sonic Break", "S.Break", uiPriority: 150)
-            .AddOption(SonicBreakStrategy.Automatic, "Auto", "Normal use of Sonic Break")
-            .AddOption(SonicBreakStrategy.EarlySB, "Force", "Early use of Sonic Break (first GCD in No Mercy)", 0, 30, ActionTargets.Hostile, 54)
-            .AddOption(SonicBreakStrategy.MidSB, "Force", "Mid use of Sonic Break (4th-5th GCD in No Mercy)", 0, 30, ActionTargets.Hostile, 54)
-            .AddOption(SonicBreakStrategy.LateSB, "Force", "Late use of Sonic Break (last GCD in No Mercy)", 0, 30, ActionTargets.Hostile, 54)
-            .AddOption(SonicBreakStrategy.Force, "Force", "Force use of Sonic Break", 0, 30, ActionTargets.Hostile, 54)
-            .AddOption(SonicBreakStrategy.Delay, "Delay", "Delay use of Sonic Break", 0, 0, ActionTargets.None, 54)
-            .AddAssociatedActions(GNB.AID.SonicBreak);
-
         //GnashingFang strategy
         res.Define(Track.GnashingFang).As<GnashingStrategy>("Gnashing Fang", "G.Fang", uiPriority: 160)
             .AddOption(GnashingStrategy.Automatic, "Auto", "Normal use of Gnashing Fang")
@@ -174,8 +146,24 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             .AddOption(GnashingStrategy.ForceTalon, "Force", "Force use of Wicked Talon (Step 3)", 0, 0, ActionTargets.Hostile, 60)
             .AddOption(GnashingStrategy.Delay, "Delay", "Delay use of Gnashing Fang", 0, 0, ActionTargets.None, 60)
             .AddAssociatedActions(GNB.AID.GnashingFang, GNB.AID.SavageClaw, GNB.AID.WickedTalon);
+        //NoMercy strategy
+        res.Define(Track.NoMercy).As<NoMercyStrategy>("No Mercy", "N.Mercy", uiPriority: 170)
+            .AddOption(NoMercyStrategy.Automatic, "Automatic", "Use normally")
+            .AddOption(NoMercyStrategy.Force, "Force", "Force use ASAP (even during downtime)", 60, 20, ActionTargets.Self, 2)
+            .AddOption(NoMercyStrategy.ForceLW, "Force Late-weave", "Uses as soon as in next possible late-weave slot", 60, 20, ActionTargets.Self, 2)
+            .AddOption(NoMercyStrategy.Force2, "Force (2+ carts)", "Use as soon as you have 2 (or more) cartridges", 60, 20, ActionTargets.Self, 30)
+            .AddOption(NoMercyStrategy.Force3, "Force (3 carts)", "Use as soon as you have 3 cartridges", 60, 20, ActionTargets.Self, 88)
+            .AddOption(NoMercyStrategy.Delay, "Delay", "Delay", 0, 0, ActionTargets.None, 2)
+            .AddAssociatedActions(GNB.AID.NoMercy);
 
         //Offensive Strategies
+        //SonicBreak strategy
+        res.Define(Track.SonicBreak).As<OffensiveStrategy>("Sonic Break", "S.Break", uiPriority: 150)
+            .AddOption(OffensiveStrategy.Automatic, "Auto", "Normal use of Sonic Break")
+            .AddOption(OffensiveStrategy.Force, "Force", "Force use of Sonic Break", 0, 30, ActionTargets.Hostile, 54)
+            .AddOption(OffensiveStrategy.Delay, "Delay", "Delay use of Sonic Break", 0, 0, ActionTargets.None, 54)
+            .AddAssociatedActions(GNB.AID.SonicBreak);
+
         //DoubleDown strategy
         res.Define(Track.DoubleDown).As<OffensiveStrategy>("Double Down", "D.Down", uiPriority: 160)
             .AddOption(OffensiveStrategy.Automatic, "Auto", "Normal use of Double Down")
@@ -225,23 +213,13 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
     public enum GCDPriority //Priority for GCDs used
     {
         None = 0,
-        Combo123 = 400,
-        NormalBS = 500,
-        NormalSB = 570,
-        GF23 = 560,
-        NormalDD = 580,
-        GF1 = 590,
-        slowSB = 620,
-        slowDD = 610,
-        slowGF1 = 600,
-        fastSB = 630,
-        fastDD = 640,
-        fastGF1 = 650,
-        ForcedLightningShot = 850,
-        ForcedSonicBreak = 860,
-        ForcedBurstStrike = 870,
-        ForcedDoubleDown = 880,
-        ForcedGnashing = 890,
+        Combo123 = 350,
+        NormalGCD = 500,
+        NormalBS = 600,
+        NormalSB = 670,
+        GF23 = 660,
+        NormalDD = 680,
+        GF1 = 690,
         ForcedGCD = 900,
         StopAll = 980,
     }
@@ -257,11 +235,12 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         NoMercy = 850,
         Potion = 900,
         ContinuationNeed = 950,
+        ForcedOGCD = 900,
         StopAll = 980,
     }
 
-    public byte Ammo; //Range: 0-2, 0-3 - current ammo count
-    public byte GunComboStep; //0 = Gnashing Fang & Reign of Beasts, 1 = Savage Claw, 2 = Wicked Talon, etc.
+    public int Ammo; //Range: 0-2, 0-3 - current ammo count
+    public int GunComboStep; //0 = Gnashing Fang & Reign of Beasts, 1 = Savage Claw, 2 = Wicked Talon, etc.
     public int MaxCartridges; //Maximum number of cartridges based on player level
 
     private float GCDLength; //Current GCD length, adjusted by skill speed/haste (2.5s baseline)
@@ -303,6 +282,8 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
     //Get the last action used in the combo sequence
     private GNB.AID ComboLastMove => (GNB.AID)World.Client.ComboState.Action;
 
+    public bool JustUsed(GNB.AID aid) => Manager?.LastCast.Data?.IsSpell(aid) ?? false;
+
     //Check if the target is within melee range (3 yalms)
     private bool In3y(Actor? target) => Player.DistanceToHitbox(target) <= 3;
 
@@ -323,6 +304,7 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
 
     //Checks if Status effect is on self
     public bool HasEffect<SID>(SID sid) where SID : Enum => Player.FindStatus((uint)(object)sid, Player.InstanceID) != null;
+    public bool HasStatus<SID>(SID sid) where SID : Enum => SelfStatusLeft(sid) > 0;
 
     public override void Execute(StrategyValues strategy, Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving) //Executes our actions
     {
@@ -384,13 +366,10 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             _ => (0, 0)
         };
 
-        //GCD minimal conditions
-        var canSonic = hasBreak && Unlocked(GNB.AID.SonicBreak);
-        var canDD = Ammo >= 2 && Unlocked(GNB.AID.DoubleDown);
-        var canBSlv80 = Ammo >= 1 && Unlocked(GNB.AID.BurstStrike) && Unlocked(GNB.AID.Bloodfest);
-        var canBSlv70 = ((Ammo == MaxCartridges && ComboLastMove is GNB.AID.BrutalShell) ||
-                         (nmLeft > 0 && Ammo > 0)) &&
-                        Unlocked(GNB.AID.BurstStrike) && !Unlocked(GNB.AID.Bloodfest);
+        //CDs minimal conditions
+        var canSonic = hasBreak && Unlocked(GNB.AID.SonicBreak); //SonicBreak conditions
+        var canDD = Ammo >= 2 && Unlocked(GNB.AID.DoubleDown); //DoubleDown conditions
+        var canBS79down = Ammo >= 1 && Unlocked(GNB.AID.BurstStrike) && !Unlocked(GNB.AID.Bloodfest); //BurstStrike Lv79 & below conditions
         var canGF = Ammo >= 1 && Unlocked(GNB.AID.GnashingFang);
         var canFC = Ammo >= 1 && Unlocked(GNB.AID.FatedCircle);
 
@@ -399,17 +378,10 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         QueueGCD(comboAction, comboAction is GNB.AID.DemonSlice or GNB.AID.DemonSlaughter ? Player : primaryTarget, comboPrio);
 
         //Focused actions for AoE strategies
-        if (AOEStrategy == AOEStrategy.FocusSingleTarget)
-        {
-            var action = NextForceSingleTarget();
-            QueueGCD(action, primaryTarget, GCDPriority.ForcedGCD);
-        }
-
-        if (AOEStrategy == AOEStrategy.FocusAoE)
-        {
-            var action = NextForceAoE();
-            QueueGCD(action, primaryTarget, GCDPriority.ForcedGCD);
-        }
+        if (AOEStrategy == AOEStrategy.FocusSingleTarget) //ST (without overcap protection)
+            QueueGCD(NextForceSingleTarget(), primaryTarget, GCDPriority.ForcedGCD);
+        if (AOEStrategy == AOEStrategy.FocusAoE) //AoE (without overcap protection)
+            QueueGCD(NextForceAoE(), primaryTarget, GCDPriority.ForcedGCD);
 
         //Estimate time to next downtime
         var downtimeIn = Manager.Planner?.EstimateTimeToNextDowntime().Item2 ?? float.MaxValue;
@@ -428,82 +400,106 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
                 if ((downtimeIn == GCD * 2 && Ammo == 2) ||
                     (downtimeIn == GCD * 4 && Ammo == 1) ||
                     (downtimeIn == GCD * 6 && Ammo == 0))
-                {
                     QueueGCD(GNB.AID.DemonSlice, Player, GCDPriority.ForcedGCD);
-                }
 
                 if ((downtimeIn == GCD * 3 && Ammo == 2) ||
                     (downtimeIn == GCD * 5 && Ammo == 1) ||
                     (downtimeIn == GCD * 8 && Ammo == 0) ||
                     (downtimeIn == GCD * 9 && Ammo == 0))
-                {
                     QueueGCD(GNB.AID.KeenEdge, primaryTarget, GCDPriority.ForcedGCD);
-                }
             }
 
             if (comboStepsRemaining == 1) //Combo initiated
             {
-                if ((downtimeIn == GCD && Ammo == 2) ||
+                if (((downtimeIn == GCD && Ammo == 2) ||
                     (downtimeIn == GCD * 3 && Ammo == 1) ||
-                    (downtimeIn == GCD * 5 && Ammo == 0) &&
+                    (downtimeIn == GCD * 5 && Ammo == 0)) &&
                     ComboLastMove == GNB.AID.DemonSlice)
-                {
                     QueueGCD(GNB.AID.DemonSlaughter, Player, GCDPriority.ForcedGCD);
-                }
 
-                if ((downtimeIn == GCD * 2 && Ammo == 2) ||
+                if (((downtimeIn == GCD * 2 && Ammo == 2) ||
                     (downtimeIn == GCD * 4 && Ammo == 1) ||
                     (downtimeIn == GCD * 7 && Ammo == 2) ||
-                    (downtimeIn == GCD * 8 && Ammo == 2) &&
+                    (downtimeIn == GCD * 8 && Ammo == 2)) &&
                     ComboLastMove == GNB.AID.KeenEdge)
-                {
                     QueueGCD(GNB.AID.BrutalShell, primaryTarget, GCDPriority.ForcedGCD);
-                }
             }
 
             if (comboStepsRemaining == 2)
             {
-                if ((downtimeIn == GCD && (Ammo == 2 || Ammo == 3)) ||
+                if (((downtimeIn == GCD && (Ammo == 2 || Ammo == 3)) ||
                     (downtimeIn == GCD * 4 && Ammo == 1) ||
-                    (downtimeIn == GCD * 7 && Ammo == 0) &&
+                    (downtimeIn == GCD * 7 && Ammo == 0)) &&
                     ComboLastMove == GNB.AID.BrutalShell)
-                {
                     QueueGCD(GNB.AID.SolidBarrel, primaryTarget, GCDPriority.ForcedGCD);
-                }
             }
 
             if (Ammo == MaxCartridges)
                 QueueGCD(NextForceSingleTarget(), primaryTarget, GCDPriority.ForcedGCD);
         }
 
-        //No Mercy execution
+        // No Mercy execution
         var nmStrat = strategy.Option(Track.NoMercy).As<NoMercyStrategy>();
-        if (!hold && ShouldUseNoMercy(nmStrat, Player))
-            QueueOGCD(GNB.AID.NoMercy, Player, OGCDPriority.ContinuationNeed);
 
-        if (nmStrat == NoMercyStrategy.OnCD)
+        if (nmStrat == NoMercyStrategy.Automatic)
         {
-            if (nmCD < 0.9f && Ammo is 3)
-                QueueGCD(GNB.AID.BurstStrike, primaryTarget, GCDPriority.ForcedBurstStrike);
-            if (nmCD > 0.9f && hasBlast)
-                QueueOGCD(GNB.AID.Hypervelocity, primaryTarget, OGCDPriority.ContinuationNeed);
-            if (nmCD > 57.5 && Ammo >= 2 && GunComboStep is 0 && (bfCD < GCD * 6 || ActionReady(GNB.AID.Bloodfest)))
-                QueueGCD(GNB.AID.SonicBreak, primaryTarget, GCDPriority.ForcedSonicBreak);
-            if (hasBreak && Ammo is 0 && GunComboStep is 1 && bfCD > GCD * 12)
-                QueueGCD(GNB.AID.SonicBreak, primaryTarget, GCDPriority.ForcedSonicBreak);
+            // Define the current combo step based on the last move in the combo chain
+            var comboSteps = ComboLastMove switch
+            {
+                GNB.AID.KeenEdge => 1,
+                GNB.AID.BrutalShell => 2,
+                GNB.AID.SolidBarrel => 0,
+                GNB.AID.DemonSlice => 1,
+                GNB.AID.DemonSlaughter => 0,
+                GNB.AID.BurstStrike => 2,
+                GNB.AID.FatedCircle => 1,
+                _ => 0
+            };
+
+            if (GCDLength >= 2.48) // Slow GNB
+            {
+                // Logic for opener and burst conditions for Slow GNB
+                if ((Ammo == 0 && ActionReady(GNB.AID.Bloodfest) && comboSteps == 2) ||
+                    (Player.Level == 100 && ((Ammo == 2 && comboSteps == 2) || Ammo == 3) && CD(GNB.AID.DoubleDown) <= GCD * 2 && bfCD > 15 && bfCD < 90) ||
+                    (Player.Level == 100 && Ammo == 2 && CD(GNB.AID.DoubleDown) <= GCD * 2 && (bfCD < GCD * 12 || ActionReady(GNB.AID.Bloodfest))) ||
+                    (Player.Level is >= 90 and <= 99 && Ammo == 2 && CD(GNB.AID.DoubleDown) <= GCD * 2 && bfCD > 15 && bfCD < 90) ||
+                    (Player.Level is >= 90 and <= 99 && Ammo == 3 && CD(GNB.AID.DoubleDown) <= GCD * 2 && (bfCD < GCD * 12 || ActionReady(GNB.AID.Bloodfest))) ||
+                    (Player.Level <= 89 && Ammo >= 1 && ActionReady(GNB.AID.GnashingFang)))
+                {
+                    QueueOGCD(GNB.AID.NoMercy, Player, OGCDPriority.NoMercy);
+                }
+            }
+            else if (GCDLength <= 2.47) // Fast GNB
+            {
+                // Logic for burst windows and opener for Fast GNB
+                if (GCD < 0.9f &&
+                    (Player.Level >= 80 && Ammo == 1 && bfCD == 0) ||
+                    (Player.Level <= 79 && Ammo >= 1 && ActionReady(GNB.AID.GnashingFang)) ||
+                    Ammo == MaxCartridges)
+                {
+                    QueueOGCD(GNB.AID.NoMercy, Player, OGCDPriority.NoMercy);
+                }
+            }
         }
 
-        //Zone execution
-        if (!hold && ShouldUseZone(strategy.Option(Track.Zone).As<OffensiveStrategy>(), primaryTarget))
-            QueueOGCD(Unlocked(GNB.AID.BlastingZone) ? GNB.AID.BlastingZone : GNB.AID.DangerZone, primaryTarget, OGCDPriority.Zone);
+        if (!hold && ShouldUseNoMercy(nmStrat, primaryTarget))
+            QueueOGCD(GNB.AID.NoMercy, Player, nmStrat is NoMercyStrategy.Force or NoMercyStrategy.ForceLW or NoMercyStrategy.Force2 or NoMercyStrategy.Force3 ? OGCDPriority.ForcedOGCD : OGCDPriority.NoMercy);
 
-        //BowShock execution
-        if (!hold && ShouldUseBowShock(strategy.Option(Track.BowShock).As<OffensiveStrategy>(), primaryTarget))
-            QueueOGCD(GNB.AID.BowShock, primaryTarget, OGCDPriority.BowShock);
+        //Zone execution (Blasting Zone / Danger Zone)
+        var zoneAction = Unlocked(GNB.AID.BlastingZone) ? GNB.AID.BlastingZone : GNB.AID.DangerZone;
+        var zoneStrat = strategy.Option(Track.Zone).As<OffensiveStrategy>();
+        if (!hold && ShouldUseZone(zoneStrat, primaryTarget))
+            QueueOGCD(zoneAction, primaryTarget, zoneStrat == OffensiveStrategy.Force ? OGCDPriority.ForcedOGCD : OGCDPriority.Zone);
+
+        //Bow Shock execution
+        var bowStrat = strategy.Option(Track.BowShock).As<OffensiveStrategy>();
+        if (!hold && ShouldUseBowShock(bowStrat, primaryTarget))
+            QueueOGCD(GNB.AID.BowShock, Player, bowStrat == OffensiveStrategy.Force ? OGCDPriority.ForcedOGCD : OGCDPriority.BowShock);
 
         //Bloodfest execution
-        if (!hold && ShouldUseBloodfest(strategy.Option(Track.Bloodfest).As<OffensiveStrategy>(), primaryTarget))
-            QueueOGCD(GNB.AID.Bloodfest, primaryTarget, OGCDPriority.Bloodfest);
+        var bfStrat = strategy.Option(Track.Bloodfest).As<OffensiveStrategy>();
+        if (!hold && ShouldUseBloodfest(bfStrat, primaryTarget))
+            QueueOGCD(GNB.AID.Bloodfest, primaryTarget, bfStrat == OffensiveStrategy.Force ? OGCDPriority.ForcedOGCD : OGCDPriority.Bloodfest);
 
         //Continuation execution
         if (Unlocked(GNB.AID.Continuation))
@@ -514,85 +510,73 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
                 QueueOGCD(GNB.AID.AbdomenTear, primaryTarget, OGCDPriority.ContinuationNeed);
             if (hasGouge)
                 QueueOGCD(GNB.AID.EyeGouge, primaryTarget, OGCDPriority.ContinuationNeed);
-            if (hasBlast || ComboLastMove is GNB.AID.BurstStrike)
+            if (hasBlast && nmCD > 0.9f)
                 QueueOGCD(GNB.AID.Hypervelocity, primaryTarget, OGCDPriority.ContinuationNeed);
             if (hasRaze || ComboLastMove is GNB.AID.FatedCircle)
                 QueueOGCD(GNB.AID.FatedBrand, primaryTarget, OGCDPriority.ContinuationNeed);
         }
 
         //Gnashing Fang execution
-        if (!hold && canGF && ShouldUseGnashingFang(strategy.Option(Track.GnashingFang).As<GnashingStrategy>(), primaryTarget))
-        {
-            if (nmStrat == NoMercyStrategy.OnCD)
-                QueueGCD(GNB.AID.GnashingFang, primaryTarget, GCDPriority.slowGF1);
-            if (nmStrat == NoMercyStrategy.LateWeave)
-                QueueGCD(GNB.AID.GnashingFang, primaryTarget, GCDPriority.fastGF1);
-
-            QueueGCD(GNB.AID.GnashingFang, primaryTarget, GCDPriority.GF1);
-        }
+        var gfStrat = strategy.Option(Track.GnashingFang).As<GnashingStrategy>();
+        if (!hold && canGF && ShouldUseGnashingFang(gfStrat, primaryTarget))
+            QueueGCD(GNB.AID.GnashingFang, primaryTarget, gfStrat == GnashingStrategy.ForceGnash ? GCDPriority.ForcedGCD : GCDPriority.GF1);
 
         //Double Down execution
-        if (!hold && canDD && ShouldUseDoubleDown(strategy.Option(Track.DoubleDown).As<OffensiveStrategy>(), primaryTarget))
-        {
-            if (nmStrat == NoMercyStrategy.OnCD)
-                QueueGCD(GNB.AID.DoubleDown, primaryTarget, GCDPriority.slowDD);
-            if (nmStrat == NoMercyStrategy.LateWeave)
-                QueueGCD(GNB.AID.DoubleDown, primaryTarget, GCDPriority.fastDD);
+        var ddStrat = strategy.Option(Track.DoubleDown).As<OffensiveStrategy>();
+        if (canDD && ShouldUseDoubleDown(ddStrat, primaryTarget))
+            QueueGCD(GNB.AID.DoubleDown, primaryTarget, ddStrat == OffensiveStrategy.Force ? GCDPriority.ForcedGCD : GCDPriority.NormalDD);
 
-            QueueGCD(GNB.AID.DoubleDown, primaryTarget, GCDPriority.NormalDD);
-        }
+        //Gnashing Fang Combo execution
+        if (GunComboStep == 1)
+            QueueGCD(GNB.AID.SavageClaw, primaryTarget, gfStrat == GnashingStrategy.ForceClaw ? GCDPriority.ForcedGCD : GCDPriority.GF23);
+        if (GunComboStep == 2)
+            QueueGCD(GNB.AID.WickedTalon, primaryTarget, gfStrat == GnashingStrategy.ForceTalon ? GCDPriority.ForcedGCD : GCDPriority.GF23);
 
-        //Gnashing Fang's Combo execution
-        if (GunComboStep is 1)
-            QueueGCD(GNB.AID.SavageClaw, primaryTarget, GCDPriority.GF23);
-        if (GunComboStep is 2)
-            QueueGCD(GNB.AID.WickedTalon, primaryTarget, GCDPriority.GF23);
-
-        //Reign Of Beasts execution
-        if (hasReign && GunComboStep is 0 && !ActionReady(GNB.AID.DoubleDown))
-            QueueGCD(GNB.AID.ReignOfBeasts, primaryTarget, GCDPriority.GF1);
+        //Reign of Beasts execution
+        if (hasReign && GunComboStep == 0 && !ActionReady(GNB.AID.DoubleDown))
+            QueueGCD(GNB.AID.ReignOfBeasts, primaryTarget, GCDPriority.NormalGCD);
 
         //Reign Combo execution
-        if (GunComboStep is 3)
-            QueueGCD(GNB.AID.NobleBlood, primaryTarget, GCDPriority.GF1);
-        if (GunComboStep is 4)
-            QueueGCD(GNB.AID.LionHeart, primaryTarget, GCDPriority.GF1);
+        if (GunComboStep == 3)
+            QueueGCD(GNB.AID.NobleBlood, primaryTarget, GCDPriority.NormalGCD);
+        if (GunComboStep == 4)
+            QueueGCD(GNB.AID.LionHeart, primaryTarget, GCDPriority.NormalGCD);
 
         //Sonic Break execution
-        var sbStrat = strategy.Option(Track.SonicBreak).As<SonicBreakStrategy>();
+        var sbStrat = strategy.Option(Track.SonicBreak).As<OffensiveStrategy>();
         if (canSonic && hasNM && ShouldUseSonicBreak(sbStrat, primaryTarget))
-        {
-            if (nmStrat == NoMercyStrategy.OnCD)
-                QueueGCD(GNB.AID.SonicBreak, primaryTarget, GCDPriority.slowSB);
-            if (nmStrat == NoMercyStrategy.LateWeave)
-                QueueGCD(GNB.AID.SonicBreak, primaryTarget, GCDPriority.fastSB);
-            if (sbStrat == SonicBreakStrategy.Force)
-                QueueGCD(GNB.AID.SonicBreak, primaryTarget, GCDPriority.ForcedSonicBreak);
-            if (ShouldUseSonicBreak(sbStrat, primaryTarget))
-                QueueGCD(GNB.AID.SonicBreak, primaryTarget, GCDPriority.NormalSB);
-
-        }
+            QueueGCD(GNB.AID.SonicBreak, primaryTarget, sbStrat == OffensiveStrategy.Force ? GCDPriority.ForcedGCD : GCDPriority.NormalSB);
 
         //Burst Strike execution
-        if (canBSlv80 && ShouldUseBurstStrike(strategy.Option(Track.BurstStrike).As<OffensiveStrategy>(), primaryTarget))
-            QueueGCD(GNB.AID.BurstStrike, primaryTarget, GCDPriority.NormalBS);
+        var strikeStrat = strategy.Option(Track.BurstStrike).As<OffensiveStrategy>();
+        if (strikeStrat == OffensiveStrategy.Automatic)
+        {
+            if ((nmCD <= GCD || ActionReady(GNB.AID.NoMercy)) && Ammo is 3 && (bfCD < GCD * 12 || ActionReady(GNB.AID.Bloodfest)))
+                QueueGCD(GNB.AID.BurstStrike, primaryTarget, GCDPriority.GF1);
+        }
+        if (Ammo >= 1 && Unlocked(GNB.AID.BurstStrike) && ShouldUseBurstStrike(strikeStrat, primaryTarget))
+            QueueGCD(GNB.AID.BurstStrike, primaryTarget, strikeStrat == OffensiveStrategy.Force ? GCDPriority.ForcedGCD : GCDPriority.NormalBS);
 
         //Fated Circle execution
-        if (canFC && ShouldUseFatedCircle(strategy.Option(Track.FatedCircle).As<OffensiveStrategy>(), primaryTarget))
-            QueueGCD(GNB.AID.BurstStrike, primaryTarget, GCDPriority.NormalBS);
-        else if (!canFC && canBSlv70)
-        {
-            var action = UseCorrectBS(AoETargets);
-            QueueGCD(action, primaryTarget, GCDPriority.NormalBS);
-        }
+        var fcStrat = strategy.Option(Track.FatedCircle).As<OffensiveStrategy>();
+        if (canFC && ShouldUseFatedCircle(fcStrat, primaryTarget))
+            QueueGCD(GNB.AID.FatedCircle, primaryTarget, fcStrat == OffensiveStrategy.Force ? GCDPriority.ForcedGCD : GCDPriority.NormalBS);
+        if (!canFC && canBS79down)
+            QueueGCD(UseCorrectBS(AoETargets), primaryTarget, GCDPriority.NormalBS);
 
         //Lightning Shot execution
+        var lsStrat = strategy.Option(Track.LightningShot).As<LightningShotStrategy>();
         if (ShouldUseLightningShot(primaryTarget, strategy.Option(Track.LightningShot).As<LightningShotStrategy>()))
-            QueueGCD(GNB.AID.LightningShot, primaryTarget, GCDPriority.ForcedLightningShot);
+            QueueGCD(GNB.AID.LightningShot, primaryTarget, lsStrat == LightningShotStrategy.Force ? GCDPriority.ForcedGCD : GCDPriority.NormalGCD);
 
         //Potion execution
         if (ShouldUsePotion(strategy.Option(Track.Potion).As<PotionStrategy>()))
             Hints.ActionsToExecute.Push(ActionDefinitions.IDPotionStr, Player, ActionQueue.Priority.VeryHigh + (int)OGCDPriority.Potion, 0, GCD - 0.9f);
+
+        if (Unlocked(GNB.AID.ReignOfBeasts) && HasEffect(GNB.SID.NoMercy) && GunComboStep == 0 && Unlocked(GNB.AID.BurstStrike) && ComboLastMove is GNB.AID.BrutalShell && Ammo == 2)
+            QueueGCD(GNB.AID.SolidBarrel, primaryTarget, GCDPriority.NormalGCD);
+        if (!Unlocked(GNB.AID.ReignOfBeasts) && HasEffect(GNB.SID.NoMercy) && GunComboStep == 0 && Unlocked(GNB.AID.BurstStrike) && (ComboLastMove is GNB.AID.BrutalShell || JustUsed(GNB.AID.BurstStrike)) && Ammo == 2)
+            QueueGCD(GNB.AID.SolidBarrel, primaryTarget, GCDPriority.NormalGCD);
     }
 
     //QueueGCD execution
@@ -618,9 +602,9 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         }
     }
 
-    private GNB.AID UseCorrectBS(int AoETargets) //Determines whether to use BurstStrike or FatedCircle based on conditions
+    private GNB.AID UseCorrectBS(int AoETargets) //Determines whether to use Burst Strike or Fated Circle based on conditions
     {
-        //If under No Mercy and FatedCircle is not unlocked, use BurstStrike even in single-target situations
+        //If under No Mercy and Fated Circle is not unlocked, use Burst Strike even in single-target situations
         if (Ammo == MaxCartridges && ComboLastMove is GNB.AID.BrutalShell)
             return Unlocked(GNB.AID.FatedCircle) ? GNB.AID.FatedCircle : GNB.AID.BurstStrike;
 
@@ -628,12 +612,16 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         var hasStrike = Unlocked(GNB.AID.BurstStrike);
         var hasCircle = Unlocked(GNB.AID.FatedCircle);
 
-        //For Lv73 or lower (without FatedCircle), prefer BurstStrike on 2+ targets to prevent overcapping
-        if (hasStrike && AoETargets >= 2)
-            return hasCircle ? GNB.AID.FatedCircle : GNB.AID.BurstStrike;
+        //If Fated Circle is unlocked and there are 2+ targets, use Fated Circle for AoE
+        if (hasCircle && AoETargets >= 2)
+            return GNB.AID.FatedCircle;
 
-        //Default to BurstStrike if available
-        return hasStrike ? GNB.AID.BurstStrike : GNB.AID.BurstStrike; //This line seems redundant
+        //If Fated Circle is not unlocked but Burst Strike is available, use Burst Strike on 2+ targets to prevent overcapping
+        if (!hasCircle && hasStrike && AoETargets >= 2)
+            return GNB.AID.BurstStrike;
+
+        //Default to Burst Strike
+        return GNB.AID.BurstStrike;
     }
 
     private GNB.AID NextComboSingleTarget() => ComboLastMove switch //Determines the next single-target action based on the last action used
@@ -715,7 +703,7 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             return (nextAction, GCDPriority.Combo123);
 
         //Return normal combo action priority based on ammo risks
-        return (nextAction, riskingAmmo ? GCDPriority.NormalBS : GCDPriority.Combo123);
+        return (nextAction, riskingAmmo ? GCDPriority.NormalGCD : GCDPriority.Combo123);
     }
 
     //Determines when to use Lightning Shot
@@ -729,55 +717,20 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         _ => false
     };
 
-    //Determines when to use No Mercy
-    //NOTE: Using SkS GNB for now; use No Mercy as soon as full cartridges are available
-    private bool ShouldUseNoMercy(NoMercyStrategy strategy, Actor? target) => strategy switch
+    // Determines when to use No Mercy
+    private bool ShouldUseNoMercy(NoMercyStrategy strategy, Actor? target)
     {
-        NoMercyStrategy.Automatic =>
-                Player.InCombat && target != null && ActionReady(GNB.AID.NoMercy),
-        NoMercyStrategy.OnCD =>
-            Player.InCombat && target != null && ActionReady(GNB.AID.NoMercy) &&
-            (Ammo is 2 && CD(GNB.AID.DoubleDown) <= GCD * 2 && CD(GNB.AID.GnashingFang) < GCD * 3 && (bfCD < GCD * 6 || ActionReady(GNB.AID.Bloodfest))) || //Lv100 2min2cart
-            (Ammo >= 2 && CD(GNB.AID.DoubleDown) <= GCD * 2 && CD(GNB.AID.GnashingFang) < GCD * 3 && bfCD > GCD * 10) || //Lv100 1min
-            (Ammo is 0 && ComboLastMove is GNB.AID.BrutalShell), //Opener
-        NoMercyStrategy.LateWeave =>
-            Player.InCombat && target != null && ActionReady(GNB.AID.NoMercy) && GCD < 0.9f &&
-            ((Ammo == 1 && bfCD == 0 && Unlocked(GNB.AID.Bloodfest) && Unlocked(GNB.AID.DoubleDown)) || //Lv90+ Opener
-            (Ammo >= 1 && bfCD == 0 && Unlocked(GNB.AID.Bloodfest) && !Unlocked(GNB.AID.DoubleDown)) || //Lv80+ Opener
-            (!Unlocked(GNB.AID.Bloodfest) && Ammo >= 1 && ActionReady(GNB.AID.GnashingFang)) || //Lv70 & below
-            (Ammo == MaxCartridges)), //60s & 120s burst windows
-        NoMercyStrategy.Force => true,
-        NoMercyStrategy.Force2cart => Player.InCombat && target != null && Ammo is 2,
-        NoMercyStrategy.Force3cart => Player.InCombat && target != null && Ammo is 3,
-        NoMercyStrategy.Delay => false,
-        _ => false
-    };
-
-    //Determines when to use Sonic Break
-    private bool ShouldUseSonicBreak(SonicBreakStrategy strategy, Actor? target) => strategy switch
-    {
-        SonicBreakStrategy.Automatic =>
-            Player.InCombat && In3y(target) && hasNM && hasBreak,
-        SonicBreakStrategy.EarlySB => Player.InCombat && In3y(target) && nmCD >= 57.5f,
-        SonicBreakStrategy.MidSB => Player.InCombat && In3y(target) && !ActionReady(GNB.AID.DoubleDown) && !ActionReady(GNB.AID.GnashingFang) && GunComboStep is 0,
-        SonicBreakStrategy.LateSB => Player.InCombat && In3y(target) && nmLeft <= GCD,
-        SonicBreakStrategy.Force => true,
-        SonicBreakStrategy.Delay => false,
-        _ => false
-    };
-
-    //Determines when to use Gnashing Fang
-    private bool ShouldUseGnashingFang(GnashingStrategy strategy, Actor? target) => strategy switch
-    {
-        GnashingStrategy.Automatic =>
-            Player.InCombat && Ammo >= 1 && In3y(target) && ActionReady(GNB.AID.GnashingFang) &&
-            (nmLeft > 0 || hasNM || nmCD is < 35 and > 17),
-        GnashingStrategy.ForceGnash => Player.InCombat && GunComboStep == 0 && Ammo >= 1,
-        GnashingStrategy.ForceClaw => Player.InCombat && GunComboStep == 1,
-        GnashingStrategy.ForceTalon => Player.InCombat && GunComboStep == 2,
-        GnashingStrategy.Delay => false,
-        _ => false
-    };
+        // Handle other strategy options
+        return strategy switch
+        {
+            NoMercyStrategy.Force => true,
+            NoMercyStrategy.ForceLW => Player.InCombat && GCD < 0.9f,
+            NoMercyStrategy.Force2 => Ammo >= 2,
+            NoMercyStrategy.Force3 => Ammo == 3,
+            NoMercyStrategy.Delay => false,
+            _ => false
+        };
+    }
 
     //Determines when to use Bloodfest
     private bool ShouldUseBloodfest(OffensiveStrategy strategy, Actor? target) => strategy switch
@@ -810,40 +763,177 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
         _ => false
     };
 
-    //Determines when to use Double Down
-    private bool ShouldUseDoubleDown(OffensiveStrategy strategy, Actor? target) => strategy switch
+    //Determines when to use Sonic Break
+    private bool ShouldUseSonicBreak(OffensiveStrategy strategy, Actor? target)
     {
-        OffensiveStrategy.Automatic =>
-            Player.InCombat && ActionReady(GNB.AID.DoubleDown) && In5y(target) && hasNM && Ammo >= 2,
-        OffensiveStrategy.Force => true,
-        OffensiveStrategy.Delay => false,
-        _ => false
-    };
+        if (strategy == OffensiveStrategy.Automatic && Player.InCombat && target != null)
+        {
+            //Fast GNB (GCD <= 2.47): Use if nmLeft <= GCD
+            if (GCDLength <= 2.47)
+            {
+                return nmLeft <= GCD;
+            }
+
+            //Slow GNB (GCD >= 2.48): Check conditions
+            if (GCDLength >= 2.48)
+            {
+                //Lv100 checks
+                if (Unlocked(GNB.AID.ReignOfBeasts))
+                {
+                    return (Ammo == 2 && nmCD > 57f && !HasEffect(GNB.SID.ReadyToBlast) && (bfCD < GCD * 12 || ActionReady(GNB.AID.Bloodfest))) || //2min
+                           (CD(GNB.AID.GnashingFang) > 27.5 && bfCD is < 90 and > 15 && !ActionReady(GNB.AID.DoubleDown) && Ammo == 0 && !HasEffect(GNB.SID.ReadyToRip) && HasEffect(GNB.SID.ReadyToBreak)) || //1min, 2 carts
+                           (Ammo == 3 && (bfCD is < 90 and > 15 && nmCD > 57f)) || //1min, 3 carts
+                           (ComboLastMove is GNB.AID.BrutalShell && bfCD > 57f); //Opener
+                }
+
+                //Lv90 checks
+                if (!Unlocked(GNB.AID.ReignOfBeasts) && Unlocked(GNB.AID.DoubleDown))
+                {
+                    return (!HasEffect(GNB.SID.ReadyToBlast) && Ammo == 3 && bfCD < GCD * 12) || //2min
+                           (bfCD is < 90 and > 15 && Ammo == 3) || //1min
+                           (ComboLastMove is GNB.AID.BrutalShell && bfCD > 57f); //Opener
+                }
+
+                //Lv80 checks
+                if (!Unlocked(GNB.AID.DoubleDown) && Unlocked(GNB.AID.Bloodfest))
+                {
+                    return (Ammo == MaxCartridges && CD(GNB.AID.GnashingFang) > 27f) || //Burst
+                           (ComboLastMove == GNB.AID.BrutalShell && bfCD > 57f); //Opener
+                }
+
+                //Lv79 and below
+                if (!Unlocked(GNB.AID.Bloodfest))
+                {
+                    return !HasEffect(GNB.SID.ReadyToBlast) && CD(GNB.AID.GnashingFang) > 27;
+                }
+            }
+        }
+
+        //Handle offensive strategies
+        return strategy switch
+        {
+            OffensiveStrategy.Force => true,
+            OffensiveStrategy.Delay => false,
+            _ => false
+        };
+    }
+
+    // Determines when to use Double Down
+    private bool ShouldUseDoubleDown(OffensiveStrategy strategy, Actor? target)
+    {
+        // Common conditions for using Double Down
+        var canUse = Player.InCombat && target != null && ActionReady(GNB.AID.DoubleDown) && In5y(target) && hasNM;
+
+        // Check for automatic strategy
+        if (strategy == OffensiveStrategy.Automatic && canUse)
+        {
+            // Fast GNB (GCD <= 2.47): Always true for this condition
+            if (GCDLength <= 2.47)
+            {
+                return true;
+            }
+
+            // Slow GNB (GCD >= 2.48): Evaluate conditions
+            if (GCDLength >= 2.48)
+            {
+                // Lv100 checks
+                if (Unlocked(GNB.AID.ReignOfBeasts) && nmCD < 57.5)
+                {
+                    return (hasNM && !hasBreak && !HasEffect(GNB.SID.ReadyToBreak) && (bfCD < GCD * 6 || ActionReady(GNB.AID.Bloodfest))) || // 2min
+                           (hasNM && !hasBreak && Ammo == 3) || // NM 3 carts
+                           (ComboLastMove is GNB.AID.SolidBarrel && Ammo == 3 && HasEffect(GNB.SID.ReadyToBreak) && HasEffect(GNB.SID.NoMercy)); // NM 2 carts
+                }
+
+                // Lv90 checks
+                if (!Unlocked(GNB.AID.ReignOfBeasts) && Unlocked(GNB.AID.DoubleDown) && nmCD < 57.5)
+                {
+                    return (Ammo >= 2 && !HasEffect(GNB.SID.ReadyToBreak) && hasNM && !hasBreak && (bfCD < GCD * 6 || ActionReady(GNB.AID.Bloodfest))) || // 2min NM 3 carts
+                           (!HasEffect(GNB.SID.ReadyToBreak) && Ammo == 3 && hasNM && !hasBreak && bfCD < 90 && bfCD > 15) || // 1min NM 3 carts
+                           (HasEffect(GNB.SID.ReadyToBreak) && Ammo == 3 && ComboLastMove is GNB.AID.SolidBarrel && bfCD < 90 && bfCD > 15) || // 1min NM 2 carts
+                           (hasNM && !hasBreak && Ammo == 3); // Opener
+                }
+            }
+        }
+        // Handle offensive strategies
+        return strategy switch
+        {
+            OffensiveStrategy.Force => true,
+            OffensiveStrategy.Delay => false,
+            _ => false
+        };
+    }
+
+    // Determines when to use Gnashing Fang
+    private bool ShouldUseGnashingFang(GnashingStrategy strategy, Actor? target)
+    {
+        var canUse = Player.InCombat && Ammo >= 1 && In3y(target) && ActionReady(GNB.AID.GnashingFang);
+
+        if (strategy == GnashingStrategy.Automatic && canUse)
+        {
+            // Fast GNB (GCD <= 2.47): Use if conditions are met
+            if (GCDLength <= 2.47)
+            {
+                return canUse && (nmLeft > 0 || hasNM || (nmCD < 35 && nmCD > 17));
+            }
+
+            // Slow GNB (GCD >= 2.48): Check various conditions
+            if (GCDLength >= 2.48 && !HasEffect(GNB.SID.ReadyToBlast) && GunComboStep == 0)
+            {
+                return canUse && (
+                    (Unlocked(GNB.AID.ReignOfBeasts) && HasEffect(GNB.SID.NoMercy) && CD(GNB.AID.DoubleDown) > 57) || // Lv100
+                    (!Unlocked(GNB.AID.ReignOfBeasts) && Unlocked(GNB.AID.DoubleDown) && HasEffect(GNB.SID.NoMercy) && CD(GNB.AID.DoubleDown) > 57) || // Lv90
+                    (!Unlocked(GNB.AID.ReignOfBeasts) && Unlocked(GNB.AID.DoubleDown) && nmCD > GCD * 20 && CD(GNB.AID.DoubleDown) > 57) || // Lv90 scuffed
+                    (!Unlocked(GNB.AID.ReignOfBeasts) && Unlocked(GNB.AID.DoubleDown) && !ActionReady(GNB.AID.Bloodfest) && CD(GNB.AID.DoubleDown) > 57) || // Lv90 Opener
+                    (!Unlocked(GNB.AID.DoubleDown) && Unlocked(GNB.AID.Bloodfest) && nmCD > 57) || // Lv80
+                    (!Unlocked(GNB.AID.DoubleDown) && Unlocked(GNB.AID.Bloodfest) && Ammo == 1 && nmCD > 57 && ActionReady(GNB.AID.Bloodfest)) || // Lv80 Opener
+                    (!Unlocked(GNB.AID.Bloodfest) && nmCD > 57) || // <=Lv79
+                    (nmCD < 35 && nmCD > 17)); // Mid-cooldown condition
+            }
+        }
+        // Handle specific Gnashing strategies
+        return strategy switch
+        {
+            GnashingStrategy.ForceGnash => canUse && GunComboStep == 0,
+            GnashingStrategy.ForceClaw => Player.InCombat && GunComboStep == 1,
+            GnashingStrategy.ForceTalon => Player.InCombat && GunComboStep == 2,
+            GnashingStrategy.Delay => false,
+            _ => false
+        };
+    }
 
     //Determines when to use Burst Strike
-    private bool ShouldUseBurstStrike(OffensiveStrategy strategy, Actor? target) => strategy switch
+    private bool ShouldUseBurstStrike(OffensiveStrategy strategy, Actor? target)
     {
-        OffensiveStrategy.Automatic =>
-            Player.InCombat && In3y(target) &&
-            (
-                (Unlocked(GNB.AID.DoubleDown) && hasNM && !ActionReady(GNB.AID.DoubleDown) && GunComboStep == 0 && !hasReign) || //Lv90+
-                (!Unlocked(GNB.AID.DoubleDown) && !ActionReady(GNB.AID.GnashingFang) && hasNM && GunComboStep == 0) || //Lv80 & Below
-                (ComboLastMove == GNB.AID.BrutalShell && Ammo == MaxCartridges) //Overcap
-            ),
-        OffensiveStrategy.Force => true,
-        OffensiveStrategy.Delay => false,
-        _ => false
-    };
+
+        if (strategy == OffensiveStrategy.Automatic)
+        {
+            if (GCDLength <= 2.47)
+            {
+                return Player.InCombat && In3y(target) &&
+                ((Unlocked(GNB.AID.DoubleDown) && hasNM && !ActionReady(GNB.AID.DoubleDown) && GunComboStep == 0 && !hasReign) || //Lv90+
+                (!Unlocked(GNB.AID.DoubleDown) && !ActionReady(GNB.AID.GnashingFang) && hasNM && GunComboStep == 0)); //Lv80 & Below
+            }
+            if (GCDLength >= 2.48)
+            {
+                return Player.InCombat && In3y(target) && (Unlocked(GNB.AID.ReignOfBeasts) && ((nmCD <= GCD || ActionReady(GNB.AID.NoMercy)) && Ammo is 3 && (bfCD < GCD * 12 || ActionReady(GNB.AID.Bloodfest))));
+            }
+        }
+
+        return strategy switch
+        {
+            OffensiveStrategy.Force => true,
+            OffensiveStrategy.Delay => false,
+            _ => false
+        };
+    }
 
     //Determines when to use Fated Circle
     private bool ShouldUseFatedCircle(OffensiveStrategy strategy, Actor? AoETargets) => strategy switch
     {
         OffensiveStrategy.Automatic =>
-            Player.InCombat && In3y(AoETargets) &&
-            (
-                (hasNM && !ActionReady(GNB.AID.DoubleDown) && Ammo > 0) ||
-                (ComboLastMove == GNB.AID.DemonSlice && Ammo == MaxCartridges)
-            ),
+            Player.InCombat && In3y(AoETargets) && NumTargetsHitByAoE() >= 2 &&
+            ((hasNM && !ActionReady(GNB.AID.DoubleDown) && Ammo > 0) ||
+            (ComboLastMove == GNB.AID.DemonSlice && Ammo == MaxCartridges)),
         OffensiveStrategy.Force => true,
         OffensiveStrategy.Delay => false,
         _ => false
