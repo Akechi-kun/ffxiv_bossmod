@@ -3,7 +3,7 @@ using AID = BossMod.GNB.AID;
 using SID = BossMod.GNB.SID;
 using TraitID = BossMod.GNB.TraitID;
 
-namespace BossMod.Autorotation.akechi;
+namespace BossMod.Autorotation.akechi.PvE.Tank;
 //Contribution by Akechi
 //Discord: @akechdz or 'Akechi' on Puni.sh for maintenance
 
@@ -159,7 +159,7 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
     {
         var res = new RotationModuleDefinition("Akechi GNB", //Title
             "Standard Rotation Module", //Description
-            "Standard rotation (Akechi)", //Category
+            "Standard rotation (Akechi)|PvE|Tank", //Category
             "Akechi", //Contributor
             RotationModuleQuality.Good, //Quality
             BitMask.Build((int)Class.GNB), //Job
@@ -876,14 +876,14 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             Player.InCombat && //In combat
             target != null && //Target exists
             canNM && //No Mercy is available
-            ((Unlocked(AID.DoubleDown) && //Double Down is unlocked, indicating Lv90 or above
-            (inOdd && Ammo >= 2) || //In Odd Window & conditions are met
-            (!inOdd && Ammo < 3)) || //In Even Window & conditions are met
-            (!Unlocked(AID.DoubleDown) && GCD < 0.9f && //Double Down is not unlocked, so we late weave it
-            ((Unlocked(AID.Bloodfest) && //but Bloodfest is, indicating Lv80-89
-            Ammo >= 1) || //Ammo is 1 or more
-            (!Unlocked(AID.Bloodfest) && canGF) || //Bloodfest is not unlocked but Gnashing Fang is, indicating Lv60-79
-            !Unlocked(AID.GnashingFang)))), //Gnashing Fang is not unlocked, indicating Lv59 and below
+            (Unlocked(AID.DoubleDown) && //Double Down is unlocked, indicating Lv90 or above
+            inOdd && Ammo >= 2 || //In Odd Window & conditions are met
+            !inOdd && Ammo < 3 || //In Even Window & conditions are met
+            !Unlocked(AID.DoubleDown) && GCD < 0.9f && //Double Down is not unlocked, so we late weave it
+            (Unlocked(AID.Bloodfest) && //but Bloodfest is, indicating Lv80-89
+            Ammo >= 1 || //Ammo is 1 or more
+            !Unlocked(AID.Bloodfest) && canGF || //Bloodfest is not unlocked but Gnashing Fang is, indicating Lv60-79
+            !Unlocked(AID.GnashingFang))), //Gnashing Fang is not unlocked, indicating Lv59 and below
         NoMercyStrategy.Force => canNM, //Force No Mercy, regardless of correct weaving
         NoMercyStrategy.ForceW => canNM && canWeaveIn, //Force No Mercy into any weave slot 
         NoMercyStrategy.ForceQW => canNM && quarterWeave, //Force No Mercy into last possible second weave slot
@@ -1002,9 +1002,9 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             In3y(target) && //Target in melee range
             canBS && //Burst Strike is available
             (hasNM || //No Mercy is active
-            (!(bfCD is <= 90 and >= 30) &&
+            !(bfCD is <= 90 and >= 30) &&
             nmCD < 1 &&
-            Ammo == 3)) || //No Mercy is almost ready and full carts
+            Ammo == 3) || //No Mercy is almost ready and full carts
             Ammo == MaxCartridges && ComboLastMove is AID.BrutalShell or AID.DemonSlice, //Full carts and last move was Brutal Shell or Demon Slice
         _ => false
     };
@@ -1018,9 +1018,9 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Rot
             In5y(target) && //Target in range
             canFC && //Fated Circle is available
             (hasNM || //No Mercy is active
-            (!(bfCD is <= 90 and >= 30) &&
+            !(bfCD is <= 90 and >= 30) &&
             nmCD < 1 &&
-            Ammo == 3)) || //No Mercy is almost ready and full carts
+            Ammo == 3) || //No Mercy is almost ready and full carts
             Ammo == MaxCartridges && ComboLastMove is AID.BrutalShell or AID.DemonSlice, //Full carts and last move was Brutal Shell or Demon Slice
         _ => false
     };

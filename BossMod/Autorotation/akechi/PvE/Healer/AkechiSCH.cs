@@ -2,7 +2,7 @@
 using AID = BossMod.SCH.AID;
 using SID = BossMod.SCH.SID;
 
-namespace BossMod.Autorotation.akechi;
+namespace BossMod.Autorotation.akechi.PvE.Healer;
 //Contribution by Akechi
 //Discord: @akechdz or 'Akechi' on Puni.sh for maintenance
 
@@ -63,7 +63,7 @@ public sealed class AkechiSCH(RotationModuleManager manager, Actor player) : Rot
     {
         var res = new RotationModuleDefinition("Akechi SCH", //Title
             "Standard Rotation Module", //Description
-            "Standard rotation (Akechi)", //Category
+            "Standard rotation (Akechi)|PvE|Healer", //Category
             "Akechi", //Contributor
             RotationModuleQuality.Ok, //Quality
             BitMask.Build((int)Class.SCH), //Job

@@ -2,7 +2,7 @@
 using AID = BossMod.DRG.AID;
 using SID = BossMod.DRG.SID;
 
-namespace BossMod.Autorotation.akechi;
+namespace BossMod.Autorotation.akechi.PvE.DPS;
 //Contribution by Akechi
 //Discord: @akechdz or 'Akechi' on Puni.sh for maintenance
 
@@ -164,7 +164,7 @@ public sealed class AkechiDRG(RotationModuleManager manager, Actor player) : Rot
         var res = new RotationModuleDefinition(
             "Akechi DRG", //Name
             "Standard Rotation Module", //Type
-            "Standard rotation (Akechi)", //Category
+            "Standard rotation (Akechi)|PvE|DPS", //Category
             "Akechi", //Contributor of module
             RotationModuleQuality.Good, //Quality
             BitMask.Build(Class.LNC, Class.DRG), //Class and Job
