@@ -33,8 +33,7 @@ public static class UIStrategyValue
             StrategyTarget.PartyWithLowestHP => $"{(value.TargetParam != 0 ? "include" : "exclude")} self",
             StrategyTarget.TankWithLowestHP => $"{(value.TargetParam != 0 ? "include" : "exclude")} self",
             StrategyTarget.HealerWithLowestHP => $"{(value.TargetParam != 0 ? "include" : "exclude")} self",
-            StrategyTarget.MeleeDPSWithLowestHP => $"{(value.TargetParam != 0 ? "include" : "exclude")} self",
-            StrategyTarget.RangedDPSWithLowestHP => $"{(value.TargetParam != 0 ? "include" : "exclude")} self",
+            StrategyTarget.DPSWithLowestHP => $"{(value.TargetParam != 0 ? "include" : "exclude")} self",
             StrategyTarget.EnemyByOID => $"{(moduleInfo?.ObjectIDType != null ? Enum.ToObject(moduleInfo.ObjectIDType, (uint)value.TargetParam).ToString() : "???")} (0x{value.TargetParam:X})",
             _ => ""
         };
@@ -201,7 +200,7 @@ public static class UIStrategyValue
                     }
                 }
                 break;
-            case StrategyTarget.MeleeDPSWithLowestHP:
+            case StrategyTarget.DPSWithLowestHP:
                 if (supportedTargets.HasFlag(ActionTargets.Self))
                 {
                     var includeSelf = value.TargetParam != 0;
@@ -212,18 +211,6 @@ public static class UIStrategyValue
                     }
                 }
                 break;
-            case StrategyTarget.RangedDPSWithLowestHP:
-                if (supportedTargets.HasFlag(ActionTargets.Self))
-                {
-                    var includeSelf = value.TargetParam != 0;
-                    if (ImGui.Checkbox("Allow self", ref includeSelf))
-                    {
-                        value.TargetParam = includeSelf ? 1 : 0;
-                        modified = true;
-                    }
-                }
-                break;
-
             case StrategyTarget.EnemyByOID:
                 if (moduleInfo?.ObjectIDType != null)
                 {
@@ -263,13 +250,11 @@ public static class UIStrategyValue
         StrategyTarget.PartyWithLowestHP => supported.HasFlag(ActionTargets.Party),
         StrategyTarget.TankWithLowestHP => supported.HasFlag(ActionTargets.Party),
         StrategyTarget.HealerWithLowestHP => supported.HasFlag(ActionTargets.Party),
-        StrategyTarget.MeleeDPSWithLowestHP => supported.HasFlag(ActionTargets.Party),
-        StrategyTarget.RangedDPSWithLowestHP => supported.HasFlag(ActionTargets.Party),
+        StrategyTarget.DPSWithLowestHP => supported.HasFlag(ActionTargets.Party),
         StrategyTarget.EnemyWithLowestCurrentHP => supported.HasFlag(ActionTargets.Hostile),
-        StrategyTarget.EnemyWithHighestCurrentHP => supported.HasFlag(ActionTargets.Hostile),
         StrategyTarget.EnemyWithLowestMaxHP => supported.HasFlag(ActionTargets.Hostile),
+        StrategyTarget.EnemyWithHighestCurrentHP => supported.HasFlag(ActionTargets.Hostile),
         StrategyTarget.EnemyWithHighestMaxHP => supported.HasFlag(ActionTargets.Hostile),
-        StrategyTarget.EnemyWithLowestPriority => supported.HasFlag(ActionTargets.Hostile),
         StrategyTarget.EnemyWithHighestPriority => supported.HasFlag(ActionTargets.Hostile),
         StrategyTarget.EnemyByOID => supported.HasFlag(ActionTargets.Hostile) && moduleInfo != null,
         StrategyTarget.PointAbsolute or StrategyTarget.PointCenter => false,

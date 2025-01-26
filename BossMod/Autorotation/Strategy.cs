@@ -9,13 +9,11 @@ public enum StrategyTarget
     PartyWithLowestHP, // parameter is whether self is allowed (1) or not (0)
     TankWithLowestHP, // parameter is whether self is allowed (1) or not (0)
     HealerWithLowestHP, // parameter is whether self is allowed (1) or not (0)
-    MeleeDPSWithLowestHP, // parameter is whether self is allowed (1) or not (0)
-    RangedDPSWithLowestHP, // parameter is whether self is allowed (1) or not (0)
+    DPSWithLowestHP, // parameter is whether self is allowed (1) or not (0)
     EnemyWithLowestCurrentHP,
-    EnemyWithHighestCurrentHP,
     EnemyWithLowestMaxHP,
+    EnemyWithHighestCurrentHP,
     EnemyWithHighestMaxHP,
-    EnemyWithLowestPriority, // selects farthest if there are multiple
     EnemyWithHighestPriority, // selects closest if there are multiple
     EnemyByOID, // parameter is oid; not really useful outside planner; selects closest if there are multiple
     PointAbsolute, // absolute x/y coordinates
