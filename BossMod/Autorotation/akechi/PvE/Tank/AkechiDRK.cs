@@ -8,7 +8,7 @@ namespace BossMod.Autorotation.akechi.PvE.Tank;
 public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : AkechiTools<AID, TraitID>(manager, player)
 {
     #region Enums: Abilities / Strategies
-    public enum Track { Blood = SharedTrack.Count, MP, Carve, DeliriumCombo, Potion, Unmend, Delirium, SaltedEarth, SaltAndDarkness, LivingShadow, Shadowbringer, Disesteem }
+    public enum Track { Blood = SharedDamageTrack.Count, MP, Carve, DeliriumCombo, Potion, Unmend, Delirium, SaltedEarth, SaltAndDarkness, LivingShadow, Shadowbringer, Disesteem }
     public enum BloodStrategy { Automatic, OnlyBloodspiller, OnlyQuietus, ForceBloodspiller, ForceQuietus, Conserve }
     public enum MPStrategy { Auto3k, Auto6k, Auto9k, AutoRefresh, Edge3k, Edge6k, Edge9k, EdgeRefresh, Flood3k, Flood6k, Flood9k, FloodRefresh, Delay }
     public enum CarveStrategy { Automatic, OnlyCarve, OnlyDrain, ForceCarve, ForceDrain, Delay }
@@ -229,14 +229,14 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
         if (strategy.AutoAOE())
         {
             QueueGCD(BestRotation(), //queue the next single-target combo action only if combo is finished
-                TargetChoice(strategy.Option(SharedTrack.AOE)) //Get target choice
+                TargetChoice(strategy.Option(SharedDamageTrack.AOE)) //Get target choice
                 ?? primaryTarget, //if none, pick primary target
                 GCDPriority.Standard); //with priority for 103/10 combo actions
         }
         if (strategy.ForceST()) //if Force Single Target option is picked
         {
             QueueGCD(ST(),
-                TargetChoice(strategy.Option(SharedTrack.AOE)) //Get target choice
+                TargetChoice(strategy.Option(SharedDamageTrack.AOE)) //Get target choice
                 ?? primaryTarget, //if none, pick primary target
                 GCDPriority.Standard); //with priority for 103/10 combo actions
         }

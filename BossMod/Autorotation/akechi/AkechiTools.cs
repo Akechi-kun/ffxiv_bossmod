@@ -1,10 +1,19 @@
 ﻿namespace BossMod.Autorotation.akechi;
 
-public enum SharedTrack { AOE, Hold, Count }
+public enum SharedDamageTrack { AOE, Hold, Count }
+public enum SharedHealingTrack { STGCDHeal, SToGCDHeal, AOEGCDHeal, AOEoGCDHeal, STGCDHoT, SToGCDHoT, AOEGCDHoT, AOEoGCDHoT, Count }
 public enum AOEStrategy { Automatic, ForceST, ForceAOE }
 public enum HoldStrategy { DontHold, HoldCooldowns, HoldGauge, HoldEverything }
 public enum GCDStrategy { Automatic, Force, Delay }
 public enum OGCDStrategy { Automatic, Force, AnyWeave, EarlyWeave, LateWeave, Delay }
+public enum STGCDHealStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, Delay }
+public enum AOEGCDHealStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, Delay }
+public enum SToGCDHealStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, AnyWeave, EarlyWeave, LateWeave, Delay }
+public enum AOEoGCDHealStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, AnyWeave, EarlyWeave, LateWeave, Delay }
+public enum STGCDHoTStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, Delay }
+public enum AOEGCDHoTStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, Delay }
+public enum SToGCDHoTStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, AnyWeave, EarlyWeave, LateWeave, Delay }
+public enum AOEoGCDHoTStrategy { At90, At80, At70, At60, At50, At40, At30, At20, Force, AnyWeave, EarlyWeave, LateWeave, Delay }
 
 public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, Actor player) : RotationModule(manager, player)
         where AID : struct, Enum where TraitID : Enum
@@ -454,7 +463,7 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
             primaryTarget = null;
 
         PlayerTarget = primaryTarget;
-        var AOEStrat = strategy.Option(SharedTrack.AOE).As<AOEStrategy>();
+        var AOEStrat = strategy.Option(SharedDamageTrack.AOE).As<AOEStrategy>();
         if (AOEStrat is AOEStrategy.Automatic)
         {
             if (Player.DistanceToHitbox(primaryTarget) > range)
@@ -521,7 +530,7 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
     /// <returns></returns>
     protected (Actor? Target, P Timer) GetDOTTarget<P>(StrategyValues strategy, Actor? initial, Func<Actor?, P> getTimer, int maxAllowedTargets) where P : struct, IComparable
     {
-        var AOEStrat = strategy.Option(SharedTrack.AOE).As<AOEStrategy>();
+        var AOEStrat = strategy.Option(SharedDamageTrack.AOE).As<AOEStrategy>();
         switch (AOEStrat)
         {
             case AOEStrategy.ForceST:
@@ -626,17 +635,18 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
 
 static class ModuleExtensions
 {
+    #region Damage
     /// <summary>Defines our shared <em>AOE</em> (rotation) and <em>Hold</em> strategies.</summary>
     /// <param name="res"></param>
     /// <returns>- Options for shared custom strategies to be used via <em>AutoRotation</em> or <em>Cooldown Planner</em></returns>
     public static RotationModuleDefinition DefineShared(this RotationModuleDefinition res)
     {
-        res.Define(SharedTrack.AOE).As<AOEStrategy>("AOE", uiPriority: 300)
+        res.Define(SharedDamageTrack.AOE).As<AOEStrategy>("AOE", uiPriority: 300)
             .AddOption(AOEStrategy.Automatic, "Auto", "Use optimal rotation", supportedTargets: ActionTargets.Hostile)
             .AddOption(AOEStrategy.ForceST, "ForceST", "Force Single Target", supportedTargets: ActionTargets.Hostile)
             .AddOption(AOEStrategy.ForceAOE, "ForceAOE", "Force AOE rotation", supportedTargets: ActionTargets.Hostile);
 
-        res.Define(SharedTrack.Hold).As<HoldStrategy>("Hold", uiPriority: 290)
+        res.Define(SharedDamageTrack.Hold).As<HoldStrategy>("Hold", uiPriority: 290)
             .AddOption(HoldStrategy.DontHold, "DontHold", "Don't hold any cooldowns or gauge abilities")
             .AddOption(HoldStrategy.HoldCooldowns, "Hold", "Hold all cooldowns only")
             .AddOption(HoldStrategy.HoldGauge, "HoldGauge", "Hold all gauge abilities only")
@@ -683,11 +693,142 @@ static class ModuleExtensions
             .AddOption(OGCDStrategy.LateWeave, "LateWeave", "Force use in next possible late-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
             .AddOption(OGCDStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
     }
-    public static bool AutoAOE(this StrategyValues strategy) => strategy.Option(SharedTrack.AOE).As<AOEStrategy>() is AOEStrategy.Automatic;
-    public static bool ForceST(this StrategyValues strategy) => strategy.Option(SharedTrack.AOE).As<AOEStrategy>() is AOEStrategy.ForceST;
-    public static bool ForceAOE(this StrategyValues strategy) => strategy.Option(SharedTrack.AOE).As<AOEStrategy>() == AOEStrategy.ForceAOE;
-    public static bool HoldAll(this StrategyValues strategy) => strategy.Option(SharedTrack.Hold).As<HoldStrategy>() == HoldStrategy.HoldEverything;
-    public static bool HoldCooldowns(this StrategyValues strategy) => strategy.Option(SharedTrack.Hold).As<HoldStrategy>() == HoldStrategy.HoldCooldowns;
-    public static bool HoldGauge(this StrategyValues strategy) => strategy.Option(SharedTrack.Hold).As<HoldStrategy>() == HoldStrategy.HoldGauge;
-    public static bool DontHold(this StrategyValues strategy) => strategy.Option(SharedTrack.Hold).As<HoldStrategy>() == HoldStrategy.DontHold;
+    #endregion
+
+    #region Healing
+    public static RotationModuleDefinition.ConfigRef<STGCDHealStrategy> DefineGCDSTHeal<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<STGCDHealStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(STGCDHealStrategy.At90, "At 90%", "Automatically casts if target party member (or any if applicable) is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.At80, "At 80%", "Automatically casts if target party member (or any if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.At70, "At 70%", "Automatically casts if target party member (or any if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.At60, "At 60%", "Automatically casts if target party member (or any if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.At50, "At 50%", "Automatically casts if target party member (or any if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.At40, "At 40%", "Automatically casts if target party member (or any if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.At30, "At 30%", "Automatically casts if target party member (or any if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.At20, "At 20%", "Automatically casts if target party member (or any if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHealStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    public static RotationModuleDefinition.ConfigRef<AOEGCDHealStrategy> DefineGCDAOEHeal<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<AOEGCDHealStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(AOEGCDHealStrategy.At90, "At 90%", "Automatically casts if Player is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.At80, "At 80%", "Automatically casts if Player (and teammates if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.At70, "At 70%", "Automatically casts if Player (and teammates if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.At60, "At 60%", "Automatically casts if Player (and teammates if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.At50, "At 50%", "Automatically casts if Player (and teammates if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.At40, "At 40%", "Automatically casts if Player (and teammates if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.At30, "At 30%", "Automatically casts if Player (and teammates if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.At20, "At 20%", "Automatically casts if Player (and teammates if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHealStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    public static RotationModuleDefinition.ConfigRef<SToGCDHealStrategy> DefineOGCDSTHeal<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<SToGCDHealStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(SToGCDHealStrategy.At90, "At 90%", "Automatically casts if target party member (or any if applicable) is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.At80, "At 80%", "Automatically casts if target party member (or any if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.At70, "At 70%", "Automatically casts if target party member (or any if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.At60, "At 60%", "Automatically casts if target party member (or any if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.At50, "At 50%", "Automatically casts if target party member (or any if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.At40, "At 40%", "Automatically casts if target party member (or any if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.At30, "At 30%", "Automatically casts if target party member (or any if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.At20, "At 20%", "Automatically casts if target party member (or any if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.AnyWeave, "AnyWeave", "Force use in next possible weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.EarlyWeave, "EarlyWeave", "Force use in next possible early-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.LateWeave, "LateWeave", "Force use in next possible late-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHealStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    public static RotationModuleDefinition.ConfigRef<AOEoGCDHealStrategy> DefineOGCDAOEHeal<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<AOEoGCDHealStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(AOEoGCDHealStrategy.At90, "At 90%", "Automatically casts if Player is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.At80, "At 80%", "Automatically casts if Player (and teammates if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.At70, "At 70%", "Automatically casts if Player (and teammates if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.At60, "At 60%", "Automatically casts if Player (and teammates if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.At50, "At 50%", "Automatically casts if Player (and teammates if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.At40, "At 40%", "Automatically casts if Player (and teammates if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.At30, "At 30%", "Automatically casts if Player (and teammates if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.At20, "At 20%", "Automatically casts if Player (and teammates if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.AnyWeave, "AnyWeave", "Force use in next possible weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.EarlyWeave, "EarlyWeave", "Force use in next possible early-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.LateWeave, "LateWeave", "Force use in next possible late-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHealStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    public static RotationModuleDefinition.ConfigRef<STGCDHoTStrategy> DefineGCDSTHoT<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<STGCDHoTStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(STGCDHoTStrategy.At90, "At 90%", "Automatically casts if target party member (or any if applicable) is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.At80, "At 80%", "Automatically casts if target party member (or any if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.At70, "At 70%", "Automatically casts if target party member (or any if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.At60, "At 60%", "Automatically casts if target party member (or any if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.At50, "At 50%", "Automatically casts if target party member (or any if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.At40, "At 40%", "Automatically casts if target party member (or any if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.At30, "At 30%", "Automatically casts if target party member (or any if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.At20, "At 20%", "Automatically casts if target party member (or any if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(STGCDHoTStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    public static RotationModuleDefinition.ConfigRef<AOEGCDHoTStrategy> DefineGCDAOEHoT<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<AOEGCDHoTStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(AOEGCDHoTStrategy.At90, "At 90%", "Automatically casts if Player is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.At80, "At 80%", "Automatically casts if Player (and teammates if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.At70, "At 70%", "Automatically casts if Player (and teammates if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.At60, "At 60%", "Automatically casts if Player (and teammates if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.At50, "At 50%", "Automatically casts if Player (and teammates if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.At40, "At 40%", "Automatically casts if Player (and teammates if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.At30, "At 30%", "Automatically casts if Player (and teammates if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.At20, "At 20%", "Automatically casts if Player (and teammates if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEGCDHoTStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    public static RotationModuleDefinition.ConfigRef<SToGCDHoTStrategy> DefineOGCDSTHoT<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<SToGCDHoTStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(SToGCDHoTStrategy.At90, "At 90%", "Automatically casts if target party member (or any if applicable) is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.At80, "At 80%", "Automatically casts if target party member (or any if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.At70, "At 70%", "Automatically casts if target party member (or any if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.At60, "At 60%", "Automatically casts if target party member (or any if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.At50, "At 50%", "Automatically casts if target party member (or any if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.At40, "At 40%", "Automatically casts if target party member (or any if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.At30, "At 30%", "Automatically casts if target party member (or any if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.At20, "At 20%", "Automatically casts if target party member (or any if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.AnyWeave, "AnyWeave", "Force use in next possible weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.EarlyWeave, "EarlyWeave", "Force use in next possible early-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.LateWeave, "LateWeave", "Force use in next possible late-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(SToGCDHoTStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    public static RotationModuleDefinition.ConfigRef<AOEoGCDHoTStrategy> DefineOGCDAOEHoT<Index>(this RotationModuleDefinition res, Index track, string internalName, string displayName = "", int uiPriority = 100, float cooldown = 0, float effectDuration = 0, ActionTargets supportedTargets = ActionTargets.None, int minLevel = 1, int maxLevel = 100) where Index : Enum
+    {
+        return res.Define(track).As<AOEoGCDHoTStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
+            .AddOption(AOEoGCDHoTStrategy.At90, "At 90%", "Automatically casts if Player is at 90% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.At80, "At 80%", "Automatically casts if Player (and teammates if applicable) is at 80% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.At70, "At 70%", "Automatically casts if Player (and teammates if applicable) is at 70% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.At60, "At 60%", "Automatically casts if Player (and teammates if applicable) is at 60% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.At50, "At 50%", "Automatically casts if Player (and teammates if applicable) is at 50% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.At40, "At 40%", "Automatically casts if Player (and teammates if applicable) is at 40% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.At30, "At 30%", "Automatically casts if Player (and teammates if applicable) is at 30% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.At20, "At 20%", "Automatically casts if Player (and teammates if applicable) is at 20% HP or above", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.Force, "Force", "Force use ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.AnyWeave, "AnyWeave", "Force use in next possible weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.EarlyWeave, "EarlyWeave", "Force use in next possible early-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.LateWeave, "LateWeave", "Force use in next possible late-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AOEoGCDHoTStrategy.Delay, "Delay", "Do not use", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel);
+    }
+    #endregion
+
+    #region Global Helpers
+    public static bool AutoAOE(this StrategyValues strategy) => strategy.Option(SharedDamageTrack.AOE).As<AOEStrategy>() is AOEStrategy.Automatic;
+    public static bool ForceST(this StrategyValues strategy) => strategy.Option(SharedDamageTrack.AOE).As<AOEStrategy>() is AOEStrategy.ForceST;
+    public static bool ForceAOE(this StrategyValues strategy) => strategy.Option(SharedDamageTrack.AOE).As<AOEStrategy>() == AOEStrategy.ForceAOE;
+    public static bool HoldAll(this StrategyValues strategy) => strategy.Option(SharedDamageTrack.Hold).As<HoldStrategy>() == HoldStrategy.HoldEverything;
+    public static bool HoldCooldowns(this StrategyValues strategy) => strategy.Option(SharedDamageTrack.Hold).As<HoldStrategy>() == HoldStrategy.HoldCooldowns;
+    public static bool HoldGauge(this StrategyValues strategy) => strategy.Option(SharedDamageTrack.Hold).As<HoldStrategy>() == HoldStrategy.HoldGauge;
+    public static bool DontHold(this StrategyValues strategy) => strategy.Option(SharedDamageTrack.Hold).As<HoldStrategy>() == HoldStrategy.DontHold;
+    #endregion
 }

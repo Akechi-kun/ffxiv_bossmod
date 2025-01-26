@@ -1,12 +1,11 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
-using AID = BossMod.SCH.AID;
-using SID = BossMod.SCH.SID;
+using BossMod.SCH;
 
 namespace BossMod.Autorotation.akechi.PvE.Healer;
 //Contribution by Akechi
 //Discord: @akechdz or 'Akechi' on Puni.sh for maintenance
 
-public sealed class AkechiSCH(RotationModuleManager manager, Actor player) : RotationModule(manager, player)
+public sealed class SCHdamage(RotationModuleManager manager, Actor player) : RotationModule(manager, player)
 {
     #region Enums: Abilities / Strategies
     public enum Track
@@ -61,7 +60,7 @@ public sealed class AkechiSCH(RotationModuleManager manager, Actor player) : Rot
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Akechi SCH", //Title
+        var res = new RotationModuleDefinition("Akechi SCH - Damage", //Title
             "Standard Rotation Module", //Description
             "Standard rotation (Akechi)|PvE|Healer", //Category
             "Akechi", //Contributor
@@ -376,3 +375,76 @@ public sealed class AkechiSCH(RotationModuleManager manager, Actor player) : Rot
     };
     #endregion
 }
+//TODO: Auto-Healing
+/*
+public sealed class SCHhealing(RotationModuleManager manager, Actor player) : AkechiTools<AID, TraitID>(manager, player)
+{
+    public enum Track { WhisperingDawn = SharedHealingTrack.Count, Adloquium, Succor, FeyIllumination, Lustrate, SacredSoil, Indomitability, DeploymentTactics, EmergencyTactics, Dissipation, Excogitation, Aetherpact, Recitation, FeyBlessing, Consolation, Protraction, Expedient, Seraphism, Summons }
+    public enum SacredSoilOption { None, Use, UseEx }
+    public enum DeploymentStrategy { None, Use, UseEx }
+    public enum DissipationStrategy { At0Aether, Force, Delay }
+    public enum AetherpactOption { None, Use, End }
+    public enum RecitationOption { None, Use, UseEx }
+    public enum PetOption { None, Eos, Seraph }
+
+    public static RotationModuleDefinition Definition()
+    {
+        var res = new RotationModuleDefinition("AkechiSCH - Healing", "Standard Rotation Module", "Standard rotation (Akechi)|PvE|Healer", "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SCH), 100);
+
+        res.DefineOGCDAOEHoT(Track.WhisperingDawn, "Whispering Dawn", "W.Dawn", uiPriority: 140, 60, 0, ActionTargets.Hostile, 21).AddAssociatedActions(AID.WhisperingDawn);
+        res.DefineGCDSTHeal(Track.Adloquium, "Adloquium", "Adlo", uiPriority: 100, supportedTargets: ActionTargets.Friendly, minLevel: 30).AddAssociatedActions(AID.Adloquium);
+        res.DefineGCDSTHeal(Track.Succor, "Succor", "Succor", uiPriority: 100, supportedTargets: ActionTargets.Self, minLevel: 35).AddAssociatedActions(AID.Succor, AID.Concitation);
+        res.DefineOGCDAOEHeal(Track.FeyIllumination, "Fey Illumination", "F.Illum.", uiPriority: 100, 120, 20, ActionTargets.Self, 40).AddAssociatedActions(AID.FeyIllumination);
+        res.DefineGCDSTHeal(Track.Lustrate, "Lustrate", "Lustrate", uiPriority: 100, supportedTargets: ActionTargets.Friendly, minLevel: 45).AddAssociatedActions(AID.Lustrate);
+        res.DefineGCDSTHeal(Track.SacredSoil, "Sacred Soil", "S.Soil", uiPriority: 100, 30, 15, ActionTargets.Party, minLevel: 50).AddAssociatedActions(AID.SacredSoil);
+        res.DefineGCDSTHeal(Track.Indomitability, "Indomitability", "Indom.", uiPriority: 100, 30, 0, ActionTargets.Self, minLevel: 54).AddAssociatedActions(AID.Indomitability);
+        res.Define(Track.DeploymentTactics).As<DeploymentStrategy>("Dissipation", "Dissipation", 300)
+            .AddOption(DeploymentStrategy.At0Aether, "At 0 Aetherflow", "Automatically use when out of Aetherflow stacks", )
+            .AddOption(DeploymentStrategy.Force, "Force", "Force use of Dissipation regardless of Aetherflow stacks")
+            .AddOption(DeploymentStrategy.Delay, "Delay", "Delay the use of Dissipation for manual or strategic usage")
+            .AddAssociatedActions(AID.Dissipation);
+        res.DefineGCDSTHeal(Track.EmergencyTactics, "Emergency Tactics", "Emerg.", uiPriority: 100, 15, 15, ActionTargets.Self, minLevel: 58).AddAssociatedActions(AID.EmergencyTactics);
+        res.Define(Track.Dissipation).As<DissipationStrategy>("Dissipation", "Dissipation", 300)
+            .AddOption(DissipationStrategy.At0Aether, "At 0 Aetherflow", "Automatically use when out of Aetherflow stacks")
+            .AddOption(DissipationStrategy.Force, "Force", "Force use of Dissipation regardless of Aetherflow stacks")
+            .AddOption(DissipationStrategy.Delay, "Delay", "Delay the use of Dissipation for manual or strategic usage")
+            .AddAssociatedActions(AID.Dissipation);
+        res.DefineGCDSTHeal(Track.Excogitation, "Excogitation", "Excog.", uiPriority: 100, 45, 45, ActionTargets.Self | ActionTargets.Party, minLevel: 62).AddAssociatedActions(AID.Excogitation);
+        res.Define(Track.Aetherpact).As<AetherpactOption>("Aetherpact", "A.pact", 300)
+            .AddOption(AetherpactOption.None, "None", "Do not use automatically")
+            .AddOption(AetherpactOption.Use, "Use", "Use Aetherpact", 0, 0, ActionTargets.Self | ActionTargets.Party, 70)
+            .AddOption(AetherpactOption.End, "UseEx", "End Aetherpact", 0, 0, ActionTargets.Self | ActionTargets.Party, 70)
+            .AddAssociatedActions(AID.Aetherpact, AID.DissolveUnion);
+        res.DefineGCDSTHeal(Track.Aetherpact, "Aetherpact", "A.pact", uiPriority: 100, 0, 0, ActionTargets.Self | ActionTargets.Party, minLevel: 70).AddAssociatedActions(AID.Aetherpact);
+        res.DefineOGCD(Track.DissolveUnion, "Dissolve Union", "D.Union.", uiPriority: 100, 0, 0, ActionTargets.Self | ActionTargets.Party, minLevel: 70).AddAssociatedActions(AID.DissolveUnion);
+
+
+        res.Define(Track.Recitation).As<RecitationOption>("Recitation", "Recit.", 130)
+            .AddOption(RecitationOption.None, "None", "Do not use automatically")
+            .AddOption(RecitationOption.Use, "Use", "Use Recitation", 90, 0, ActionTargets.Self, 74, 97)
+            .AddOption(RecitationOption.UseEx, "UseEx", "Use Enhanced Recitation", 60, 0, ActionTargets.Self, 98)
+            .AddAssociatedActions(AID.Recitation);
+
+        DefineSimpleConfig(res, Track.FeyBlessing, "FeyBlessing", "F.Blessing", 120, SCH.AID.FeyBlessing);
+        DefineSimpleConfig(res, Track.Consolation, "Consolation", "Consol.", 80, SCH.AID.Consolation, 30);
+        DefineSimpleConfig(res, Track.Protraction, "Protraction", "Prot.", 110, SCH.AID.Protraction, 10);
+        DefineSimpleConfig(res, Track.Expedient, "Expedient", "Exped.", 200, SCH.AID.Expedient, 20);
+        DefineSimpleConfig(res, Track.Seraphism, "Seraphism", "Seraphism", 300, SCH.AID.Seraphism, 20);
+
+        // Pet Summons
+        res.Define(Track.Summons).As<PetOption>("Pet", "", 180)
+            .AddOption(PetOption.None, "None", "Do not use automatically")
+            .AddOption(PetOption.Eos, "Eos", "Summon Eos", 2, 0, ActionTargets.Self, 4)
+            .AddOption(PetOption.Seraph, "Seraph", "Summon Seraph", 120, 22, ActionTargets.Self, 80)
+            .AddAssociatedActions(SCH.AID.SummonEos, SCH.AID.SummonSeraph);
+
+        return res;
+    }
+
+
+    public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving) //Executes our actions
+    {
+
+    }
+}
+*/
