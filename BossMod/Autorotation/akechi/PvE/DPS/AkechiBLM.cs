@@ -182,18 +182,18 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Rot
             .AddAssociatedActions(AID.Manafont);
         res.Define(Track.Triplecast).As<TriplecastStrategy>("T.cast", uiPriority: 170)
             .AddOption(TriplecastStrategy.Automatic, "Auto", "Use any charges available during Ley Lines window or every 2 minutes (NOTE: does not take into account charge overcap, will wait for 2 minute windows to spend both)", 0, 0, ActionTargets.Self, 66)
-            .AddOption(TriplecastStrategy.Force, "Force", "Force the use of Triplecast; uses all charges", 60, 15, ActionTargets.Self, 66)
-            .AddOption(TriplecastStrategy.Force1, "Force1", "Force the use of Triplecast; holds one charge for manual usage", 60, 15, ActionTargets.Self, 66)
-            .AddOption(TriplecastStrategy.ForceWeave, "ForceWeave", "Force the use of Triplecast in any next possible weave slot", 60, 15, ActionTargets.Self, 66)
-            .AddOption(TriplecastStrategy.ForceWeave1, "ForceWeave1", "Force the use of Triplecast in any next possible weave slot; holds one charge for manual usage", 60, 15, ActionTargets.Self, 66)
+            .AddOption(TriplecastStrategy.Force, "Force", "Force the use of Triplecast; uses all charges", 0, 15, ActionTargets.Self, 66)
+            .AddOption(TriplecastStrategy.Force1, "Force1", "Force the use of Triplecast; holds one charge for manual usage", 0, 15, ActionTargets.Self, 66)
+            .AddOption(TriplecastStrategy.ForceWeave, "ForceWeave", "Force the use of Triplecast in any next possible weave slot", 0, 15, ActionTargets.Self, 66)
+            .AddOption(TriplecastStrategy.ForceWeave1, "ForceWeave1", "Force the use of Triplecast in any next possible weave slot; holds one charge for manual usage", 0, 15, ActionTargets.Self, 66)
             .AddOption(TriplecastStrategy.Delay, "Delay", "Delay the use of Triplecast", 0, 0, ActionTargets.Self, 66)
             .AddAssociatedActions(AID.Triplecast);
         res.Define(Track.LeyLines).As<LeyLinesStrategy>("L.Lines", uiPriority: 170)
             .AddOption(LeyLinesStrategy.Automatic, "Auto", "Automatically decide when to use Ley Lines", 0, 0, ActionTargets.Self, 52)
-            .AddOption(LeyLinesStrategy.Force, "Force", "Force the use of Ley Lines, regardless of weaving conditions", 120, 30, ActionTargets.Self, 52)
-            .AddOption(LeyLinesStrategy.Force1, "Force1", "Force the use of Ley Lines; holds one charge for manual usage", 120, 30, ActionTargets.Self, 52)
-            .AddOption(LeyLinesStrategy.ForceWeave, "ForceWeave", "Force the use of Ley Lines in any next possible weave slot", 120, 30, ActionTargets.Self, 52)
-            .AddOption(LeyLinesStrategy.ForceWeave1, "ForceWeave1", "Force the use of Ley Lines in any next possible weave slot; holds one charge for manual usage", 120, 30, ActionTargets.Self, 52)
+            .AddOption(LeyLinesStrategy.Force, "Force", "Force the use of Ley Lines, regardless of weaving conditions", 0, 30, ActionTargets.Self, 52)
+            .AddOption(LeyLinesStrategy.Force1, "Force1", "Force the use of Ley Lines; holds one charge for manual usage", 0, 30, ActionTargets.Self, 52)
+            .AddOption(LeyLinesStrategy.ForceWeave, "ForceWeave", "Force the use of Ley Lines in any next possible weave slot", 0, 30, ActionTargets.Self, 52)
+            .AddOption(LeyLinesStrategy.ForceWeave1, "ForceWeave1", "Force the use of Ley Lines in any next possible weave slot; holds one charge for manual usage", 0, 30, ActionTargets.Self, 52)
             .AddOption(LeyLinesStrategy.Delay, "Delay", "Delay the use of Ley Lines", 0, 0, ActionTargets.Self, 52)
             .AddAssociatedActions(AID.LeyLines);
         res.Define(Track.Potion).As<PotionStrategy>("Potion", uiPriority: 160)
@@ -734,10 +734,9 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Rot
                 OGCDPriority.ForcedOGCD);
         //Between the Lines
         //TODO: Utility maybe?
+        var zone = World.Actors.FirstOrDefault(x => x.OID == 0x179 && x.OwnerID == Player.InstanceID);
         if (ShouldUseBTL(btlStrat))
-            QueueOGCD(AID.BetweenTheLines,
-                Player,
-                OGCDPriority.ForcedOGCD);
+            Hints.ActionsToExecute.Push(ActionID.MakeSpell(AID.BetweenTheLines), Player, ActionQueue.Priority.Medium, targetPos: zone!.PosRot.XYZ());
         //Potion
         if (potionStrat is PotionStrategy.AlignWithRaidBuffs && CD(AID.LeyLines) < 5 ||
             potionStrat is PotionStrategy.Immediate)
