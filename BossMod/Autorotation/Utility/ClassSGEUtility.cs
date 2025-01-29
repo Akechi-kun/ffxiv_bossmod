@@ -116,7 +116,7 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
         {
             if (edStrat == DiagnosisOption.Use)
             {
-                Hints.ActionsToExecute.Push(ActionID.MakeSpell(SGE.AID.Diagnosis), Player, ed.Priority(), ed.Value.ExpireIn);
+                Hints.ActionsToExecute.Push(ActionID.MakeSpell(diagAction), primaryTarget, diag.Priority(), diag.Value.ExpireIn, castTime: ActionDefinitions.Instance.Spell(SGE.SID.Diagnosis)!.CastTime); // TODO[cast-time]: this probably needs explicit cast-time argument (adjusted by swiftcast etc)
             }
             if (edStrat == DiagnosisOption.UseED)
             {
@@ -134,9 +134,10 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
 
         if (epStrat != PrognosisOption.None)
         {
+
             if (epStrat == PrognosisOption.Use)
             {
-                Hints.ActionsToExecute.Push(ActionID.MakeSpell(SGE.AID.Prognosis), Player, ep.Priority(), ep.Value.ExpireIn);
+                Hints.ActionsToExecute.Push(ActionID.MakeSpell(SGE.AID.Prognosis), Player, ep.Priority(), ep.Value.ExpireIn, castTime: ActionDefinitions.Instance.Spell(SGE.SID.Prognosis)!.CastTime));
             }
             if (epStrat is PrognosisOption.UseEP or PrognosisOption.UseEPEx)
             {
