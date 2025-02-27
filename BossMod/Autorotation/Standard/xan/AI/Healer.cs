@@ -125,7 +125,7 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase(mana
         if (strategy.Enabled(Track.Heal))
             switch (Player.Class)
             {
-                case Class.WHM:
+                case Class.CNJ or Class.WHM:
                     AutoWHM(strategy);
                     break;
                 case Class.AST:
@@ -223,20 +223,44 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase(mana
     {
         var gauge = World.Client.GetGauge<WhiteMageGauge>();
 
+        #region ST
         HealSingle((target, state) =>
         {
-            if (state.PredictedHPRatio < 0.5 && gauge.Lily > 0)
-                UseGCD(BossMod.WHM.AID.AfflatusSolace, target);
+            if (Unlocked(BossMod.WHM.AID.Regen) && state.PredictedHPRatio < 1 && target.FindStatus(BossMod.WHM.SID.Regen) == null)
+                UseGCD(BossMod.WHM.AID.Regen, target);
 
-            if (state.PredictedHPRatio < 0.25)
+            if (state.PredictedHPRatio < 0.5)
+            {
+                if (Unlocked(BossMod.WHM.AID.AfflatusSolace) && gauge.Lily > 0)
+                    UseGCD(BossMod.WHM.AID.AfflatusSolace, target);
+
+                //CNJ
+                if (!Unlocked(BossMod.WHM.AID.Cure3))
+                    UseGCD(Unlocked(BossMod.WHM.AID.Cure2) ? BossMod.WHM.AID.Cure2 : BossMod.WHM.AID.Cure1, target);
+            }
+
+            if (Unlocked(BossMod.WHM.AID.Tetragrammaton) && state.PredictedHPRatio < 0.25)
                 UseOGCD(BossMod.WHM.AID.Tetragrammaton, target);
         });
+        #endregion
 
-        if (ShouldHealInArea(Player.Position, 15, 0.75f) && gauge.Lily > 0)
-            UseGCD(BossMod.WHM.AID.AfflatusRapture, Player);
+        #region AOE
+        if (ShouldHealInArea(Player.Position, 15, 0.75f))
+        {
+            if (Unlocked(BossMod.WHM.AID.AfflatusRapture) && gauge.Lily > 0)
+                UseGCD(BossMod.WHM.AID.AfflatusRapture, Player);
 
-        if (ShouldHealInArea(Player.Position, 10, 0.5f))
+            if (Unlocked(BossMod.WHM.AID.Medica2) && Player.FindStatus(Unlocked(BossMod.WHM.AID.MedicaIII) ? BossMod.WHM.SID.MedicaIII : BossMod.WHM.SID.Medica2) == null)
+                UseGCD(Unlocked(BossMod.WHM.AID.MedicaIII) ? BossMod.WHM.AID.MedicaIII : BossMod.WHM.AID.Medica2, Player);
+
+            //CNJ
+            if (!Unlocked(BossMod.WHM.AID.Cure3) && Unlocked(BossMod.WHM.AID.Medica1))
+                UseGCD(BossMod.WHM.AID.Medica1, Player);
+        }
+
+        if (Unlocked(BossMod.WHM.AID.Cure3) && ShouldHealInArea(Player.Position, 10, 0.5f))
             UseGCD(BossMod.WHM.AID.Cure3, Player);
+        #endregion
     }
 
     private static readonly (AstrologianCard, BossMod.AST.AID)[] SupportCards = [
@@ -295,14 +319,14 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase(mana
     {
         void UseSoil(Vector3? location = null)
         {
-            if (World.Client.GetGauge<ScholarGauge>().Aetherflow == 0)
+            if (!Unlocked(BossMod.SCH.AID.SacredSoil) || World.Client.GetGauge<ScholarGauge>().Aetherflow == 0)
                 return;
             location ??= ArenaCenter ?? Player.PosRot.XYZ();
             Hints.ActionsToExecute.Push(ActionID.MakeSpell(BossMod.SCH.AID.SacredSoil), null, ActionQueue.Priority.Medium + 5, targetPos: location.Value);
         }
 
         // TODO make this configurable
-        if (primaryTarget != null)
+        if (Unlocked(BossMod.SCH.AID.ChainStratagem) && primaryTarget != null)
             UseOGCD(BossMod.SCH.AID.ChainStratagem, primaryTarget);
 
         var gauge = World.Client.GetGauge<ScholarGauge>();
@@ -341,8 +365,18 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase(mana
                 {
                     UseOGCD(BossMod.SCH.AID.Excogitation, target);
                     UseOGCD(BossMod.SCH.AID.Lustrate, target);
+                    SaveLowPartyMember(BossMod.SCH.AID.Lustrate, target);
                 }
-                else
+            }
+            var emergCombo = Player.FindStatus(BossMod.SCH.SID.EmergencyTactics) != null ? BossMod.SCH.AID.Succor : BossMod.SCH.AID.EmergencyTactics;
+            if (Unlocked(BossMod.SCH.AID.Adloquium) && state.PredictedHPRatio < 0.6)
+            {
+                if (Unlocked(BossMod.SCH.AID.EmergencyTactics))
+                {
+                    UseGCD(emergCombo, target);
+                    SaveLowPartyMember(emergCombo, target);
+                }
+                if (Player.HPMP.Shield == 0 || Player.FindStatus(BossMod.SCH.SID.Galvanize) == null)
                     UseGCD(BossMod.SCH.AID.Adloquium, target);
             }
         });
@@ -361,12 +395,28 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase(mana
         });
 
         foreach (var rw in Raidwides)
-            if ((rw - World.CurrentTime).TotalSeconds < 5)
+            if ((rw - World.CurrentTime).TotalSeconds < 7)
             {
-                var allies = LightParty.ToList();
-                var centroid = allies.Aggregate(allies[0].PosRot.XYZ(), (pos, actor) => (pos + actor.PosRot.XYZ()) / 2f);
-                UseSoil(centroid);
+                if ((rw - World.CurrentTime).TotalSeconds < 5)
+                {
+                    var allies = LightParty.ToList();
+                    var centroid = allies.Aggregate(allies[0].PosRot.XYZ(), (pos, actor) => (pos + actor.PosRot.XYZ()) / 2f);
+                    UseSoil(centroid);
+                }
+
+                if (Unlocked(BossMod.SCH.AID.Succor) && ShouldHealInArea(Player.Position, 15, 1.0f) && (Player.HPMP.Shield == 0 || Player.FindStatus(BossMod.SCH.SID.Galvanize) == null))
+                    UseGCD(BossMod.SCH.AID.Succor, Player);
             }
+
+        var emergCombo = Player.FindStatus(BossMod.SCH.SID.EmergencyTactics) != null ? BossMod.SCH.AID.Succor : BossMod.SCH.AID.EmergencyTactics;
+        if (Unlocked(BossMod.SCH.AID.Succor) && ShouldHealInArea(Player.Position, 15, 0.6f))
+        {
+            if (Unlocked(BossMod.SCH.AID.EmergencyTactics))
+                UseGCD(emergCombo, Player);
+
+            if (Player.HPMP.Shield == 0 || Player.FindStatus(BossMod.SCH.SID.Galvanize) == null)
+                UseGCD(BossMod.SCH.AID.Succor, Player);
+        }
     }
 
     private void AutoSGE(StrategyValues strategy, Actor? primaryTarget)
@@ -383,12 +433,26 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase(mana
             UseOGCD(Unlocked(BossMod.SGE.AID.PhysisII) ? BossMod.SGE.AID.PhysisII : BossMod.SGE.AID.Physis, Player);
         }
 
+        var eukProg = Player.FindStatus(BossMod.SGE.SID.Eukrasia) != null ? (Unlocked(BossMod.SGE.AID.EukrasianPrognosisII) ? BossMod.SGE.AID.EukrasianPrognosisII : BossMod.SGE.AID.EukrasianPrognosis) : BossMod.SGE.AID.Eukrasia;
+        if (ShouldHealInArea(Player.Position, 15, 0.5f) && (Player.HPMP.Shield == 0 || Player.FindStatus(BossMod.SGE.SID.EukrasianPrognosis) == null))
+            UseGCD(eukProg, Player);
+
         HealSingle((target, state) =>
         {
-            if (haveBalls && state.PredictedHPRatio < 0.5)
+            if (state.PredictedHPRatio < 0.5)
             {
-                UseOGCD(BossMod.SGE.AID.Taurochole, target);
-                UseOGCD(BossMod.SGE.AID.Druochole, target);
+                if (haveBalls)
+                {
+                    UseOGCD(BossMod.SGE.AID.Taurochole, target);
+                    UseOGCD(BossMod.SGE.AID.Druochole, target);
+                    SaveLowPartyMember(BossMod.SGE.AID.Druochole, target);
+                }
+                var eukDiag = Player.FindStatus(BossMod.SGE.SID.Eukrasia) != null ? BossMod.SGE.AID.EukrasianDiagnosis : BossMod.SGE.AID.Eukrasia;
+                if (target.HPMP.Shield == 0 || target.FindStatus(BossMod.SGE.SID.EukrasianDiagnosis) == null)
+                {
+                    UseGCD(eukDiag, target);
+                    SaveLowPartyMember(eukDiag, target);
+                }
             }
 
             if (state.PredictedHPRatio < 0.3)
@@ -398,7 +462,47 @@ public class HealerAI(RotationModuleManager manager, Actor player) : AIBase(mana
         });
 
         foreach (var rw in Raidwides)
-            if ((rw - World.CurrentTime).TotalSeconds < 15 && haveBalls)
-                UseOGCD(BossMod.SGE.AID.Kerachole, Player);
+            if ((rw - World.CurrentTime).TotalSeconds < 15)
+            {
+                if (haveBalls)
+                    UseOGCD(BossMod.SGE.AID.Kerachole, Player);
+
+                if (Player.HPMP.Shield == 0 || Player.FindStatus(BossMod.SGE.SID.EukrasianDiagnosis) == null)
+                    UseGCD(eukProg, Player);
+            }
+    }
+
+    private static float TargetHPP(Actor? actor = null)
+    {
+        if (actor is null || actor.IsDead)
+            return 0f;
+
+        var HPP = (float)actor.HPMP.CurHP / actor.HPMP.MaxHP * 100f;
+        return Math.Clamp(HPP, 0f, 100f);
+    }
+
+    private bool SaveLowPartyMember<AID>(AID aid, Actor lpm) where AID : Enum
+    {
+        if (lpm.IsDead || lpm.HPMP.CurHP == 0 || !lpm.IsAlly)
+            return false;
+
+        var lpmHP = TargetHPP(lpm);
+        if (Unlocked(aid))
+        {
+            if (lpmHP < 10)
+                UseGCD(aid, lpm);
+            foreach (var rw in Raidwides)
+            {
+                if ((rw - World.CurrentTime).TotalSeconds < 6 && lpmHP < 25)
+                    UseGCD(aid, lpm);
+            }
+            foreach (var tb in Tankbusters)
+            {
+                if ((tb.Item2 - World.CurrentTime).TotalSeconds < 6 && lpmHP < 66)
+                    UseGCD(aid, lpm);
+            }
+        }
+
+        return false;
     }
 }

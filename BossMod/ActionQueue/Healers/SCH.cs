@@ -102,6 +102,7 @@ public enum SID : uint
     ChainStratagem = 1221, // applied by Chain Stratagem to target
     FeyUnion = 1223, // applied by Aetherpact to target
     Seraphism = 3884, // applied by Seraphism to self
+    EmergencyTactics = 792, // applied by Emergency Tactics to self
 
     //Shared
     Surecast = ClassShared.SID.Surecast, // applied by Surecast to self
