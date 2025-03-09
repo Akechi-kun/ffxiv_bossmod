@@ -1,5 +1,6 @@
 ﻿using static BossMod.AIHints;
 using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using BossMod.GNB;
 
 namespace BossMod.Autorotation.akechi;
@@ -135,7 +136,6 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Ake
     private float nmLeft;
     private float nmCD;
     private float bfCD;
-    private bool inOdd;
     private bool hasNM;
     private bool hasBreak;
     private bool hasReign;
@@ -184,11 +184,31 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Ake
     #endregion
 
     #region Cooldown Helpers
+    private bool ShouldBuffUp(NoMercyStrategy strategy, Actor? target)
+    {
+        var lv90orhigher = (InOddWindow(AID.Bloodfest) && Ammo >= 2) || (!InOddWindow(AID.Bloodfest) && Ammo < 3);
+        var slow = CanWeaveIn && ((CombatTimer <= 30 && (Unlocked(AID.DoubleDown) ? (ComboLastMove is AID.KeenEdge && Ammo != 3 || ShouldUseAOE) : Ammo > 0)) || (CombatTimer > 30 && (Unlocked(AID.DoubleDown) ? lv90orhigher : Ammo > 0)));
+        var mid = (CombatTimer <= 30 && CanQuarterWeaveIn && (Unlocked(AID.DoubleDown) ? (ComboLastMove is AID.BrutalShell && Ammo != 3 || ShouldUseAOE) : Ammo > 0)) || (CombatTimer > 30 && (Unlocked(AID.DoubleDown) ? (CanWeaveIn && lv90orhigher) : (CanQuarterWeaveIn && Ammo > 0)));
+        var fast = CanQuarterWeaveIn && (CombatTimer <= 30 && (Unlocked(AID.DoubleDown) ? (ComboLastMove is AID.BrutalShell && Ammo != 3 || ShouldUseAOE) : Ammo > 0) || CombatTimer > 30 && (Unlocked(AID.DoubleDown) ? lv90orhigher : Ammo > 0));
+
+        if (GetRecastTime(AID.KeenEdge) > 2.47f) //slow
+        {
+            return slow;
+        }
+        if (GetRecastTime(AID.KeenEdge) is <= 2.47f and > 2.44f)
+        {
+            return mid;
+        }
+        if (GetRecastTime(AID.KeenEdge) <= 2.44f)
+        {
+            return fast;
+        }
+
+        return false;
+    }
     private bool ShouldUseNoMercy(NoMercyStrategy strategy, Actor? target) => strategy switch
     {
-        NoMercyStrategy.Automatic => Player.InCombat && target != null && canNM &&
-            ((Unlocked(AID.DoubleDown) && (inOdd && Ammo >= 2 || !inOdd && Ammo < 3)) || //90+
-            (!Unlocked(AID.DoubleDown) && CanQuarterWeaveIn && Ammo >= 1)), //2-89
+        NoMercyStrategy.Automatic => Player.InCombat && target != null && canNM && ShouldBuffUp(NoMercyStrategy.Automatic, target),
         NoMercyStrategy.Force => canNM,
         NoMercyStrategy.ForceW => canNM && CanWeaveIn,
         NoMercyStrategy.ForceQW => canNM && CanQuarterWeaveIn,
@@ -272,14 +292,19 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Ake
         GnashingStrategy.Delay => false,
         _ => false
     };
-    private bool ShouldSpendCarts(CartridgeStrategy strategy, Actor? target) => strategy switch
+    private bool ShouldSpendCarts(CartridgeStrategy strategy, Actor? target)
     {
-        CartridgeStrategy.Automatic => Player.InCombat && target != null &&
-            ((ShouldUseAOE ? (In5y(target) && canFC) : (In3y(target) && canBS)) &&
-            (hasNM || (!(bfCD is <= 90 and >= 30) && nmCD < 1 && Ammo == 3)) ||
-            (Ammo == MaxCartridges && ComboLastMove is AID.BrutalShell or AID.DemonSlice)),
-        _ => false
-    };
+        var slow = (GetRecastTime(AID.KeenEdge) > 2.47f && CombatTimer <= 13 && (ComboLastMove is AID.KeenEdge || ShouldUseAOE)) || CombatTimer > 13;
+        var fast = (GetRecastTime(AID.KeenEdge) <= 2.47f && CombatTimer <= 13 && (ComboLastMove is AID.BrutalShell || ShouldUseAOE)) || CombatTimer > 13;
+        return strategy switch
+        {
+            CartridgeStrategy.Automatic => Player.InCombat && target != null &&
+                ((ShouldUseAOE ? (In5y(target) && canFC) : (In3y(target) && canBS)) &&
+                (hasNM || ((slow || fast) && !InOddWindow(AID.Bloodfest) && nmCD < 1 && Ammo == 3)) ||
+                (Ammo == MaxCartridges && ComboLastMove is AID.BrutalShell or AID.DemonSlice)),
+            _ => false
+        };
+    }
     private bool ShouldUseSonicBreak(SonicBreakStrategy strategy, Actor? target) => strategy switch
     {
         SonicBreakStrategy.Automatic => Player.InCombat && In3y(target) && canBreak,
@@ -333,7 +358,6 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Ake
         hasRip = PlayerHasEffect(SID.ReadyToRip, 10f) && !LastActionUsed(AID.JugularRip);
         hasTear = PlayerHasEffect(SID.ReadyToTear, 10f) && !LastActionUsed(AID.AbdomenTear);
         hasGouge = PlayerHasEffect(SID.ReadyToGouge, 10f) && !LastActionUsed(AID.EyeGouge);
-        inOdd = bfCD is <= 90 and >= 30;
         ShouldUseAOE = ShouldUseAOECircle(5).OnTwoOrMore;
         (BestSplashTargets, NumSplashTargets) = GetBestTarget(primaryTarget, 3.5f, IsSplashTarget);
         BestSplashTarget = Unlocked(AID.ReignOfBeasts) && NumSplashTargets > 1 ? BestSplashTargets : primaryTarget;
