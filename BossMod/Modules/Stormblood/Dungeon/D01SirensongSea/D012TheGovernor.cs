@@ -68,15 +68,15 @@ class Tether(BossModule module) : BaitAwayTethers(module, new AOEShapeCone(0, 0.
         base.AddAIHints(slot, actor, assignment, hints);
         if (target == actor.InstanceID && CurrentBaits.Count > 0)
             hints.AddForbiddenZone(ShapeDistance.Circle(Module.PrimaryActor.Position, 19));
+
     }
 }
-
-
 
 class ShadowFlow(BossModule module) : GenericAOEs(module)
 {
     public List<AOEInstance> aoes = [];
     public List<Actor> Grovellers = [];
+    public List<Actor> Boss = [];
 
     DateTime activation;
 
@@ -90,7 +90,7 @@ class ShadowFlow(BossModule module) : GenericAOEs(module)
         }
         foreach (Actor groveller in Grovellers)
         {
-            yield return new AOEInstance(new AOEShapeCircle(7f), groveller.Position, Activation: activation);
+            yield return new AOEInstance(new AOEShapeCircle(6), groveller.Position, Activation: activation);
         }
     }
 
@@ -106,7 +106,7 @@ class ShadowFlow(BossModule module) : GenericAOEs(module)
     {
         if ((AID)spell.Action.ID == AID.ShadowFlow)
         {
-            aoes.Add(new AOEInstance(new AOEShapeCircle(7f), Module.Center, Activation: Module.CastFinishAt(spell, 10f)));
+            aoes.Add(new AOEInstance(new AOEShapeCircle(6), Module.Center, Activation: Module.CastFinishAt(spell, 10f)));
         }
     }
 
@@ -126,7 +126,6 @@ class ShadowFlow(BossModule module) : GenericAOEs(module)
         }
     }
 }
-
 
 class DO12TheGovernorStates : StateMachineBuilder
 {
