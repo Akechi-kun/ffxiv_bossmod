@@ -3,19 +3,36 @@
 // base class that simplifies implementation of utility modules - these are really only useful for planning support
 public abstract class GenericUtility(RotationModuleManager manager, Actor player) : RotationModule(manager, player)
 {
-    public enum SimpleOption { None, Use }
+    public enum GCDOption { None, Use }
+    public enum OGCDOption { None, Use, AnyWeave, EarlyWeave, LateWeave }
     public enum LBOption { None, LB3, LB2, LB1, LB2Only, LB1Only, LB12 }
 
-    protected static void DefineSimpleConfig<Index, AID>(RotationModuleDefinition def, Index expectedIndex, string internalName, string displayName, int uiPriority, AID aid, float effect = 0)
+    protected static void DefineSimpleGCD<Index, AID>(RotationModuleDefinition def, Index expectedIndex, string internalName, string displayName, int uiPriority, AID aid, float effect = 0)
         where Index : Enum
         where AID : Enum
     {
         var adefs = ActionDefinitions.Instance;
         var action = ActionID.MakeSpell(aid);
         var adata = adefs[action]!;
-        def.Define(expectedIndex).As<SimpleOption>(internalName, displayName, uiPriority)
-            .AddOption(SimpleOption.None, "None", "Do not use automatically")
-            .AddOption(SimpleOption.Use, "Use", $"Use {action.Name()}", adata.Cooldown, effect, adata.AllowedTargets, adefs.ActionMinLevel(action))
+        def.Define(expectedIndex).As<GCDOption>(internalName, displayName, uiPriority)
+            .AddOption(GCDOption.None, "None", "Do not use automatically")
+            .AddOption(GCDOption.Use, "Use", $"Use {action.Name()}", adata.Cooldown, effect, adata.AllowedTargets, adefs.ActionMinLevel(action))
+            .AddAssociatedActions(aid);
+    }
+
+    protected static void DefineSimpleOGCD<Index, AID>(RotationModuleDefinition def, Index expectedIndex, string internalName, string displayName, int uiPriority, AID aid, float effect = 0)
+    where Index : Enum
+    where AID : Enum
+    {
+        var adefs = ActionDefinitions.Instance;
+        var action = ActionID.MakeSpell(aid);
+        var adata = adefs[action]!;
+        def.Define(expectedIndex).As<OGCDOption>(internalName, displayName, uiPriority)
+            .AddOption(OGCDOption.None, "None", "Do not use automatically")
+            .AddOption(OGCDOption.Use, "Use", $"Use {action.Name()}, regardless of weave window", adata.Cooldown, effect, adata.AllowedTargets, adefs.ActionMinLevel(action))
+            .AddOption(OGCDOption.AnyWeave, "AnyWeave", $"Use {action.Name()} in any next weave window", adata.Cooldown, effect, adata.AllowedTargets, adefs.ActionMinLevel(action))
+            .AddOption(OGCDOption.EarlyWeave, "EarlyWeave", $"Use {action.Name()} asap in any next early-weave window", adata.Cooldown, effect, adata.AllowedTargets, adefs.ActionMinLevel(action))
+            .AddOption(OGCDOption.LateWeave, "LateWeave", $"Use {action.Name()} asap in any next late-weave window", adata.Cooldown, effect, adata.AllowedTargets, adefs.ActionMinLevel(action))
             .AddAssociatedActions(aid);
     }
 
@@ -34,7 +51,12 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
 
     protected void ExecuteSimple<AID>(in StrategyValues.OptionRef opt, AID aid, Actor? defaultTarget, float castTime = 0) where AID : Enum
     {
-        if (opt.As<SimpleOption>() == SimpleOption.Use)
+        if (opt.As<GCDOption>() == GCDOption.Use)
+            Hints.ActionsToExecute.Push(ActionID.MakeSpell(aid), ResolveTargetOverride(opt.Value) ?? defaultTarget, opt.Priority(), opt.Value.ExpireIn, castTime: castTime);
+        if (opt.As<OGCDOption>() == OGCDOption.Use ||
+            opt.As<OGCDOption>() == OGCDOption.AnyWeave && GCD is < 2.5f and >= 0.6f ||
+            opt.As<OGCDOption>() == OGCDOption.EarlyWeave && GCD is < 2.5f and >= 1.26f ||
+            opt.As<OGCDOption>() == OGCDOption.LateWeave && GCD is <= 1.25f and >= 0.6f)
             Hints.ActionsToExecute.Push(ActionID.MakeSpell(aid), ResolveTargetOverride(opt.Value) ?? defaultTarget, opt.Priority(), opt.Value.ExpireIn, castTime: castTime);
     }
 

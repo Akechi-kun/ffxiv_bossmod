@@ -10,7 +10,7 @@ public sealed class ClassRDMUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: RDM", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.RDM), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.MagickBarrier, "Magick Barrier", "Barrier", 600, RDM.AID.MagickBarrier, 10);
+        DefineSimpleOGCD(res, Track.MagickBarrier, "Magick Barrier", "Barrier", 600, RDM.AID.MagickBarrier, 10);
 
         return res;
     }

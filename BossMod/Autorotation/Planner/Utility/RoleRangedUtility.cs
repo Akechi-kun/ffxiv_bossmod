@@ -7,17 +7,17 @@ public abstract class RoleRangedUtility(RotationModuleManager manager, Actor pla
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3)
     {
-        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "", 100, ClassShared.AID.Sprint, 10);
+        DefineSimpleGCD(def, SharedTrack.Sprint, "Sprint", "", 100, ClassShared.AID.Sprint, 10);
 
         DefineLimitBreak(def, SharedTrack.LB, ActionTargets.Hostile)
             .AddAssociatedActions(ClassShared.AID.BigShot, ClassShared.AID.Desperado)
             .AddAssociatedAction(lb3);
 
-        DefineSimpleConfig(def, SharedTrack.LegGraze, "LegGraze", "Slow", -100, ClassShared.AID.LegGraze, 10);
-        DefineSimpleConfig(def, SharedTrack.SecondWind, "SecondWind", "", 20, ClassShared.AID.SecondWind);
-        DefineSimpleConfig(def, SharedTrack.FootGraze, "FootGraze", "Bind", -150, ClassShared.AID.FootGraze, 10);
-        DefineSimpleConfig(def, SharedTrack.HeadGraze, "HeadGraze", "Interrupt", -50, ClassShared.AID.HeadGraze);
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "ArmsL", 300, ClassShared.AID.ArmsLength, 6); // note: secondary effect 15s
+        DefineSimpleGCD(def, SharedTrack.LegGraze, "LegGraze", "Slow", -100, ClassShared.AID.LegGraze, 10);
+        DefineSimpleGCD(def, SharedTrack.SecondWind, "SecondWind", "", 20, ClassShared.AID.SecondWind);
+        DefineSimpleGCD(def, SharedTrack.FootGraze, "FootGraze", "Bind", -150, ClassShared.AID.FootGraze, 10);
+        DefineSimpleGCD(def, SharedTrack.HeadGraze, "HeadGraze", "Interrupt", -50, ClassShared.AID.HeadGraze);
+        DefineSimpleGCD(def, SharedTrack.ArmsLength, "ArmsLength", "ArmsL", 300, ClassShared.AID.ArmsLength, 6); // note: secondary effect 15s
     }
 
     protected void ExecuteShared(StrategyValues strategy, ActionID lb3, Actor? primaryTarget)

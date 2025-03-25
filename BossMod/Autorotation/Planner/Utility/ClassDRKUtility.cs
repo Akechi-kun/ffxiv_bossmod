@@ -4,7 +4,6 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
 {
     public enum Track { DarkMind = SharedTrack.Count, ShadowWall, LivingDead, TheBlackestNight, Oblation, DarkMissionary, Shadowstride }
     public enum WallOption { None, ShadowWall, ShadowedVigil } //ShadowWall strategy
-    public enum TBNStrategy { None, Force } //TheBlackestNight strategy
     public enum OblationStrategy { None, Force, ForceHold1 } //Oblation strategy
     public enum DashStrategy { None, GapClose, GapCloseHold1 } //GapCloser strategy
 
@@ -17,7 +16,7 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: DRK", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.DRK), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
-        DefineSimpleConfig(res, Track.DarkMind, "DarkMind", "DMind", 450, DRK.AID.DarkMind, 10); //120s CD, 15s duration
+        DefineSimpleOGCD(res, Track.DarkMind, "DarkMind", "DMind", 450, DRK.AID.DarkMind, 10); //120s CD, 15s duration
 
         res.Define(Track.ShadowWall).As<WallOption>("ShadowWall", "Wall", 550) //120s CD, 15s duration
             .AddOption(WallOption.None, "None", "Do not use automatically")
@@ -25,12 +24,8 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
             .AddOption(WallOption.ShadowedVigil, "UseEx", "Use Shadowed Vigil", 120, 15, ActionTargets.Self, 92)
             .AddAssociatedActions(DRK.AID.ShadowWall, DRK.AID.ShadowedVigil);
 
-        DefineSimpleConfig(res, Track.LivingDead, "LivingDead", "LD", 400, DRK.AID.LivingDead, 10); //300s CD, 10s duration
-
-        res.Define(Track.TheBlackestNight).As<TBNStrategy>("TheBlackestNight", "TBN", 550) //60s (120s total), 10s duration, 2 charges
-            .AddOption(TBNStrategy.None, "None", "Do not use automatically")
-            .AddOption(TBNStrategy.Force, "Use", "Use The Blackest Night", 15, 7, ActionTargets.Self | ActionTargets.Party, 70)
-            .AddAssociatedActions(DRK.AID.TheBlackestNight);
+        DefineSimpleOGCD(res, Track.LivingDead, "LivingDead", "LD", 400, DRK.AID.LivingDead, 10); //300s CD, 10s duration
+        DefineSimpleOGCD(res, Track.TheBlackestNight, "TheBlackestNight", "TBN", 400, DRK.AID.TheBlackestNight, 7); //15s duration
 
         res.Define(Track.Oblation).As<OblationStrategy>("Oblation", "", 550) //60s (120s total), 10s duration, 2 charges
             .AddOption(OblationStrategy.None, "None", "Do not use automatically")
@@ -38,7 +33,7 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
             .AddOption(OblationStrategy.ForceHold1, "UseHold1", "Use Oblation; Holds 1 charge for manual usage", 60, 10, ActionTargets.Self | ActionTargets.Party, 82)
             .AddAssociatedActions(DRK.AID.Oblation);
 
-        DefineSimpleConfig(res, Track.DarkMissionary, "DarkMissionary", "Mission", 220, DRK.AID.DarkMissionary, 15); //90s CD, 15s duration
+        DefineSimpleOGCD(res, Track.DarkMissionary, "DarkMissionary", "Mission", 220, DRK.AID.DarkMissionary, 15); //90s CD, 15s duration
 
         res.Define(Track.Shadowstride).As<DashStrategy>("Shadowstride", "Dash", 20)
             .AddOption(DashStrategy.None, "None", "No use")
@@ -55,13 +50,7 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
         ExecuteSimple(strategy.Option(Track.DarkMind), DRK.AID.DarkMind, Player); //Execution of DarkMind
         ExecuteSimple(strategy.Option(Track.LivingDead), DRK.AID.LivingDead, Player); //Execution of LivingDead
         ExecuteSimple(strategy.Option(Track.DarkMissionary), DRK.AID.DarkMissionary, Player); //Execution of DarkMissionary
-
-        //TBN execution
-        var canTBN = ActionUnlocked(ActionID.MakeSpell(DRK.AID.TheBlackestNight)) && Player.HPMP.CurMP >= 3000;
-        var tbn = strategy.Option(Track.TheBlackestNight);
-        var tbnTarget = ResolveTargetOverride(tbn.Value) ?? CoTank() ?? primaryTarget ?? Player; //Smart-Targets Co-Tank if set to Automatic, if no Co-Tank then targets self
-        if (canTBN && tbn.As<TBNStrategy>() == TBNStrategy.Force)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(DRK.AID.TheBlackestNight), tbnTarget, tbn.Priority(), tbn.Value.ExpireIn);
+        ExecuteSimple(strategy.Option(Track.TheBlackestNight), DRK.AID.TheBlackestNight, ResolveTargetOverride(strategy.Option(Track.TheBlackestNight).Value) ?? CoTank() ?? primaryTarget ?? Player);
 
         //Oblation execution
         var canObl = ActionUnlocked(ActionID.MakeSpell(DRK.AID.Oblation));

@@ -29,7 +29,7 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
             .AddOption(PhysisOption.UseEx, "UseEx", "Use Physis II", 60, 15, ActionTargets.Self, 60)
             .AddAssociatedActions(SGE.AID.Physis, SGE.AID.PhysisII);
 
-        DefineSimpleConfig(res, Track.Eukrasia, "Eukrasia", "", 110, SGE.AID.Eukrasia); //Eukrasia (spell only)
+        DefineSimpleGCD(res, Track.Eukrasia, "Eukrasia", "", 110, SGE.AID.Eukrasia); //Eukrasia (spell only)
 
         res.Define(Track.Diagnosis).As<DiagnosisOption>("Diagnosis", "Diag", 200) //Diagnosis & EukrasianDiagnosis
             .AddOption(DiagnosisOption.None, "None", "Do not use automatically")
@@ -44,9 +44,9 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
             .AddOption(PrognosisOption.UseEPEx, "UseEPEx", "Use Eukrasian Prognosis II", 0, 30, ActionTargets.Self, 96)
             .AddAssociatedActions(SGE.AID.Prognosis, SGE.AID.EukrasianPrognosis, SGE.AID.EukrasianPrognosisII);
 
-        DefineSimpleConfig(res, Track.Druochole, "Druochole", "Druo", 150, SGE.AID.Druochole); //Druochole
-        DefineSimpleConfig(res, Track.Kerachole, "Kerachole", "Kera", 180, SGE.AID.Kerachole, 15); //Kerachole
-        DefineSimpleConfig(res, Track.Ixochole, "Ixochole", "Ixo", 190, SGE.AID.Ixochole); //Ixochole
+        DefineSimpleOGCD(res, Track.Druochole, "Druochole", "Druo", 150, SGE.AID.Druochole); //Druochole
+        DefineSimpleOGCD(res, Track.Kerachole, "Kerachole", "Kera", 180, SGE.AID.Kerachole, 15); //Kerachole
+        DefineSimpleOGCD(res, Track.Ixochole, "Ixochole", "Ixo", 190, SGE.AID.Ixochole); //Ixochole
 
         res.Define(Track.Zoe).As<ZoeOption>("Zoe", "", 200) //Zoe
             .AddOption(ZoeOption.None, "None", "Do not use automatically")
@@ -54,15 +54,15 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
             .AddOption(ZoeOption.UseEx, "UseEx", "Use Enhanced Zoe", 90, 30, ActionTargets.Self, 88)
             .AddAssociatedActions(SGE.AID.Zoe);
 
-        DefineSimpleConfig(res, Track.Pepsis, "Pepsis", "", 170, SGE.AID.Pepsis); //Pepsis
-        DefineSimpleConfig(res, Track.Taurochole, "Taurochole", "Tauro", 200, SGE.AID.Taurochole, 15); //Taurchole
-        DefineSimpleConfig(res, Track.Haima, "Haima", "", 100, SGE.AID.Haima, 15); //Haima
-        DefineSimpleConfig(res, Track.Rhizomata, "Rhizomata", "Rhizo", 230, SGE.AID.Rhizomata); //Rhizomata
-        DefineSimpleConfig(res, Track.Holos, "Holos", "", 240, SGE.AID.Holos, 20); //Holos
-        DefineSimpleConfig(res, Track.Panhaima, "Panhaima", "", 250, SGE.AID.Panhaima, 15); //Panhaima
-        DefineSimpleConfig(res, Track.Krasis, "Krasis", "", 210, SGE.AID.Krasis, 10); //Krasis
-        DefineSimpleConfig(res, Track.Pneuma, "Pneuma", "", 220, SGE.AID.Pneuma); //Pneuma
-        DefineSimpleConfig(res, Track.Philosophia, "Philosophia", "Philo", 260, SGE.AID.Philosophia, 20); //Philosophia
+        DefineSimpleOGCD(res, Track.Pepsis, "Pepsis", "", 170, SGE.AID.Pepsis); //Pepsis
+        DefineSimpleOGCD(res, Track.Taurochole, "Taurochole", "Tauro", 200, SGE.AID.Taurochole, 15); //Taurchole
+        DefineSimpleOGCD(res, Track.Haima, "Haima", "", 100, SGE.AID.Haima, 15); //Haima
+        DefineSimpleOGCD(res, Track.Rhizomata, "Rhizomata", "Rhizo", 230, SGE.AID.Rhizomata); //Rhizomata
+        DefineSimpleOGCD(res, Track.Holos, "Holos", "", 240, SGE.AID.Holos, 20); //Holos
+        DefineSimpleOGCD(res, Track.Panhaima, "Panhaima", "", 250, SGE.AID.Panhaima, 15); //Panhaima
+        DefineSimpleOGCD(res, Track.Krasis, "Krasis", "", 210, SGE.AID.Krasis, 10); //Krasis
+        DefineSimpleGCD(res, Track.Pneuma, "Pneuma", "", 220, SGE.AID.Pneuma); //Pneuma
+        DefineSimpleGCD(res, Track.Philosophia, "Philosophia", "Philo", 260, SGE.AID.Philosophia, 20); //Philosophia
 
         res.Define(Track.Icarus).As<DashStrategy>("Icarus", "", 20)
             .AddOption(DashStrategy.None, "None", "No use")

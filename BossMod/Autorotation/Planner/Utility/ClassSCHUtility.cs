@@ -16,8 +16,8 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: SCH", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SCH), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.WhisperingDawn, "Whispering Dawn", "W.Dawn", 140, SCH.AID.WhisperingDawn, 21);
-        DefineSimpleConfig(res, Track.Adloquium, "Adloquium", "Adlo.", 100, SCH.AID.Adloquium, 30);
+        DefineSimpleOGCD(res, Track.WhisperingDawn, "Whispering Dawn", "W.Dawn", 140, SCH.AID.WhisperingDawn, 21);
+        DefineSimpleGCD(res, Track.Adloquium, "Adloquium", "Adlo.", 100, SCH.AID.Adloquium, 30);
 
         res.Define(Track.Succor).As<SuccorOption>("Succor", "Succor", 200)
             .AddOption(SuccorOption.None, "None", "Do not use automatically")
@@ -25,8 +25,8 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(SuccorOption.Concitation, "UseEx", "Use Concitation", 2, 30, ActionTargets.Self, 96)
             .AddAssociatedActions(SCH.AID.Succor, SCH.AID.Concitation);
 
-        DefineSimpleConfig(res, Track.FeyIllumination, "Fey Illumination", "F.Illum.", 240, SCH.AID.FeyIllumination, 20);
-        DefineSimpleConfig(res, Track.Lustrate, "Lustrate", "Lustrate", 150, SCH.AID.Lustrate);
+        DefineSimpleOGCD(res, Track.FeyIllumination, "Fey Illumination", "F.Illum.", 240, SCH.AID.FeyIllumination, 20);
+        DefineSimpleOGCD(res, Track.Lustrate, "Lustrate", "Lustrate", 150, SCH.AID.Lustrate);
 
         res.Define(Track.SacredSoil).As<SacredSoilOption>("Sacred Soil", "S.Soil", 200)
             .AddOption(SacredSoilOption.None, "None", "Do not use automatically")
@@ -34,7 +34,7 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(SacredSoilOption.UseEx, "UseEx", "Use Enhanced Sacred Soil", 30, 15, ActionTargets.Area, 78)
             .AddAssociatedActions(SCH.AID.SacredSoil);
 
-        DefineSimpleConfig(res, Track.Indomitability, "Indomitability", "Indom.", 90, SCH.AID.Indomitability);
+        DefineSimpleOGCD(res, Track.Indomitability, "Indomitability", "Indom.", 90, SCH.AID.Indomitability);
 
         res.Define(Track.DeploymentTactics).As<DeployOption>("DeploymentTactics", "Deploy.", 150)
             .AddOption(DeployOption.None, "None", "Do not use automatically")
@@ -42,9 +42,9 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(DeployOption.UseEx, "UseEx", "Use Enhanced Deployment Tactics", 90, 0, ActionTargets.Self, 88)
             .AddAssociatedActions(SCH.AID.DeploymentTactics);
 
-        DefineSimpleConfig(res, Track.EmergencyTactics, "EmergencyTactics", "Emerg.", 100, SCH.AID.EmergencyTactics, 15);
-        DefineSimpleConfig(res, Track.Dissipation, "Dissipation", "Dissi.", 290, SCH.AID.Dissipation, 15);
-        DefineSimpleConfig(res, Track.Excogitation, "Excogitation", "Excog.", 100, SCH.AID.Excogitation, 45);
+        DefineSimpleOGCD(res, Track.EmergencyTactics, "EmergencyTactics", "Emerg.", 100, SCH.AID.EmergencyTactics, 15);
+        DefineSimpleOGCD(res, Track.Dissipation, "Dissipation", "Dissi.", 290, SCH.AID.Dissipation, 15);
+        DefineSimpleOGCD(res, Track.Excogitation, "Excogitation", "Excog.", 100, SCH.AID.Excogitation, 45);
 
         res.Define(Track.Aetherpact).As<AetherpactOption>("Aetherpact", "A.pact", 300)
             .AddOption(AetherpactOption.None, "None", "Do not use automatically")
@@ -58,12 +58,12 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(RecitationOption.UseEx, "UseEx", "Use Enhanced Recitation", 60, 0, ActionTargets.Self, 98)
             .AddAssociatedActions(SCH.AID.Recitation);
 
-        DefineSimpleConfig(res, Track.FeyBlessing, "FeyBlessing", "F.Blessing", 120, SCH.AID.FeyBlessing);
-        DefineSimpleConfig(res, Track.Consolation, "Consolation", "Consol.", 80, SCH.AID.Consolation, 30);
-        DefineSimpleConfig(res, Track.Protraction, "Protraction", "Prot.", 110, SCH.AID.Protraction, 10);
-        DefineSimpleConfig(res, Track.Expedient, "Expedient", "Exped.", 200, SCH.AID.Expedient, 20);
-        DefineSimpleConfig(res, Track.Seraphism, "Seraphism", "Seraphism", 300, SCH.AID.Seraphism, 20);
-        DefineSimpleConfig(res, Track.Seraph, "Seraph", "Seraph", 300, SCH.AID.SummonSeraph, 20);
+        DefineSimpleOGCD(res, Track.FeyBlessing, "FeyBlessing", "F.Blessing", 120, SCH.AID.FeyBlessing);
+        DefineSimpleOGCD(res, Track.Consolation, "Consolation", "Consol.", 80, SCH.AID.Consolation, 30);
+        DefineSimpleOGCD(res, Track.Protraction, "Protraction", "Prot.", 110, SCH.AID.Protraction, 10);
+        DefineSimpleOGCD(res, Track.Expedient, "Expedient", "Exped.", 200, SCH.AID.Expedient, 20);
+        DefineSimpleOGCD(res, Track.Seraphism, "Seraphism", "Seraphism", 300, SCH.AID.Seraphism, 20);
+        DefineSimpleOGCD(res, Track.Seraph, "Seraph", "Seraph", 300, SCH.AID.SummonSeraph, 20);
 
         return res;
     }

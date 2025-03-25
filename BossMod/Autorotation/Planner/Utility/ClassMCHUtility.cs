@@ -20,7 +20,7 @@ public sealed class ClassMCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(TactOption.Use88IfNotActive, "Use88IfNotActive", "Use Tactician (90s CD), unless equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 88)
             .AddAssociatedActions(MCH.AID.Tactician);
 
-        DefineSimpleConfig(res, Track.Dismantle, "Dismantle", "Dism", 500, MCH.AID.Dismantle, 10);
+        DefineSimpleOGCD(res, Track.Dismantle, "Dismantle", "Dism", 500, MCH.AID.Dismantle, 10);
 
         return res;
     }

@@ -9,16 +9,16 @@ public abstract class RoleTankUtility(RotationModuleManager manager, Actor playe
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3, ActionID stanceApply, ActionID stanceRemove)
     {
-        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "", 100, ClassShared.AID.Sprint, 10);
+        DefineSimpleGCD(def, SharedTrack.Sprint, "Sprint", "", 100, ClassShared.AID.Sprint, 10);
 
         DefineLimitBreak(def, SharedTrack.LB, ActionTargets.Self, 10, 15, 8)
             .AddAssociatedActions(ClassShared.AID.ShieldWall, ClassShared.AID.Stronghold)
             .AddAssociatedAction(lb3);
 
-        DefineSimpleConfig(def, SharedTrack.Rampart, "Rampart", "", 500, ClassShared.AID.Rampart, 20);
-        DefineSimpleConfig(def, SharedTrack.LowBlow, "LowBlow", "Stun", -100, ClassShared.AID.LowBlow, 5);
-        DefineSimpleConfig(def, SharedTrack.Provoke, "Provoke", "", 200, ClassShared.AID.Provoke);
-        DefineSimpleConfig(def, SharedTrack.Interject, "Interject", "Interrupt", -50, ClassShared.AID.Interject);
+        DefineSimpleGCD(def, SharedTrack.Rampart, "Rampart", "", 500, ClassShared.AID.Rampart, 20);
+        DefineSimpleGCD(def, SharedTrack.LowBlow, "LowBlow", "Stun", -100, ClassShared.AID.LowBlow, 5);
+        DefineSimpleGCD(def, SharedTrack.Provoke, "Provoke", "", 200, ClassShared.AID.Provoke);
+        DefineSimpleGCD(def, SharedTrack.Interject, "Interject", "Interrupt", -50, ClassShared.AID.Interject);
 
         // TODO: combine standard/ex options
         // TODO: add 'if-not-active' strategy with configurable min-time-left
@@ -28,8 +28,8 @@ public abstract class RoleTankUtility(RotationModuleManager manager, Actor playe
             .AddOption(ReprisalOption.UseEx, "UseEx", "Use Reprisal (15s)", 60, 15, ActionTargets.Self, 98)
             .AddAssociatedActions(ClassShared.AID.Reprisal);
 
-        DefineSimpleConfig(def, SharedTrack.Shirk, "Shirk", "", 150, ClassShared.AID.Shirk);
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "ArmsL", 300, ClassShared.AID.ArmsLength, 6); // note: secondary effect 15s
+        DefineSimpleGCD(def, SharedTrack.Shirk, "Shirk", "", 150, ClassShared.AID.Shirk);
+        DefineSimpleGCD(def, SharedTrack.ArmsLength, "ArmsLength", "ArmsL", 300, ClassShared.AID.ArmsLength, 6); // note: secondary effect 15s
 
         def.Define(SharedTrack.Stance).As<StanceOption>("Stance", "", 5)
             .AddOption(StanceOption.None, "None", "Do not touch stance")

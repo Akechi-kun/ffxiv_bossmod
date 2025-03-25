@@ -30,9 +30,9 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
             .AddOption(SentOption.Guardian, "UseEx", "Use Guardian", 120, 15, ActionTargets.Self, 92) //120s CD, 15s duration
             .AddAssociatedActions(PLD.AID.Sentinel, PLD.AID.Guardian);
 
-        DefineSimpleConfig(res, Track.Cover, "Cover", "", 320, PLD.AID.Cover, 12); //120s CD, 12s duration, -50 OathGauge cost
-        DefineSimpleConfig(res, Track.Bulwark, "Bulwark", "Bul", 450, PLD.AID.Bulwark, 10); //90s CD, 15s duration
-        DefineSimpleConfig(res, Track.DivineVeil, "DivineVeil", "Veil", 220, PLD.AID.DivineVeil, 30); //90s CD, 30s duration
+        DefineSimpleOGCD(res, Track.Cover, "Cover", "", 320, PLD.AID.Cover, 12); //120s CD, 12s duration, -50 OathGauge cost
+        DefineSimpleOGCD(res, Track.Bulwark, "Bulwark", "Bul", 450, PLD.AID.Bulwark, 10); //90s CD, 15s duration
+        DefineSimpleOGCD(res, Track.DivineVeil, "DivineVeil", "Veil", 220, PLD.AID.DivineVeil, 30); //90s CD, 30s duration
 
         res.Define(Track.PassageOfArms).As<ArmsDirection>("PassageOfArms", "PoA", 400) //PassageOfArms definition for CD plans
             .AddOption(ArmsDirection.None, "None", "Do not use automatically")
@@ -42,7 +42,7 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
             .AddOption(ArmsDirection.CameraBackward, "CameraBackward", "Faces the Backward direction relative to the Camera", 120, 18, ActionTargets.Self, 70)
             .AddAssociatedActions(PLD.AID.PassageOfArms);
 
-        DefineSimpleConfig(res, Track.HallowedGround, "HallowedGround", "Inv", 400, PLD.AID.HallowedGround, 10); //420s CD, 10s duration
+        DefineSimpleOGCD(res, Track.HallowedGround, "HallowedGround", "Inv", 400, PLD.AID.HallowedGround, 10); //420s CD, 10s duration
 
         return res;
     }

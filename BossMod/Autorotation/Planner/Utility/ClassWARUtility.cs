@@ -15,7 +15,7 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: WAR", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "veyn", RotationModuleQuality.Good, BitMask.Build((int)Class.WAR), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
-        DefineSimpleConfig(res, Track.Thrill, "ThrillOfBattle", "Thrill", 450, WAR.AID.ThrillOfBattle, 10);
+        DefineSimpleOGCD(res, Track.Thrill, "ThrillOfBattle", "Thrill", 450, WAR.AID.ThrillOfBattle, 10);
 
         res.Define(Track.Vengeance).As<VengOption>("Vengeance", "Veng", 550)
             .AddOption(VengOption.None, "None", "Do not use automatically")
@@ -23,7 +23,7 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
             .AddOption(VengOption.Damnation, "UseEx", "Use Damnation", 120, 15, ActionTargets.Self, 92)
             .AddAssociatedActions(WAR.AID.Vengeance, WAR.AID.Damnation);
 
-        DefineSimpleConfig(res, Track.Holmgang, "Holmgang", "", 400, WAR.AID.Holmgang, 10);
+        DefineSimpleOGCD(res, Track.Holmgang, "Holmgang", "", 400, WAR.AID.Holmgang, 10);
 
         res.Define(Track.Bloodwhetting).As<BWOption>("BW", uiPriority: 350)
             .AddOption(BWOption.None, "None", "Do not use automatically")
@@ -32,8 +32,8 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
             .AddOption(BWOption.NascentFlash, "NF", "Use Nascent Flash", 25, 4, ActionTargets.Party, 76) // note: secondary effect duration 8
             .AddAssociatedActions(WAR.AID.Bloodwhetting, WAR.AID.RawIntuition, WAR.AID.NascentFlash);
 
-        DefineSimpleConfig(res, Track.Equilibrium, "Equilibrium", "Equi", 320, WAR.AID.Equilibrium); // note: secondary effect (hot) duration 6
-        DefineSimpleConfig(res, Track.ShakeItOff, "ShakeItOff", "SIO", 220, WAR.AID.ShakeItOff, 30); // note: secondary effect duration 15
+        DefineSimpleOGCD(res, Track.Equilibrium, "Equilibrium", "Equi", 320, WAR.AID.Equilibrium); // note: secondary effect (hot) duration 6
+        DefineSimpleOGCD(res, Track.ShakeItOff, "ShakeItOff", "SIO", 220, WAR.AID.ShakeItOff, 30); // note: secondary effect duration 15
 
         return res;
     }

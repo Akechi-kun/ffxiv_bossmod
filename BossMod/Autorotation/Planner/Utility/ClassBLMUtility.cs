@@ -12,7 +12,7 @@ public sealed class ClassBLMUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: BLM", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.BLM), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.Manaward, "Manaward", "", 600, BLM.AID.Manaward, 20);
+        DefineSimpleOGCD(res, Track.Manaward, "Manaward", "", 600, BLM.AID.Manaward, 20);
 
         res.Define(Track.AetherialManipulation).As<DashStrategy>("Dash", "", 20)
             .AddOption(DashStrategy.None, "None", "No use.")

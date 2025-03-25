@@ -12,8 +12,8 @@ public sealed class ClassMNKUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: MNK", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "xan", RotationModuleQuality.Excellent, BitMask.Build((int)Class.MNK), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.Mantra, "Mantra", "", 100, MNK.AID.Mantra, 15);
-        DefineSimpleConfig(res, Track.RiddleOfEarth, "RiddleOfEarth", "RoE", 150, MNK.AID.RiddleOfEarth, 10); // note: secondary effect is 15s hot
+        DefineSimpleOGCD(res, Track.Mantra, "Mantra", "", 100, MNK.AID.Mantra, 15);
+        DefineSimpleOGCD(res, Track.RiddleOfEarth, "RiddleOfEarth", "RoE", 150, MNK.AID.RiddleOfEarth, 10); // note: secondary effect is 15s hot
 
         res.Define(Track.Thunderclap).As<DashStrategy>("Thunderclap", "Dash", 20)
             .AddOption(DashStrategy.None, "None", "No use")

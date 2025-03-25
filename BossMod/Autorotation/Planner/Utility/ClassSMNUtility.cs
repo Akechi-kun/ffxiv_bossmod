@@ -12,9 +12,7 @@ public sealed class ClassSMNUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: SMN", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.SMN), 100);
         DefineShared(res, IDLimitBreak3);
 
-        res.Define(Track.RadiantAegis).As<AegisStrategy>("Radiant Aegis", "Aegis", 20)
-            .AddOption(AegisStrategy.None, "None", "No use")
-            .AddOption(AegisStrategy.Use, "Use", "Use Radiant Aegis", 60, 30, ActionTargets.Self, 2);
+        DefineSimpleOGCD(res, Track.RadiantAegis, "Radiant Aegis", "Aegis", 600, SMN.AID.RadiantAegis, 30);
 
         //TODO: Rekindle here or inside own module?
 
@@ -24,10 +22,9 @@ public sealed class ClassSMNUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-
-        var radi = strategy.Option(Track.RadiantAegis);
-        var hasAegis = StatusDetails(Player, SMN.SID.RadiantAegis, Player.InstanceID, 30).Left > 0.1f;
-        if (radi.As<AegisStrategy>() != AegisStrategy.None && !hasAegis)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(SMN.AID.RadiantAegis), Player, radi.Priority(), radi.Value.ExpireIn);
+        if (Player.FindStatus(SMN.SID.RadiantAegis) == null)
+        {
+            ExecuteSimple(strategy.Option(Track.RadiantAegis), SMN.AID.RadiantAegis, Player);
+        }
     }
 }
