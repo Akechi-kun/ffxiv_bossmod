@@ -1,6 +1,4 @@
-﻿using static BossMod.Autorotation.ClassPCTUtility;
-
-namespace BossMod.Autorotation;
+﻿namespace BossMod.Autorotation;
 
 public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player) : RoleTankUtility(manager, player)
 {
@@ -15,7 +13,7 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: PLD", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "veyn, Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.PLD), 100);
+        var res = new RotationModuleDefinition("Utility: PLD", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner|Utility", "veyn, Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.PLD), 100);
 
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
