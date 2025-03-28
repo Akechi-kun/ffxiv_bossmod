@@ -58,10 +58,10 @@
       <Visible>false</Visible>
     </Content>
   </ItemGroup>
-
   <ItemGroup>
-    <ProjectReference Include="..\BossMod\BossMod.csproj" />
+	<ProjectReference Include="..\BossMod\BossMod.csproj" />
   </ItemGroup>
+	
 
   <ItemGroup>
     <!-- <PackageReference Include="ImGui.NET" Version="1.86.0" /> -->

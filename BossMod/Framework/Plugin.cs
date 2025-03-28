@@ -7,6 +7,10 @@ using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Event;
 using System.IO;
 using System.Reflection;
+using ECommons;
+using ECommons.Automation.LegacyTaskManager;
+using ECommons.DalamudServices;
+using ECommons.Logging;
 
 namespace BossMod;
 
@@ -55,6 +59,8 @@ public sealed class Plugin : IDalamudPlugin
         InteropGenerator.Runtime.Resolver.GetInstance.Setup(sigScanner.SearchBase, gameVersion, new(dalamud.ConfigDirectory.FullName + "/cs.json"));
         FFXIVClientStructs.Interop.Generated.Addresses.Register();
         InteropGenerator.Runtime.Resolver.GetInstance.Resolve();
+
+        ECommonsMain.Init(dalamud, this, ECommons.Module.All);
 
         dalamud.Create<Service>();
         Service.LogHandlerDebug = (string msg) => Service.Logger.Debug(msg);
@@ -111,6 +117,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public void Dispose()
     {
+        ECommonsMain.Dispose();
         Service.Condition.ConditionChange -= OnConditionChanged;
         _wndDebug.Dispose();
         _wndAI.Dispose();

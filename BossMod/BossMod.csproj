@@ -29,7 +29,34 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
-  <ItemGroup>
+	<ItemGroup>
+		<None Include="..\.editorconfig" Link=".editorconfig" />
+		<None Update="Images\OVERVIEW.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Images\RADAR.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Images\AUTOROTATION.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Images\CDPLANNER.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Images\AI.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Images\REPLAYS.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="Images\CONTRIBUTE.png">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+
+	</ItemGroup>
+
+
+	<ItemGroup>
     <Using Include="System" />
     <Using Include="System.Collections" />
     <Using Include="System.Collections.Generic" />
@@ -46,15 +73,23 @@
     <DalamudLibPath>$(DALAMUD_HOME)/</DalamudLibPath>
   </PropertyGroup>
 
+  <PropertyGroup>
+	  <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+	<PropertyGroup>
+		<EnableWindowsTargeting>true</EnableWindowsTargeting>
+	</PropertyGroup>
+	
   <ItemGroup>
     <PackageReference Include="DalamudPackager" Version="12.0.0" />
     <PackageReference Include="SharpDX.Mathematics" Version="4.2.0" />
     <PackageReference Include="System.Data.Sqlite" Version="1.0.119" />
-    <ProjectReference Include="..\CodeAnalysis\CodeAnalysis.csproj">
+	  <ProjectReference Include="..\CodeAnalysis\CodeAnalysis.csproj">
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
       <OutputItemType>Analyzer</OutputItemType>
     </ProjectReference>
-    <ProjectReference Include="..\FFXIVClientStructs\FFXIVClientStructs\FFXIVClientStructs.csproj" />
+	  <ProjectReference Include="..\ECommons\ECommons\ECommons.csproj" />
+	  <ProjectReference Include="..\FFXIVClientStructs\FFXIVClientStructs\FFXIVClientStructs.csproj" />
     <!--<Reference Include="FFXIVClientStructs">
       <HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
       <Private>false</Private>
@@ -87,6 +122,7 @@
       <HintPath>$(DalamudLibPath)SharpDX.Direct3D11.dll</HintPath>
       <Private>false</Private>
     </Reference>
+	  
   </ItemGroup>
 
   <ItemGroup>
@@ -95,8 +131,12 @@
     </None>
     <EmbeddedResource Include="Modules\Global\DeepDungeon\*.json" />
   </ItemGroup>
-
+	
   <ItemGroup Condition="'$(Configuration)' == 'Release'">
     <EmbeddedResource Include="Pathfinding\ObstacleMaps\*" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <Folder Include="Images\" />
   </ItemGroup>
 </Project>

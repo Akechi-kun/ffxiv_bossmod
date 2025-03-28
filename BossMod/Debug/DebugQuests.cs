@@ -98,7 +98,7 @@ unsafe class DebugQuests
             {
                 foreach (var nnpc in _tree.Node($"NPC {baseId:X}, outrank={quests.OutrankAll}"))
                 {
-                    int i = 0;
+                    //int i = 0;
                     foreach (var q in quests.AllQuests)
                     {
                         // TODO map Unknown11
