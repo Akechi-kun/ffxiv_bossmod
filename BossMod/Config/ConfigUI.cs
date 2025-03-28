@@ -1,5 +1,8 @@
 ﻿using BossMod.Autorotation;
 using Dalamud.Interface.Utility.Raii;
+using ECommons;
+using ECommons.DalamudServices;
+using ECommons.ImGuiMethods;
 using ImGuiNET;
 using System.IO;
 using System.Reflection;
@@ -25,6 +28,7 @@ public sealed class ConfigUI : IDisposable
     private readonly ConfigRoot _root;
     private readonly WorldState _ws;
     private readonly UIPresetDatabaseEditor? _presets;
+    public OpenWindow CurrrentOpenWindow { get; set; }
 
     public ConfigUI(ConfigRoot config, WorldState ws, DirectoryInfo? replayDir, RotationDatabase? rotationDB)
     {
@@ -70,17 +74,307 @@ public sealed class ConfigUI : IDisposable
     {
         _tabs.Draw();
     }
-
-    private void DrawSettings()
+    public void DrawSettings()
     {
-        using var child = ImRaii.Child("SettingsWindow", new Vector2(0, 0), true);
-        if (child)
-            DrawNodes(_roots);
+        var region = ImGui.GetContentRegionAvail();
+        var itemSpacing = ImGui.GetStyle().ItemSpacing;
+
+        var topLeftSideHeight = region.Y;
+
+        ImGui.PushStyleVar(ImGuiStyleVar.CellPadding, new Vector2(5f.Scale(), 0));
+        try
+        {
+            using var table = ImRaii.Table($"BossModTableContainer", 2, ImGuiTableFlags.Resizable);
+            if (!table)
+                return;
+
+            ImGui.TableSetupColumn("##LeftColumn", ImGuiTableColumnFlags.WidthFixed, ImGui.GetWindowWidth() / 2);
+
+            ImGui.TableNextColumn();
+
+            var regionSize = ImGui.GetContentRegionAvail();
+
+            ImGui.PushStyleVar(ImGuiStyleVar.SelectableTextAlign, new Vector2(0.5f, 0.5f));
+            using (var leftChild = ImRaii.Child($"###BossModLeftSide", regionSize with { Y = topLeftSideHeight }, true, ImGuiWindowFlags.NoDecoration))
+            {
+                var iconPath = Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName!, @"Images\ICON1.png");
+
+                // Move the cursor a bit to the right before drawing the first icon
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() - 15f);  // Move 10 units to the right
+                if (ThreadLoadImageHandler.TryGetTextureWrap(iconPath, out var icon))
+                {
+                    ImGuiEx.LineCentered("###ICON", () =>
+                    {
+                        ImGui.Image(icon.ImGuiHandle, new Vector2(100f.Scale(), 100f.Scale()));
+                    });
+                }
+                ImGui.Spacing();
+                if (ImGui.Selectable("System", CurrrentOpenWindow == OpenWindow.System))
+                {
+                    CurrrentOpenWindow = OpenWindow.System;
+                }
+                if (ImGui.Selectable("Party Roles", CurrrentOpenWindow == OpenWindow.PartyRoles))
+                {
+                    CurrrentOpenWindow = OpenWindow.PartyRoles;
+                }
+                if (ImGui.Selectable("Encounters", CurrrentOpenWindow == OpenWindow.Encounters))
+                {
+                    CurrrentOpenWindow = OpenWindow.Encounters;
+                }
+                if (ImGui.Selectable("Action Tweaks", CurrrentOpenWindow == OpenWindow.ActionTweaks))
+                {
+                    CurrrentOpenWindow = OpenWindow.ActionTweaks;
+                }
+                if (ImGui.Selectable("Autorotation", CurrrentOpenWindow == OpenWindow.Autorotation))
+                {
+                    CurrrentOpenWindow = OpenWindow.Autorotation;
+                }
+                if (ImGui.Selectable("Automation", CurrrentOpenWindow == OpenWindow.Automation))
+                {
+                    CurrrentOpenWindow = OpenWindow.Automation;
+                }
+                if (ImGui.Selectable("AI", CurrrentOpenWindow == OpenWindow.AI))
+                {
+                    CurrrentOpenWindow = OpenWindow.AI;
+                }
+                if (ImGui.Selectable("Replays", CurrrentOpenWindow == OpenWindow.Replays))
+                {
+                    CurrrentOpenWindow = OpenWindow.Replays;
+                }
+                if (ImGui.Selectable("Obstacle Maps", CurrrentOpenWindow == OpenWindow.ObstacleMaps))
+                {
+                    CurrrentOpenWindow = OpenWindow.ObstacleMaps;
+                }
+                if (ImGui.Selectable("Color Scheme", CurrrentOpenWindow == OpenWindow.ColorScheme))
+                {
+                    CurrrentOpenWindow = OpenWindow.ColorScheme;
+                }
+                ImGui.Spacing();
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() - 15f);
+                if (ThreadLoadImageHandler.TryGetTextureWrap(iconPath, out var icon1))
+                {
+                    ImGuiEx.LineCentered("###ICON1", () =>
+                    {
+                        ImGui.Image(icon1.ImGuiHandle, new Vector2(100f.Scale(), 100f.Scale()));
+                    });
+                }
+            }
+
+            ImGui.PopStyleVar();
+            ImGui.TableNextColumn();
+            using var rightChild = ImRaii.Child($"###BossModRightSide", Vector2.Zero, true);
+            ImGui.Spacing();
+
+            switch (CurrrentOpenWindow)
+            {
+                case OpenWindow.System:
+                    DrawSystem();
+                    break;
+                case OpenWindow.PartyRoles:
+                    DrawPartyRoles();
+                    break;
+                case OpenWindow.Encounters:
+                    DrawEncounters();
+                    break;
+                case OpenWindow.ActionTweaks:
+                    DrawActionTweaks();
+                    break;
+                case OpenWindow.Autorotation:
+                    DrawAutorotation();
+                    break;
+                case OpenWindow.Automation:
+                    DrawAutomation();
+                    break;
+                case OpenWindow.AI:
+                    DrawAI();
+                    break;
+                case OpenWindow.Replays:
+                    DrawReplays();
+                    break;
+                case OpenWindow.ObstacleMaps:
+                    DrawObstacleMaps();
+                    break;
+                case OpenWindow.ColorScheme:
+                    DrawColorScheme();
+                    break;
+                case OpenWindow.None:
+                    DrawNoSelection();
+                    break;
+                default:
+                    break;
+            }
+                    ;
+        }
+        catch (Exception ex)
+        {
+            ex.Log();
+        }
+        ImGui.PopStyleVar();
+    }
+    private void DrawNoSelection()
+    {
+        var settingsPath = Path.Combine(Svc.PluginInterface.AssemblyLocation.DirectoryName!, @"Images\SETTINGS.png");
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() - 15f);  // Move 10 units to the right
+        if (ThreadLoadImageHandler.TryGetTextureWrap(settingsPath, out var settings))
+        {
+            ImGuiEx.LineCentered("###Settings", () =>
+            {
+                ImGui.Image(settings.ImGuiHandle, new Vector2(300f.Scale(), 80f.Scale()));
+            });
+        }
+
+        ImGuiEx.TextCentered("This is the Settings menu.");
+        ImGui.Spacing();
+        ImGuiEx.TextCentered("Here you can configure various options within the plugin.");
+        ImGui.Spacing();
+        ImGuiEx.TextCentered("Make sure to read tooltips for guidance when navigating!");
+        ImGui.Spacing();
+        ImGui.Separator();
+    }
+    private void DrawColorScheme()
+    {
+        var colorSchemeNode = _roots.FirstOrDefault(n => n.Name == "Color Scheme");
+        if (colorSchemeNode != null)
+        {
+            DrawNode(colorSchemeNode.Node, _root, _tree, _ws);
+            DrawNodes(colorSchemeNode.Children);
+        }
+        else
+        {
+            ImGui.Text("Color Scheme node not found.");
+        }
     }
 
+    private void DrawSystem()
+    {
+        var systemNode = _roots.FirstOrDefault(n => n.Name == "Boss Modules and Radar");
+        if (systemNode != null)
+        {
+            DrawNode(systemNode.Node, _root, _tree, _ws);
+            DrawNodes(systemNode.Children);
+        }
+        else
+        {
+            ImGui.Text("System node not found.");
+        }
+    }
+    private void DrawPartyRoles()
+    {
+        var partyRolesNode = _roots.FirstOrDefault(n => n.Name == "Party Roles");
+        if (partyRolesNode != null)
+        {
+            DrawNode(partyRolesNode.Node, _root, _tree, _ws);
+        }
+        else
+        {
+            ImGui.Text("Party Roles node not found.");
+        }
+    }
+    private void DrawEncounters()
+    {
+        var encountersNode = _roots.FirstOrDefault(n => n.Name == "Encounter-Specific Options");
+        if (encountersNode != null)
+        {
+            DrawNode(encountersNode.Node, _root, _tree, _ws);
+            DrawNodes(encountersNode.Children);
+        }
+        else
+        {
+            ImGui.Text("Encounters node not found.");
+        }
+    }
+
+    public void DrawActionTweaks()
+    {
+        var actionTweaksNode = _roots.FirstOrDefault(n => n.Name == "Action Tweaks");
+        if (actionTweaksNode != null)
+        {
+            DrawNode(actionTweaksNode.Node, _root, _tree, _ws);
+            DrawNodes(actionTweaksNode.Children);
+        }
+        else
+        {
+            ImGui.Text("Action Tweaks node not found.");
+        }
+    }
+    private void DrawAutorotation()
+    {
+        var autorotationNode = _roots.FirstOrDefault(n => n.Name == "Autorotation");
+        if (autorotationNode != null)
+        {
+            DrawNode(autorotationNode.Node, _root, _tree, _ws);
+            DrawNodes(autorotationNode.Children);
+        }
+        else
+        {
+            ImGui.Text("Autorotation node not found.");
+        }
+    }
+    private void DrawAutomation()
+    {
+        var automationNode = _roots.FirstOrDefault(n => n.Name == "Full duty automation");
+        if (automationNode != null)
+        {
+            DrawNode(automationNode.Node, _root, _tree, _ws);
+            DrawNodes(automationNode.Children);
+        }
+        else
+        {
+            ImGui.Text("Automation node not found.");
+        }
+    }
+    private void DrawAI()
+    {
+        var aiNode = _roots.FirstOrDefault(n => n.Name == "AI Configuration");
+        if (aiNode != null)
+        {
+            DrawNode(aiNode.Node, _root, _tree, _ws);
+            DrawNodes(aiNode.Children);
+        }
+    }
+    private void DrawReplays()
+    {
+        var replaysNode = _roots.FirstOrDefault(n => n.Name == "Replays");
+        if (replaysNode != null)
+        {
+            DrawNode(replaysNode.Node, _root, _tree, _ws);
+            DrawNodes(replaysNode.Children);
+        }
+        else
+        {
+            ImGui.Text("Replays node not found.");
+        }
+    }
+    private void DrawObstacleMaps()
+    {
+        var obstacleMapsNode = _roots.FirstOrDefault(n => n.Name == "Obstacle map development");
+
+        if (obstacleMapsNode != null)
+        {
+            DrawNode(obstacleMapsNode.Node, _root, _tree, _ws);
+            DrawNodes(obstacleMapsNode.Children);
+        }
+        else
+        {
+            ImGui.Text("Obstacle map development node not found.");
+        }
+    }
+
+    /*
+    private void DrawNodes(List<UINode> nodes)
+    {
+        foreach (var n in _tree.Nodes(nodes, n => new(n.Name)))
+        {
+            using var child = ImRaii.Child(n.Name, new Vector2(0, 0), true,
+                ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.AlwaysUseWindowPadding);
+            DrawNode(n.Node, _root, _tree, _ws);
+            DrawNodes(n.Children);
+        }
+    }
+    */
     public static void DrawNode(ConfigNode node, ConfigRoot root, UITree tree, WorldState ws)
     {
-        // draw standard properties
+        // Draw properties of the node (fields with PropertyDisplayAttribute)
         foreach (var field in node.GetType().GetFields())
         {
             var props = field.GetCustomAttribute<PropertyDisplayAttribute>();
@@ -99,7 +393,7 @@ public sealed class ConfigUI : IDisposable
             }
         }
 
-        // draw custom stuff
+        // Draw custom content for the node (if any)
         node.DrawCustom(tree, ws);
     }
 
@@ -341,5 +635,19 @@ public sealed class ConfigUI : IDisposable
                 node.Modified.Fire();
             }
         }
+    }
+    public enum OpenWindow
+    {
+        None = 0,
+        System = 1,
+        PartyRoles = 2,
+        Encounters = 3,
+        ActionTweaks = 4,
+        Autorotation = 5,
+        Automation = 6,
+        AI = 7,
+        Replays = 8,
+        ObstacleMaps = 9,
+        ColorScheme = 10
     }
 }
