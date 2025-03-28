@@ -1088,6 +1088,9 @@
           "System.Xml.ReaderWriter": "4.3.0"
         }
       },
+      "ecommons": {
+        "type": "Project"
+      },
       "ffxivclientstructs": {
         "type": "Project",
         "dependencies": {
