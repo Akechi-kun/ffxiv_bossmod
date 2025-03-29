@@ -157,8 +157,9 @@ public sealed unsafe class ActionManagerEx : IDisposable
             var position = player->Position.ToSystem() + direction.ToDirection().ToVec3();
             _inst->AutoFaceTargetPosition(&position);
 
+            var pm = (PlayerMove*)player;
             // if rotation interpolation is in progress, we have to reset desired rotation to avoid game rotating us away next frame
-            player->Move.Interpolation.DesiredRotation = direction.Rad;
+            pm->Move.Interpolation.DesiredRotation = direction.Rad;
         }
     }
 
@@ -228,7 +229,15 @@ public sealed unsafe class ActionManagerEx : IDisposable
 
     public int GetAdjustedRecastTime(ActionID action, bool applyClassMechanics = true) => ActionManager.GetAdjustedRecastTime((CSActionType)action.Type, action.ID, applyClassMechanics);
 
-    public bool CanMoveWhileCasting(ActionID action) => action.ID is 29391 or 29402;
+    public bool CanMoveWhileCasting(ActionID action)
+    {
+        return action switch
+        {
+            { Type: ActionType.Spell, ID: 29391 or 29402 } => true, // phys ranged PVP actions
+            { Type: ActionType.Mount } => true,
+            _ => false
+        };
+    }
 
     public bool IsRecastTimerActive(ActionID action)
         => _inst->IsRecastTimerActive((CSActionType)action.Type, action.ID);
