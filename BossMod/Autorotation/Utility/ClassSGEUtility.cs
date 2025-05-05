@@ -6,15 +6,15 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
     public enum KardiaOption { None, Kardia, Soteria }
     public enum DiagnosisOption { None, Use, UseED }
     public enum PrognosisOption { None, Use, UseEP, UseEPEx }
-    public enum PhysisOption { None, Use, UseEx }
-    public enum ZoeOption { None, Use, UseEx }
+    public enum PhysisOption { None, Use, UseEX }
+    public enum ZoeOption { None, Use, UseEX }
     public enum DashStrategy { None, GapClose }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(SGE.AID.TechneMakre);
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: SGE", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SGE), 100); //How we're planning our skills listed below
+        var res = new RotationModuleDefinition("Utility: SGE", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner", "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SGE), 100); //How we're planning our skills listed below
         DefineShared(res, IDLimitBreak3); //Shared Healer actions
 
         res.Define(Track.Kardia).As<KardiaOption>("Kardia", "", 200) //Kardia & Soteria
@@ -26,7 +26,7 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.Physis).As<PhysisOption>("Physis", "", 200) //Physis
             .AddOption(PhysisOption.None, "None", "Do not use automatically")
             .AddOption(PhysisOption.Use, "Use", "Use Physis", 60, 15, ActionTargets.Self, 20, 59)
-            .AddOption(PhysisOption.UseEx, "UseEx", "Use Physis II", 60, 15, ActionTargets.Self, 60)
+            .AddOption(PhysisOption.UseEX, "UseEX", "Use Physis II", 60, 15, ActionTargets.Self, 60)
             .AddAssociatedActions(SGE.AID.Physis, SGE.AID.PhysisII);
 
         DefineSimpleConfig(res, Track.Eukrasia, "Eukrasia", "", 110, SGE.AID.Eukrasia); //Eukrasia (spell only)
@@ -51,7 +51,7 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.Zoe).As<ZoeOption>("Zoe", "", 200) //Zoe
             .AddOption(ZoeOption.None, "None", "Do not use automatically")
             .AddOption(ZoeOption.Use, "Use", "Use Zoe", 120, 30, ActionTargets.Self, 56, 87)
-            .AddOption(ZoeOption.UseEx, "UseEx", "Use Enhanced Zoe", 90, 30, ActionTargets.Self, 88)
+            .AddOption(ZoeOption.UseEX, "UseEX", "Use Enhanced Zoe", 90, 30, ActionTargets.Self, 88)
             .AddAssociatedActions(SGE.AID.Zoe);
 
         DefineSimpleConfig(res, Track.Pepsis, "Pepsis", "", 170, SGE.AID.Pepsis); //Pepsis

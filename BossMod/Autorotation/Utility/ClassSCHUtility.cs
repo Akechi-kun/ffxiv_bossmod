@@ -4,16 +4,16 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
 {
     public enum Track { WhisperingDawn = SharedTrack.Count, Adloquium, Succor, FeyIllumination, Lustrate, SacredSoil, Indomitability, DeploymentTactics, EmergencyTactics, Dissipation, Excogitation, Aetherpact, Recitation, FeyBlessing, Consolation, Protraction, Expedient, Seraphism, Seraph }
     public enum SuccorOption { None, Succor, Concitation }
-    public enum SacredSoilOption { None, Use, UseEx }
-    public enum DeployOption { None, Use, UseEx }
+    public enum SacredSoilOption { None, Use, UseEX }
+    public enum DeployOption { None, Use, UseEX }
     public enum AetherpactOption { None, Use, End }
-    public enum RecitationOption { None, Use, UseEx }
+    public enum RecitationOption { None, Use, UseEX }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(SCH.AID.AngelFeathers);
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: SCH", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SCH), 100);
+        var res = new RotationModuleDefinition("Utility: SCH", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner", "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SCH), 100);
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.WhisperingDawn, "Whispering Dawn", "W.Dawn", 140, SCH.AID.WhisperingDawn, 21);
@@ -22,7 +22,7 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.Succor).As<SuccorOption>("Succor", "Succor", 200)
             .AddOption(SuccorOption.None, "None", "Do not use automatically")
             .AddOption(SuccorOption.Succor, "Use", "Use Succor", 2, 30, ActionTargets.Self, 35, 95)
-            .AddOption(SuccorOption.Concitation, "UseEx", "Use Concitation", 2, 30, ActionTargets.Self, 96)
+            .AddOption(SuccorOption.Concitation, "UseEX", "Use Concitation", 2, 30, ActionTargets.Self, 96)
             .AddAssociatedActions(SCH.AID.Succor, SCH.AID.Concitation);
 
         DefineSimpleConfig(res, Track.FeyIllumination, "Fey Illumination", "F.Illum.", 240, SCH.AID.FeyIllumination, 20);
@@ -31,7 +31,7 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.SacredSoil).As<SacredSoilOption>("Sacred Soil", "S.Soil", 200)
             .AddOption(SacredSoilOption.None, "None", "Do not use automatically")
             .AddOption(SacredSoilOption.Use, "Use", "Use Sacred Soil", 30, 15, ActionTargets.Area, 50, 77)
-            .AddOption(SacredSoilOption.UseEx, "UseEx", "Use Enhanced Sacred Soil", 30, 15, ActionTargets.Area, 78)
+            .AddOption(SacredSoilOption.UseEX, "UseEX", "Use Enhanced Sacred Soil", 30, 15, ActionTargets.Area, 78)
             .AddAssociatedActions(SCH.AID.SacredSoil);
 
         DefineSimpleConfig(res, Track.Indomitability, "Indomitability", "Indom.", 90, SCH.AID.Indomitability);
@@ -39,7 +39,7 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.DeploymentTactics).As<DeployOption>("DeploymentTactics", "Deploy.", 150)
             .AddOption(DeployOption.None, "None", "Do not use automatically")
             .AddOption(DeployOption.Use, "Use", "Use Deployment Tactics", 120, 0, ActionTargets.Self, 56, 87)
-            .AddOption(DeployOption.UseEx, "UseEx", "Use Enhanced Deployment Tactics", 90, 0, ActionTargets.Self, 88)
+            .AddOption(DeployOption.UseEX, "UseEX", "Use Enhanced Deployment Tactics", 90, 0, ActionTargets.Self, 88)
             .AddAssociatedActions(SCH.AID.DeploymentTactics);
 
         DefineSimpleConfig(res, Track.EmergencyTactics, "EmergencyTactics", "Emerg.", 100, SCH.AID.EmergencyTactics, 15);
@@ -49,13 +49,13 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.Aetherpact).As<AetherpactOption>("Aetherpact", "A.pact", 300)
             .AddOption(AetherpactOption.None, "None", "Do not use automatically")
             .AddOption(AetherpactOption.Use, "Use", "Use Aetherpact", 0, 0, ActionTargets.Self | ActionTargets.Party, 70)
-            .AddOption(AetherpactOption.End, "UseEx", "End Aetherpact", 0, 0, ActionTargets.Self | ActionTargets.Party, 70)
+            .AddOption(AetherpactOption.End, "UseEX", "End Aetherpact", 0, 0, ActionTargets.Self | ActionTargets.Party, 70)
             .AddAssociatedActions(SCH.AID.Aetherpact, SCH.AID.DissolveUnion);
 
         res.Define(Track.Recitation).As<RecitationOption>("Recitation", "Recit.", 130)
             .AddOption(RecitationOption.None, "None", "Do not use automatically")
             .AddOption(RecitationOption.Use, "Use", "Use Recitation", 90, 0, ActionTargets.Self, 74, 97)
-            .AddOption(RecitationOption.UseEx, "UseEx", "Use Enhanced Recitation", 60, 0, ActionTargets.Self, 98)
+            .AddOption(RecitationOption.UseEX, "UseEX", "Use Enhanced Recitation", 60, 0, ActionTargets.Self, 98)
             .AddAssociatedActions(SCH.AID.Recitation);
 
         DefineSimpleConfig(res, Track.FeyBlessing, "FeyBlessing", "F.Blessing", 120, SCH.AID.FeyBlessing);
@@ -100,7 +100,7 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         var soil = strategy.Option(Track.SacredSoil);
         var soilAction = soil.As<SacredSoilOption>() switch
         {
-            SacredSoilOption.Use or SacredSoilOption.UseEx => SCH.AID.SacredSoil,
+            SacredSoilOption.Use or SacredSoilOption.UseEX => SCH.AID.SacredSoil,
             _ => default
         };
         if (soilAction != default)

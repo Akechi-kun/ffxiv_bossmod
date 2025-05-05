@@ -3,8 +3,8 @@
 public abstract class RoleCasterUtility(RotationModuleManager manager, Actor player) : GenericUtility(manager, player)
 {
     public enum SharedTrack { Sprint, LB, Addle, Sleep, LucidDreaming, Swiftcast, Surecast, Count }
-    public enum AddleOption { None, Use, UseEx }
-    public enum SwiftcastOption { None, Use, UseEx }
+    public enum AddleOption { None, Use, UseEX }
+    public enum SwiftcastOption { None, Use, UseEX }
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3)
     {
@@ -19,7 +19,7 @@ public abstract class RoleCasterUtility(RotationModuleManager manager, Actor pla
         def.Define(SharedTrack.Addle).As<AddleOption>("Addle", "", 250)
             .AddOption(AddleOption.None, "None", "Do not use automatically")
             .AddOption(AddleOption.Use, "Use", "Use Addle (10s)", 90, 10, ActionTargets.Hostile, 22, 97)
-            .AddOption(AddleOption.UseEx, "UseEx", "Use Addle (15s)", 90, 15, ActionTargets.Hostile, 98)
+            .AddOption(AddleOption.UseEX, "UseEX", "Use Addle (15s)", 90, 15, ActionTargets.Hostile, 98)
             .AddAssociatedActions(ClassShared.AID.Addle);
 
         DefineSimpleConfig(def, SharedTrack.Sleep, "Sleep", "", -10, ClassShared.AID.Sleep);
@@ -29,7 +29,7 @@ public abstract class RoleCasterUtility(RotationModuleManager manager, Actor pla
         def.Define(SharedTrack.Swiftcast).As<SwiftcastOption>("Swiftcast", "Swiftcast", 20)
             .AddOption(SwiftcastOption.None, "None", "Do not use automatically")
             .AddOption(SwiftcastOption.Use, "Use", "Use Swiftcast (10s)", 60, 10, ActionTargets.Self, 22, 93)
-            .AddOption(SwiftcastOption.UseEx, "UseEx", "Use Swiftcast (15s)", 40, 10, ActionTargets.Self, 94)
+            .AddOption(SwiftcastOption.UseEX, "UseEX", "Use Swiftcast (15s)", 40, 10, ActionTargets.Self, 94)
             .AddAssociatedActions(ClassShared.AID.Swiftcast);
 
         DefineSimpleConfig(def, SharedTrack.Surecast, "Surecast", "", 10, ClassShared.AID.Surecast, 6); // note: secondary effect 15s

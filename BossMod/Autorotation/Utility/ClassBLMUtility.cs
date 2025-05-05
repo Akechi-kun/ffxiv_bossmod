@@ -1,44 +1,46 @@
-﻿namespace BossMod.Autorotation;
+﻿using BossMod.BLM;
+
+namespace BossMod.Autorotation;
 
 public sealed class ClassBLMUtility(RotationModuleManager manager, Actor player) : RoleCasterUtility(manager, player)
 {
-    public enum Track { Manaward = SharedTrack.Count, AetherialManipulation }
-    public enum DashStrategy { None, Force }
+    public enum Track { Manaward = SharedTrack.Count, AetherialManipulation, LeyLines, BTL, Retrace, Triplecast, Amplifier }
 
-    public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(BLM.AID.Meteor);
+    public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(AID.Meteor);
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: BLM", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.BLM), 100);
+        var res = new RotationModuleDefinition("Utility: BLM", "Cooldown Planner support for Utility and Buff actions.\nNOTE: This is NOT a rotation preset!", "Cooldown Planner", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.BLM), 100);
         DefineShared(res, IDLimitBreak3);
-
-        DefineSimpleConfig(res, Track.Manaward, "Manaward", "", 600, BLM.AID.Manaward, 20);
-
-        res.Define(Track.AetherialManipulation).As<DashStrategy>("Dash", "", 20)
-            .AddOption(DashStrategy.None, "None", "No use.")
-            .AddOption(DashStrategy.Force, "Force", "Use ASAP", 10, 0, ActionTargets.Party, 50)
-            .AddAssociatedActions(BLM.AID.AetherialManipulation);
-
+        DefineSimpleConfig(res, Track.Manaward, "Manaward", "", 600, AID.Manaward, 20);
+        DefineDashConfig(res, Track.AetherialManipulation, "Aetherial Manipulation", "AM", 600, AID.AetherialManipulation);
+        DefineSimpleConfig(res, Track.LeyLines, "Ley Lines", "", 600, AID.LeyLines, 20);
+        DefineSimpleConfig(res, Track.BTL, "Between The Lines", "", 600, AID.BetweenTheLines);
+        DefineSimpleConfig(res, Track.Retrace, "Retrace", "", 600, AID.Retrace);
+        DefineSimpleConfig(res, Track.Triplecast, "Triplecast", "", 600, AID.Triplecast, 15);
+        DefineSimpleConfig(res, Track.Amplifier, "Amplifier", "", 600, AID.Amplifier);
         return res;
     }
 
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.Manaward), BLM.AID.Manaward, Player);
-
-        var dash = strategy.Option(Track.AetherialManipulation);
-        var dashStrategy = strategy.Option(Track.AetherialManipulation).As<DashStrategy>();
-        var dashTarget = ResolveTargetOverride(dash.Value); //Smart-Targeting: Target needs to be set in autorotation or CDPlanner to prevent unexpected behavior
-        var distance = Player.DistanceToHitbox(dashTarget);
-        var cd = World.Client.Cooldowns[ActionDefinitions.Instance.Spell(BLM.AID.AetherialManipulation)!.MainCooldownGroup].Remaining;
-        var shouldDash = dashStrategy switch
+        if (CDleft(AID.Manaward) <= GCD)
+            ExecuteSimple(strategy.Option(Track.Manaward), AID.Manaward, Player);
+        if (CDleft(AID.Amplifier) <= GCD)
+            ExecuteSimple(strategy.Option(Track.Amplifier), AID.Amplifier, Player);
+        if (!HasEffect(SID.Triplecast))
+            ExecuteSimple(strategy.Option(Track.Triplecast), AID.Triplecast, Player);
+        if (CDleft(AID.AetherialManipulation) < GCD)
+            ExecuteDash(strategy.Option(Track.AetherialManipulation), AID.AetherialManipulation, primaryTarget);
+        var llCircle = World.Actors.FirstOrDefault(x => x.OID == 0x179 && x.OwnerID == Player.InstanceID);
+        if (llCircle == null && !HasEffect(SID.LeyLines))
+            ExecuteSimple(strategy.Option(Track.LeyLines), AID.LeyLines, Player, targetPos: Player.PosRot.XYZ());
+        if (llCircle != null && HasEffect(SID.LeyLines) && !HasEffect(SID.CircleOfPower))
         {
-            DashStrategy.None => false,
-            DashStrategy.Force => distance <= 25 && cd < 0.6f,
-            _ => false,
-        };
-        if (shouldDash)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(BLM.AID.AetherialManipulation), dashTarget, dash.Priority(), dash.Value.ExpireIn);
+            ExecuteSimple(strategy.Option(Track.BTL), AID.BetweenTheLines, Player, targetPos: llCircle.PosRot.XYZ());
+            if (CDleft(AID.Retrace) <= GCD)
+                ExecuteSimple(strategy.Option(Track.Retrace), AID.Retrace, Player, targetPos: Player.PosRot.XYZ());
+        }
     }
 }

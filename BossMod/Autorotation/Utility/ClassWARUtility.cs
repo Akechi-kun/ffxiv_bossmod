@@ -12,7 +12,7 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: WAR", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "veyn", RotationModuleQuality.Good, BitMask.Build((int)Class.WAR), 100);
+        var res = new RotationModuleDefinition("Utility: WAR", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner", "veyn", RotationModuleQuality.Good, BitMask.Build((int)Class.WAR), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
         DefineSimpleConfig(res, Track.Thrill, "ThrillOfBattle", "Thrill", 450, WAR.AID.ThrillOfBattle, 10);
@@ -20,7 +20,7 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.Vengeance).As<VengOption>("Vengeance", "Veng", 550)
             .AddOption(VengOption.None, "None", "Do not use automatically")
             .AddOption(VengOption.Vengeance, "Use", "Use Vengeance", 120, 15, ActionTargets.Self, 38, 91)
-            .AddOption(VengOption.Damnation, "UseEx", "Use Damnation", 120, 15, ActionTargets.Self, 92)
+            .AddOption(VengOption.Damnation, "UseEX", "Use Damnation", 120, 15, ActionTargets.Self, 92)
             .AddAssociatedActions(WAR.AID.Vengeance, WAR.AID.Damnation);
 
         DefineSimpleConfig(res, Track.Holmgang, "Holmgang", "", 400, WAR.AID.Holmgang, 10);

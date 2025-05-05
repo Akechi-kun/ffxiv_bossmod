@@ -106,6 +106,7 @@ public enum SID : uint
     NeutralSect = 1892,
     NeutralSectShield = 1921,
     Divination = 1878,
+    EarthlyDominance = 1224,
     GiantDominance = 1248,
     ClarifyingDraw = 2713,
     Macrocosmos = 2718,

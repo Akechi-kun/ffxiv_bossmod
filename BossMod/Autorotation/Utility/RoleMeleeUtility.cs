@@ -4,7 +4,7 @@
 public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor player) : GenericUtility(manager, player)
 {
     public enum SharedTrack { Sprint, LB, SecondWind, LegSweep, Bloodbath, Feint, ArmsLength, Count }
-    public enum FeintOption { None, Use, UseEx }
+    public enum FeintOption { None, Use, UseEX }
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3)
     {
@@ -24,7 +24,7 @@ public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor play
         def.Define(SharedTrack.Feint).As<FeintOption>("Feint", "", 250)
             .AddOption(FeintOption.None, "None", "Do not use automatically")
             .AddOption(FeintOption.Use, "Use", "Use Feint (10s)", 90, 10, ActionTargets.Hostile, 22, 97)
-            .AddOption(FeintOption.UseEx, "UseEx", "Use Feint (15s)", 90, 15, ActionTargets.Hostile, 98)
+            .AddOption(FeintOption.UseEX, "UseEX", "Use Feint (15s)", 90, 15, ActionTargets.Hostile, 98)
             .AddAssociatedActions(ClassShared.AID.Feint);
 
         DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "ArmsL", 300, ClassShared.AID.ArmsLength, 6); // note: secondary effect 15s

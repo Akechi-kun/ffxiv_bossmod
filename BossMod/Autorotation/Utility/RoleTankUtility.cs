@@ -4,7 +4,7 @@
 public abstract class RoleTankUtility(RotationModuleManager manager, Actor player) : GenericUtility(manager, player)
 {
     public enum SharedTrack { Sprint, LB, Rampart, LowBlow, Provoke, Interject, Reprisal, Shirk, ArmsLength, Stance, Count }
-    public enum ReprisalOption { None, Use, UseEx }
+    public enum ReprisalOption { None, Use, UseEX }
     public enum StanceOption { None, Apply, Remove }
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3, ActionID stanceApply, ActionID stanceRemove)
@@ -25,7 +25,7 @@ public abstract class RoleTankUtility(RotationModuleManager manager, Actor playe
         def.Define(SharedTrack.Reprisal).As<ReprisalOption>("Reprisal", "", 250)
             .AddOption(ReprisalOption.None, "None", "Do not use automatically")
             .AddOption(ReprisalOption.Use, "Use", "Use Reprisal (10s)", 60, 10, ActionTargets.Self, 22, 97)
-            .AddOption(ReprisalOption.UseEx, "UseEx", "Use Reprisal (15s)", 60, 15, ActionTargets.Self, 98)
+            .AddOption(ReprisalOption.UseEX, "UseEX", "Use Reprisal (15s)", 60, 15, ActionTargets.Self, 98)
             .AddAssociatedActions(ClassShared.AID.Reprisal);
 
         DefineSimpleConfig(def, SharedTrack.Shirk, "Shirk", "", 150, ClassShared.AID.Shirk);

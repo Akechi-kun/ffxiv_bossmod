@@ -13,7 +13,7 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: PLD", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "veyn, Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.PLD), 100);
+        var res = new RotationModuleDefinition("Utility: PLD", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Cooldown Planner", "veyn, Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.PLD), 100);
 
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
@@ -27,7 +27,7 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
         res.Define(Track.Sentinel).As<SentOption>("Sentinel", "Sent", 550) //Sentinel definition for CD plans
             .AddOption(SentOption.None, "None", "Do not use automatically")
             .AddOption(SentOption.Sentinel, "Use", "Use Sentinel", 120, 15, ActionTargets.Self, 38, 91) //120s CD, 15s duration
-            .AddOption(SentOption.Guardian, "UseEx", "Use Guardian", 120, 15, ActionTargets.Self, 92) //120s CD, 15s duration
+            .AddOption(SentOption.Guardian, "UseEX", "Use Guardian", 120, 15, ActionTargets.Self, 92) //120s CD, 15s duration
             .AddAssociatedActions(PLD.AID.Sentinel, PLD.AID.Guardian);
 
         DefineSimpleConfig(res, Track.Cover, "Cover", "", 320, PLD.AID.Cover, 12); //120s CD, 12s duration, -50 OathGauge cost
