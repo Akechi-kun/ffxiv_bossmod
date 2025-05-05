@@ -37,20 +37,39 @@ public sealed class ClassASTUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.Helios), AID.Helios, primaryTarget, 1.5f);
-        ExecuteSimple(strategy.Option(Track.Lightspeed), AID.Lightspeed, Player);
-        ExecuteSimple(strategy.Option(Track.BeneficII), AID.BeneficII, Player, 1.5f);
-        ExecuteSimple(strategy.Option(Track.EssentialDignity), AID.EssentialDignity, Player);
-        ExecuteSimple(strategy.Option(Track.AspectedBenefic), AID.AspectedBenefic, Player);
-        ExecuteSimple(strategy.Option(Track.Synastry), AID.Synastry, Player);
-        ExecuteSimple(strategy.Option(Track.CollectiveUnconscious), AID.CollectiveUnconscious, Player);
-        ExecuteSimple(strategy.Option(Track.CelestialOpposition), AID.CelestialOpposition, Player);
-        ExecuteSimple(strategy.Option(Track.CelestialIntersection), AID.CelestialIntersection, Player);
-        ExecuteSimple(strategy.Option(Track.NeutralSect), AID.NeutralSect, Player);
-        ExecuteSimple(strategy.Option(Track.Exaltation), AID.Exaltation, Player);
-        ExecuteSimple(strategy.Option(Track.SunSign), AID.SunSign, Player);
-        ExecuteSimple(strategy.Option(Track.Divination), AID.Divination, Player);
-        ExecuteEX(strategy.Option(Track.AspectedHelios), AID.AspectedHelios, AID.HeliosConjunction, Player, castTime: 1.5f);
+        ExecuteSimple(strategy.Option(Track.Helios), AID.Helios, Player, 1.5f);
+        ExecuteSimple(strategy.Option(Track.BeneficII), AID.BeneficII, primaryTarget, 1.5f);
+
+        if (!HasEffect(SID.Lightspeed) &&
+            ActionReady(AID.Lightspeed, IsTraitUnlocked(TraitID.HyperLightspeed) ? 62f : 92))
+            ExecuteSimple(strategy.Option(Track.Lightspeed), AID.Lightspeed, Player);
+
+        if (ActionReady(AID.EssentialDignity, IsTraitUnlocked(TraitID.EnhancedEssentialDignityII) ? 82f : IsTraitUnlocked(TraitID.EnhancedEssentialDignity) ? 42f : 2f))
+            ExecuteSimple(strategy.Option(Track.EssentialDignity), AID.EssentialDignity, primaryTarget);
+
+        if (OGCDReady(AID.Synastry))
+            ExecuteSimple(strategy.Option(Track.Synastry), AID.Synastry, primaryTarget);
+
+        var abTarget = ResolveTargetOverride(strategy.Option(Track.AspectedBenefic).Value) ?? primaryTarget ?? Player;
+        if (abTarget?.FindStatus(SID.AspectedBenefic) == null)
+            ExecuteSimple(strategy.Option(Track.AspectedBenefic), AID.AspectedBenefic, primaryTarget);
+
+        if (OGCDReady(AID.CollectiveUnconscious))
+            ExecuteSimple(strategy.Option(Track.CollectiveUnconscious), AID.CollectiveUnconscious, Player);
+        if (OGCDReady(AID.CelestialOpposition))
+            ExecuteSimple(strategy.Option(Track.CelestialOpposition), AID.CelestialOpposition, Player);
+        if (OGCDReady(AID.CelestialIntersection))
+            ExecuteSimple(strategy.Option(Track.CelestialIntersection), AID.CelestialIntersection, Player);
+        if (OGCDReady(AID.NeutralSect))
+            ExecuteSimple(strategy.Option(Track.NeutralSect), AID.NeutralSect, Player);
+        if (OGCDReady(AID.Exaltation))
+            ExecuteSimple(strategy.Option(Track.Exaltation), AID.Exaltation, Player);
+        if (OGCDReady(AID.SunSign))
+            ExecuteSimple(strategy.Option(Track.SunSign), AID.SunSign, Player);
+        if (OGCDReady(AID.Divination))
+            ExecuteSimple(strategy.Option(Track.Divination), AID.Divination, Player);
+        if (OGCDReady(AID.AspectedHelios))
+            ExecuteEX(strategy.Option(Track.AspectedHelios), AID.AspectedHelios, AID.HeliosConjunction, Player, castTime: 1.5f);
         ExecuteEnd(strategy.Option(Track.EarthlyStar), AID.EarthlyStar, AID.StellarDetonation, SID.EarthlyDominance, SID.EarthlyDominance, null, targetPos: ResolveTargetLocation(strategy.Option(Track.EarthlyStar).Value).ToVec3(Player.PosRot.Y));
         ExecuteEnd(strategy.Option(Track.Horoscope), AID.Horoscope, AID.HoroscopeEnd, SID.Horoscope, SID.Horoscope, Player);
         ExecuteEnd(strategy.Option(Track.Macrocosmos), AID.Macrocosmos, AID.MicrocosmosEnd, SID.Macrocosmos, SID.Macrocosmos, Player);

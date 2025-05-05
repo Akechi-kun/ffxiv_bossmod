@@ -5,14 +5,19 @@ namespace BossMod.Autorotation;
 // base class that simplifies implementation of utility modules - these are really only useful for planning support
 public abstract class GenericUtility(RotationModuleManager manager, Actor player) : RotationModule(manager, player)
 {
-    public enum SimpleOption { None, Use }
-    public enum EXOption { None, Use, UseEX }
-    public enum EndOption { None, Use, End }
-    public enum DashOption { None, Use, Melee, Five, Ten }
-    public enum LBOption { None, LB3, LB2, LB1, LB2Only, LB1Only, LB12 }
+    public enum SimpleOption { None, Use } //simple
+    public enum EXOption { None, Use, UseEX } //for options that have upgrades
+    public enum EndOption { None, Use, End } //for options that can be ended early
+    public enum DashOption { None, Use, Melee, Five, Ten } //distances for dashes
+    public enum LBOption { None, LB3, LB2, LB1, LB2Only, LB1Only, LB12 } //Limit Breaks
 
     protected float CDleft<AID>(AID aid) where AID : Enum => World.Client.Cooldowns[ActionDefinitions.Instance.Spell(aid)!.MainCooldownGroup].Remaining;
-    protected bool HasEffect<SID>(SID sid) where SID : Enum => Player.FindStatus(sid) != null;
+    protected bool IsUnlocked<AID>(AID aid) where AID : Enum => ActionUnlocked(ActionID.MakeSpell(aid));
+    protected bool IsTraitUnlocked<TraitID>(TraitID tid) where TraitID : Enum => TraitUnlocked((uint)(object)tid); //trait checks
+    protected bool HasEffect<SID>(SID sid) where SID : Enum => Player.FindStatus(sid) != null; //status checks
+    protected bool ActionReady<AID>(AID aid, float remaining = 0f) where AID : Enum => IsUnlocked(aid) && CDleft(aid) < remaining; //simple condition check that can be used for just about every ability
+    protected bool GCDReady<AID>(AID aid) where AID : Enum => ActionReady(aid, GCD); //simple GCD check
+    protected bool OGCDReady<AID>(AID aid) where AID : Enum => ActionReady(aid, 2.5f); //simple OGCD check
 
     protected static void DefineSimpleConfig<Index, AID>(RotationModuleDefinition def, Index expectedIndex, string internalName, string displayName, int uiPriority, AID aid, float effect = 0)
         where Index : Enum
@@ -107,14 +112,14 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
     {
         var status = opt.As<EndOption>() switch
         {
-            EndOption.Use => Player.FindStatus(startSID) == null,
-            EndOption.End => Player.FindStatus(endSID) != null,
+            EndOption.Use => CDleft(startAID) <= 2f && Player.FindStatus(startSID) == null, //condition to start
+            EndOption.End => Player.FindStatus(endSID) != null, //condition to end
             _ => false
         };
         var action = opt.As<EndOption>() switch
         {
-            EndOption.Use => ActionID.MakeSpell(startAID),
-            EndOption.End => ActionID.MakeSpell(endAID),
+            EndOption.Use => ActionID.MakeSpell(startAID), //action to start
+            EndOption.End => ActionID.MakeSpell(endAID), //action to end
             _ => default
         };
         if (status && action != default)
