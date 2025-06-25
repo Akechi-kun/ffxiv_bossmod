@@ -822,6 +822,11 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
             _ => false
         };
     }
+
+    protected void ExecutePotSTR(GCDPriority prio = 0) => Hints.ActionsToExecute.Push(ActionDefinitions.IDPotionStr, Player, ActionQueue.Priority.Medium + (int)prio);
+    protected void ExecutePotINT(GCDPriority prio = 0) => Hints.ActionsToExecute.Push(ActionDefinitions.IDPotionInt, Player, ActionQueue.Priority.Medium + (int)prio);
+    protected void ExecutePotDEX(GCDPriority prio = 0) => Hints.ActionsToExecute.Push(ActionDefinitions.IDPotionDex, Player, ActionQueue.Priority.Medium + (int)prio);
+
     #endregion
 
     #region Shared Abilities
@@ -1025,13 +1030,13 @@ static class ModuleExtensions
     {
         var action = ActionID.MakeSpell(aid);
         return res.Define(track).As<OGCDStrategy>(internalName, displayName: displayName, uiPriority: uiPriority)
-            .AddOption(OGCDStrategy.Automatic, "Auto", $"Automatically use {action.Name()} when optimal", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(OGCDStrategy.RaidBuffsOnly, "With Buffs", $"Use {action.Name()} when raid buffs are active", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(OGCDStrategy.Force, "Force", $"Force use {action.Name()} ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(OGCDStrategy.AnyWeave, "AnyWeave", $"Force use {action.Name()} in next possible weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(OGCDStrategy.EarlyWeave, "EarlyWeave", $"Force use {action.Name()} in next possible early-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(OGCDStrategy.LateWeave, "LateWeave", $"Force use {action.Name()} in next possible late-weave slot", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(OGCDStrategy.Delay, "Delay", $"Do NOT use {action.Name()}", 0, 0, ActionTargets.None, minLevel: minLevel, maxLevel)
+            .AddOption(OGCDStrategy.Automatic, "Auto", $"Automatically use {action.Name()} when optimal", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(OGCDStrategy.RaidBuffsOnly, "With Buffs", $"Use {action.Name()} when raid buffs are active", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(OGCDStrategy.Force, "Force", $"Force use {action.Name()} ASAP", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(OGCDStrategy.AnyWeave, "AnyWeave", $"Force use {action.Name()} in next possible weave slot", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(OGCDStrategy.EarlyWeave, "EarlyWeave", $"Force use {action.Name()} in next possible early-weave slot", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(OGCDStrategy.LateWeave, "LateWeave", $"Force use {action.Name()} in next possible late-weave slot", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(OGCDStrategy.Delay, "Delay", $"Do NOT use {action.Name()}", 0, 0, ActionTargets.None, minLevel, maxLevel)
             .AddAssociatedActions(aid);
     }
 
@@ -1041,9 +1046,9 @@ static class ModuleExtensions
     {
         var action = ActionID.MakeSpell(aid);
         return res.Define(track).As<AllowOrForbid>(internalName, displayName: displayName, uiPriority: uiPriority)
-            .AddOption(AllowOrForbid.Allow, "Allow", $"Allow use of {action.Name()} when available", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(AllowOrForbid.Force, "Force", $"Force use {action.Name()} ASAP", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
-            .AddOption(AllowOrForbid.Forbid, "Forbid", $"Forbid use of {action.Name()} entirely", cooldown, effectDuration, supportedTargets, minLevel: minLevel, maxLevel)
+            .AddOption(AllowOrForbid.Allow, "Allow", $"Allow use of {action.Name()} when available", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(AllowOrForbid.Force, "Force", $"Force use {action.Name()} ASAP", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
+            .AddOption(AllowOrForbid.Forbid, "Forbid", $"Forbid use of {action.Name()} entirely", cooldown, effectDuration, supportedTargets, minLevel, maxLevel)
             .AddAssociatedActions(aid);
     }
     #endregion

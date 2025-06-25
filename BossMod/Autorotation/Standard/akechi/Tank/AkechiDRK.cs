@@ -3,15 +3,13 @@ using static BossMod.AIHints;
 using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
 
 namespace BossMod.Autorotation.akechi;
-//Contribution by Akechi
-//Discord: @akechdz or 'Akechi' on Puni.sh for maintenance
 
 public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : AkechiTools<AID, TraitID>(manager, player)
 {
     #region Enums: Abilities / Strategies
     public enum Track { Blood = SharedTrack.Count, MP, Carve, DeliriumCombo, Unmend, Delirium, SaltedEarth, SaltAndDarkness, LivingShadow, Shadowbringer, Disesteem }
-    public enum BloodStrategy { Automatic, ASAP, OnlyBloodspiller, OnlyQuietus, ForceBloodspiller, ForceQuietus, Conserve, Delay }
-    public enum MPStrategy { Optimal, Auto3k, Auto6k, Auto9k, AutoRefresh, Edge3k, Edge6k, Edge9k, EdgeRefresh, Flood3k, Flood6k, Flood9k, FloodRefresh, ForceEdge, ForceFlood, Delay }
+    public enum BloodStrategy { Automatic, OnlyBloodspiller, OnlyQuietus, ForceBest, ForceBloodspiller, ForceQuietus, Conserve, Delay }
+    public enum MPStrategy { Automatic, Auto3k, Auto6k, Auto9k, AutoRefresh, Edge3k, Edge6k, Edge9k, EdgeRefresh, Flood3k, Flood6k, Flood9k, FloodRefresh, ForceEdge, ForceFlood, Delay }
     public enum CarveStrategy { Automatic, OnlyCarve, OnlyDrain, ForceCarve, ForceDrain, Delay }
     public enum DeliriumComboStrategy { Automatic, ScarletDelirum, Comeuppance, Torcleaver, Impalement, Delay }
     public enum UnmendStrategy { OpenerFar, OpenerForce, Force, Allow, Forbid }
@@ -26,48 +24,48 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
         res.DefineHold();
         res.DefinePotion(ActionDefinitions.IDPotionStr);
         res.Define(Track.Blood).As<BloodStrategy>("Blood", "Blood", uiPriority: 200)
-            .AddOption(BloodStrategy.Automatic, "Automatic", "Automatically use Blood-related abilities optimally")
-            .AddOption(BloodStrategy.ASAP, "ASAP", "Automatically use Blood-related abilities ASAP when available", 0, 0, ActionTargets.Hostile, 62)
-            .AddOption(BloodStrategy.OnlyBloodspiller, "Only Bloodspiller", "Uses Bloodspiller optimally as Blood spender only, regardless of targets", 0, 0, ActionTargets.Hostile, 62)
-            .AddOption(BloodStrategy.OnlyQuietus, "Only Quietus", "Uses Quietus optimally as Blood spender only, regardless of targets", 0, 0, ActionTargets.Hostile, 64)
-            .AddOption(BloodStrategy.ForceBloodspiller, "Force Bloodspiller", "Force use Bloodspiller ASAP when available", 0, 0, ActionTargets.Hostile, 62)
-            .AddOption(BloodStrategy.ForceQuietus, "Force Quietus", "Force use Quietus ASAP", 0, 0, ActionTargets.Hostile, 64)
-            .AddOption(BloodStrategy.Conserve, "Conserve", "Conserves all Blood-related abilities as much as possible; only spending when absolutely necessary", 0, 0, ActionTargets.Hostile, 62)
-            .AddOption(BloodStrategy.Delay, "Delay", "Delay the use of Blood-related abilities", 0, 0, ActionTargets.None, 62)
+            .AddOption(BloodStrategy.Automatic, "Automatic", "Automatically use Bloodspiller or Quietus optimally based on targets nearby", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(BloodStrategy.OnlyBloodspiller, "Only Bloodspiller", "Uses Bloodspiller optimally as Blood spender only, regardless of targets nearby", supportedTargets: ActionTargets.Hostile, minLevel: 62)
+            .AddOption(BloodStrategy.OnlyQuietus, "Only Quietus", "Uses Quietus optimally as Blood spender only, regardless of targets nearby", supportedTargets: ActionTargets.Hostile, minLevel: 64)
+            .AddOption(BloodStrategy.ForceBest, "ASAP", "Automatically use Bloodspiller or Quietus ASAP when 50+ Blood is available", supportedTargets: ActionTargets.Hostile, minLevel: 62)
+            .AddOption(BloodStrategy.ForceBloodspiller, "Force Bloodspiller", "Force use Bloodspiller ASAP when 50+ Blood is available", supportedTargets: ActionTargets.Hostile, minLevel: 62)
+            .AddOption(BloodStrategy.ForceQuietus, "Force Quietus", "Force use Quietus ASAP when 50+ Blood is available", supportedTargets: ActionTargets.Hostile, minLevel: 64)
+            .AddOption(BloodStrategy.Conserve, "Conserve", "Conserves all Bloodspiller or Quietus as much as possible; only spending when absolutely necessary", supportedTargets: ActionTargets.Hostile, minLevel: 62)
+            .AddOption(BloodStrategy.Delay, "Delay", "Delay the use of Bloodspiller or Quietus", supportedTargets: ActionTargets.None, minLevel: 62)
             .AddAssociatedActions(AID.Bloodspiller, AID.Quietus);
         res.Define(Track.MP).As<MPStrategy>("MP", "MP", uiPriority: 190)
-            .AddOption(MPStrategy.Optimal, "Optimal", "Use MP actions optimally; 2 for 1m, 4 (or 5 if Dark Arts is active) for 2m")
-            .AddOption(MPStrategy.Auto3k, "Auto 3k", "Automatically decide best MP action to use; Uses when at 3000+ MP", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.Auto6k, "Auto 6k", "Automatically decide best MP action to use; Uses when at 6000+ MP", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.Auto9k, "Auto 9k", "Automatically decide best MP action to use; Uses when at 9000+ MP", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.AutoRefresh, "Auto Refresh", "Automatically decide best MP action to use as Darkside refresher only", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.Edge3k, "Edge 3k", "Use Edge of Shadow as Darkside refresher & MP spender; Uses when at 3000+ MP", 0, 0, ActionTargets.Hostile, 40)
-            .AddOption(MPStrategy.Edge6k, "Edge 6k", "Use Edge of Shadow as Darkside refresher & MP spender; Uses when at 6000+ MP", 0, 0, ActionTargets.Hostile, 40)
-            .AddOption(MPStrategy.Edge9k, "Edge 9k", "Use Edge of Shadow as Darkside refresher & MP spender; Uses when at 9000+ MP", 0, 0, ActionTargets.Hostile, 40)
-            .AddOption(MPStrategy.EdgeRefresh, "Edge Refresh", "Use Edge abilities as Darkside refresher only", 0, 0, ActionTargets.Hostile, 40)
-            .AddOption(MPStrategy.Flood3k, "Flood 3k", "Use Flood of Shadow as Darkside refresher & MP spender; Uses when at 3000+ MP", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.Flood6k, "Flood 6k", "Use Flood of Shadow as Darkside refresher & MP spender; Uses when at 6000+ MP", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.Flood9k, "Flood 9k", "Use Flood of Shadow as Darkside refresher & MP spender; Uses when at 9000+ MP", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.FloodRefresh, "Flood Refresh", "Use Flood abilities as Darkside refresher only", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.ForceEdge, "Force Edge", "Force use Edge abilities ASAP if MP is available", 0, 0, ActionTargets.Hostile, 40)
-            .AddOption(MPStrategy.ForceFlood, "Force Flood", "Force use Flood abilities ASAP if MP is available", 0, 0, ActionTargets.Hostile, 30)
-            .AddOption(MPStrategy.Delay, "Delay", "Delay the use of MP actions", 0, 0, ActionTargets.None, 30)
+            .AddOption(MPStrategy.Automatic, "Optimal", "Automatically use Edge or Flood optimally based on targets nearby; 2 for 1m, 4 (or 5 if Dark Arts is active) for 2m", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.Auto3k, "Auto 3k", "Automatically use Edge or Flood optimally based on targets nearby; Uses when 3000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.Auto6k, "Auto 6k", "Automatically use Edge or Flood optimally based on targets nearby; Uses when 6000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.Auto9k, "Auto 9k", "Automatically use Edge or Flood optimally based on targets nearby; Uses when 9000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.AutoRefresh, "Auto Refresh", "Automatically use Edge or Flood optimally based on targets nearby; Uses only to refresh Darkside or when almost full on MP", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.Edge3k, "Edge 3k", "Use Edge of Darkness/Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses when 3000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 40)
+            .AddOption(MPStrategy.Edge6k, "Edge 6k", "Use Edge of Darkness/Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses when 6000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 40)
+            .AddOption(MPStrategy.Edge9k, "Edge 9k", "Use Edge of Darkness/Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses when 9000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 40)
+            .AddOption(MPStrategy.EdgeRefresh, "Edge Refresh", "Use Edge of Darkness/Shadow of Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses only to refresh Darkside or when almost full on MP", supportedTargets: ActionTargets.Hostile, minLevel: 40)
+            .AddOption(MPStrategy.Flood3k, "Flood 3k", "Use Flood of Darkness/Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses when 3000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.Flood6k, "Flood 6k", "Use Flood of Darkness/Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses when 6000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.Flood9k, "Flood 9k", "Use Flood of Darkness/Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses when 9000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.FloodRefresh, "Flood Refresh", "Use Flood of Darkness/Shadow as Darkside refresher & MP spender regardless of targets nearby; Uses only to refresh Darkside or when almost full on MP", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.ForceEdge, "Force Edge", "Force use Edge of Darkness/Shadow ASAP if 3000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 40)
+            .AddOption(MPStrategy.ForceFlood, "Force Flood", "Force use Flood of Darkness/Shadow ASAP if 3000+ MP is available", supportedTargets: ActionTargets.Hostile, minLevel: 30)
+            .AddOption(MPStrategy.Delay, "Delay", "Delay the use of Edge or Flood of Darkness/Shadow", supportedTargets: ActionTargets.None, minLevel: 40)
             .AddAssociatedActions(AID.EdgeOfDarkness, AID.EdgeOfShadow, AID.FloodOfDarkness, AID.FloodOfShadow);
         res.Define(Track.Carve).As<CarveStrategy>("Carve & Spit / Abyssal Drain", "Carve", uiPriority: 160)
-            .AddOption(CarveStrategy.Automatic, "Auto", "Automatically decide when to use either Carve and Spit or Abyssal Drain")
-            .AddOption(CarveStrategy.OnlyCarve, "Only Carve and Spit", "Automatically use Carve and Spit as optimal spender, regardless of targets", 0, 0, ActionTargets.Hostile, 60)
-            .AddOption(CarveStrategy.OnlyDrain, "Only Abysssal Drain", "Automatically use Abyssal Drain as optimal spender, regardless of targets", 0, 0, ActionTargets.Hostile, 56)
+            .AddOption(CarveStrategy.Automatic, "Auto", "Automatically use Carve and Spit or Abyssal Drain based on targets nearby", supportedTargets: ActionTargets.Hostile, minLevel: 56)
+            .AddOption(CarveStrategy.OnlyCarve, "Only Carve and Spit", "Automatically use Carve and Spit, regardless of targets nearby", supportedTargets: ActionTargets.Hostile, minLevel: 60)
+            .AddOption(CarveStrategy.OnlyDrain, "Only Abysssal Drain", "Automatically use Abyssal Drain, regardless of targets nearby", supportedTargets: ActionTargets.Hostile, minLevel: 56)
             .AddOption(CarveStrategy.ForceCarve, "Force Carve and Spit", "Force use Carve and Spit ASAP when available", 60, 0, ActionTargets.Hostile, 60)
             .AddOption(CarveStrategy.ForceDrain, "Force Abyssal Drain", "Force use Abyssal Drain ASAP when available", 60, 0, ActionTargets.Hostile, 56)
-            .AddOption(CarveStrategy.Delay, "Delay", "Delay the use of Carve and Spit", 0, 0, ActionTargets.None, 56)
+            .AddOption(CarveStrategy.Delay, "Delay", "Delay the use of Carve and Spit", supportedTargets: ActionTargets.None, minLevel: 56)
             .AddAssociatedActions(AID.CarveAndSpit, AID.AbyssalDrain);
         res.Define(Track.DeliriumCombo).As<DeliriumComboStrategy>("Delirium Combo", "Scarlet", uiPriority: 180)
-            .AddOption(DeliriumComboStrategy.Automatic, "Auto", "Automatically decide when to use Delirium Combo", 0, 0, ActionTargets.Hostile, 96)
-            .AddOption(DeliriumComboStrategy.ScarletDelirum, "Scarlet Delirium", "Force use Scarlet Delirium ASAP when available", 0, 0, ActionTargets.Hostile, 96)
-            .AddOption(DeliriumComboStrategy.Comeuppance, "Comeuppance", "Force use Comeuppance ASAP when available", 0, 0, ActionTargets.Hostile, 96)
-            .AddOption(DeliriumComboStrategy.Torcleaver, "Torcleaver", "Force use Torcleaver ASAP when available", 0, 0, ActionTargets.Hostile, 96)
-            .AddOption(DeliriumComboStrategy.Impalement, "Impalement", "Force use Impalement ASAP when available", 0, 0, ActionTargets.Hostile, 96)
-            .AddOption(DeliriumComboStrategy.Delay, "Delay", "Delay use of Scarlet combo", 0, 0, ActionTargets.Hostile, 96)
+            .AddOption(DeliriumComboStrategy.Automatic, "Auto", "Automatically use Delirium Combo", supportedTargets: ActionTargets.Hostile, minLevel: 96)
+            .AddOption(DeliriumComboStrategy.ScarletDelirum, "Scarlet Delirium", "Force use Scarlet Delirium ASAP when available", supportedTargets: ActionTargets.Hostile, minLevel: 96)
+            .AddOption(DeliriumComboStrategy.Comeuppance, "Comeuppance", "Force use Comeuppance ASAP when available", supportedTargets: ActionTargets.Hostile, minLevel: 96)
+            .AddOption(DeliriumComboStrategy.Torcleaver, "Torcleaver", "Force use Torcleaver ASAP when available", supportedTargets: ActionTargets.Hostile, minLevel: 96)
+            .AddOption(DeliriumComboStrategy.Impalement, "Impalement", "Force use Impalement ASAP when available", supportedTargets: ActionTargets.Hostile, minLevel: 96)
+            .AddOption(DeliriumComboStrategy.Delay, "Delay", "Delay use of Scarlet combo", supportedTargets: ActionTargets.None, minLevel: 96)
             .AddAssociatedActions(AID.ScarletDelirium, AID.Comeuppance, AID.Torcleaver, AID.Impalement);
         res.Define(Track.Unmend).As<UnmendStrategy>("Ranged", "Ranged", uiPriority: 30)
             .AddOption(UnmendStrategy.OpenerFar, "Far (Opener)", "Use Unmend only in pre-pull & out of max-melee range", supportedTargets: ActionTargets.Hostile)
@@ -121,7 +119,7 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
     {
         if (!CanWeaveIn || !Unlocked(AID.FloodOfDarkness))
             return false;
-        if (strategy == MPStrategy.Optimal)
+        if (strategy == MPStrategy.Automatic)
         {
             if (RiskingMP)
                 return MP >= 3000 || DarkArts.IsActive;
@@ -163,7 +161,7 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
         return strategy switch
         {
             BloodStrategy.Automatic or BloodStrategy.OnlyBloodspiller or BloodStrategy.OnlyQuietus => condition,
-            BloodStrategy.ASAP or BloodStrategy.ForceBloodspiller or BloodStrategy.ForceQuietus => minimum,
+            BloodStrategy.ForceBest or BloodStrategy.ForceBloodspiller or BloodStrategy.ForceQuietus => minimum,
             BloodStrategy.Conserve => RiskingBlood || Delirium.Left > GCD,
             _ => false
         };
@@ -212,7 +210,6 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
 
     public override void Execution(StrategyValues strategy, Enemy? primaryTarget)
     {
-        #region Variables
         #region Variables
         var gauge = World.Client.GetGauge<DarkKnightGauge>();
         Blood = gauge.Blood;
@@ -277,8 +274,6 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
         var deStrat = de.As<GCDStrategy>();
         var unmend = strategy.Option(Track.Unmend);
         var unmendStrat = unmend.As<UnmendStrategy>();
-        #endregion
-
         #endregion
 
         #endregion
@@ -361,7 +356,7 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
             {
                 switch (mpStrat)
                 {
-                    case MPStrategy.Optimal:
+                    case MPStrategy.Automatic:
                     case MPStrategy.Auto9k:
                     case MPStrategy.Auto6k:
                     case MPStrategy.Auto3k:
@@ -411,9 +406,9 @@ public sealed class AkechiDRK(RotationModuleManager manager, Actor player) : Ake
             if (ShouldUseSaltAndDarkness(strategy.Option(Track.SaltAndDarkness).As<OGCDStrategy>(), primaryTarget))
                 QueueOGCD(AID.SaltAndDarkness, Player, OGCDPriority.AboveAverage);
             if (ShouldUseUnmend(unmendStrat, primaryTarget))
-                QueueGCD(AID.Unmend, SingleTargetChoice(primaryTarget?.Actor, unmend), GCDPriority.Low);
+                QueueGCD(AID.Unmend, SingleTargetChoice(primaryTarget?.Actor, unmend), GCDPriority.Low + 1);
             if (ShouldUsePotion(strategy))
-                Hints.ActionsToExecute.Push(ActionDefinitions.IDPotionStr, Player, ActionQueue.Priority.VeryHigh + (int)OGCDPriority.Forced, 0, GCD - 0.9f);
+                ExecutePotSTR(strategy.UsePotionImmediately() ? GCDPriority.Forced : GCDPriority.None);
             #endregion
         }
         #endregion
