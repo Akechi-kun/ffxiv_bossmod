@@ -800,7 +800,7 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
     };
 
     /// <summary>Simplified check for if a specified OGCD is ready and if the strategy allows for it.</summary>
-    protected bool ShouldUseGCD(bool ready, GCDStrategy strategy, Actor? target, bool optimal = false) => ready && strategy switch
+    protected bool ShouldUseGCD(GCDStrategy strategy, Actor? target, bool ready, bool optimal = true) => ready && strategy switch
     {
         GCDStrategy.Automatic => target != null && optimal,
         GCDStrategy.RaidBuffsOnly => RaidBuffsLeft > 0f,
