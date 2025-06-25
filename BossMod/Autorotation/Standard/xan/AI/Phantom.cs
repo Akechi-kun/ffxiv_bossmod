@@ -61,7 +61,7 @@ public class PhantomAI(RotationModuleManager manager, Actor player) : AIBase(man
             .AddAssociatedActions(PhantomID.PhantomAim);
 
         def.AbilityTrack(Track.TimeMage, "TimeMage", "Time Mage: Use Comet ASAP if it will be instant")
-            .AddAssociatedActions(PhantomID.OccultComet);
+            .AddAssociatedActions(PhantomID.OccultComet, PhantomID.OccultQuick);
 
         def.Define(Track.Chemist).As<RaiseStrategy>("Chemist", "Chemist: Raise")
             .AddOption(RaiseStrategy.Never, "Never", "Disabled")
@@ -96,6 +96,16 @@ public class PhantomAI(RotationModuleManager manager, Actor player) : AIBase(man
         return def;
     }
 
+    public static readonly uint[] UndeadMobs = [
+        13921, // caoineag
+        13922, // crescent ghost
+        13923, // crescent geshunpest
+        13924, // crescent armor
+        13925, // crescent troubadour
+        13926, // crescent gourmand
+        13927, // crescent dullahan
+    ];
+
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         var isMidCombo = CheckMidCombo();
@@ -121,13 +131,15 @@ public class PhantomAI(RotationModuleManager manager, Actor player) : AIBase(man
 
             if (bestTarget != null)
             {
+                var isUndead = UndeadMobs.Contains(bestTarget.NameID);
+
                 UseAction(PhantomID.SilverCannon, bestTarget, prio); // shares CD with holy
                 UseAction(PhantomID.ShockCannon, bestTarget, prio); // shares CD with dark
 
                 // use after silver for the extra damage from silver debuff
                 UseAction(PhantomID.PhantomFire, bestTarget, prio);
 
-                UseAction(PhantomID.HolyCannon, bestTarget, prio);
+                UseAction(PhantomID.HolyCannon, bestTarget, isUndead ? prio + 1 : prio);
                 UseAction(PhantomID.DarkCannon, bestTarget, prio);
             }
         }
@@ -147,6 +159,8 @@ public class PhantomAI(RotationModuleManager manager, Actor player) : AIBase(man
             var haveSwift = Player.Statuses.Any(s => InstantCastStatus.Contains(s.ID) && s.ExpireAt > nextGCD);
             if (haveSwift)
                 UseAction(PhantomID.OccultComet, primaryTarget, prio);
+
+            UseAction(PhantomID.OccultQuick, Player, prio);
         }
 
         var option = strategy.Option(Track.Chemist);
