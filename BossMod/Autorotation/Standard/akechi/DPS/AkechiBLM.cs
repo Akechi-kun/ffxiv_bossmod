@@ -6,7 +6,8 @@ namespace BossMod.Autorotation.akechi;
 
 public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : AkechiTools<AID, TraitID>(manager, player)
 {
-    public enum Track { Thunder = SharedTrack.Count, Ender, Polyglot, Manafont, Triplecast, Swiftcast, LeyLines, TPUS, Movement, Casting, Amplifier, Retrace, BTL }
+    public enum Track { AOE = SharedTrack.Count, Thunder, Ender, Polyglot, Manafont, Triplecast, Swiftcast, LeyLines, TPUS, Movement, Casting, Amplifier, Retrace, BTL }
+    public enum AOEStrategy { Automatic, ForceST, ForceAOE }
     public enum ThunderStrategy { Allow3, Allow6, Allow9, AllowNoDOT, ForceAny, ForceST, ForceAOE, Forbid }
     public enum EnderStrategy { Automatic, OnlyDespair, OnlyFlare, ForceDespair, ForceFlare }
     public enum PolyglotStrategy { AutoSpendAll, AutoHold1, AutoHold2, AutoHold3, XenoSpendAll, XenoHold1, XenoHold2, XenoHold3, FoulSpendAll, FoulHold1, FoulHold2, FoulHold3, ForceAny, ForceXeno, ForceFoul, Delay }
@@ -20,13 +21,20 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
     public static RotationModuleDefinition Definition()
     {
         var res = new RotationModuleDefinition("Akechi BLM", "Standard Rotation Module", "Standard rotation (Akechi)|DPS", "Akechi", RotationModuleQuality.Ok, BitMask.Build(Class.THM, Class.BLM), 100);
-        res.DefineAOE().AddAssociatedActions(
-            AID.Fire1, AID.Fire2, AID.Fire3, AID.Fire4, AID.HighFire2, //Fire
-            AID.Blizzard1, AID.Blizzard2, AID.Blizzard3, AID.Blizzard4, AID.HighBlizzard2, //Blizzard
-            AID.Flare, AID.Freeze, AID.Despair, AID.FlareStar); //Other
+
         res.DefineTargeting();
         res.DefineHold();
         res.DefinePotion(ActionDefinitions.IDPotionInt);
+
+        res.Define(Track.AOE).As<AOEStrategy>("ST/AOE", "Single-Target & AoE Rotations", 300)
+            .AddOption(AOEStrategy.Automatic, "Automatically use best rotation based on targets nearby")
+            .AddOption(AOEStrategy.ForceST, "Force single-target rotation, regardless of targets nearby")
+            .AddOption(AOEStrategy.ForceAOE, "Force AOE rotation, regardless of targets nearby")
+            .AddAssociatedActions(
+                AID.Fire1, AID.Fire3, AID.Fire4, AID.Despair, AID.FlareStar,
+                AID.Fire2, AID.HighFire2, AID.Flare,
+                AID.Blizzard1, AID.Blizzard3, AID.Blizzard4,
+                AID.Blizzard2, AID.HighBlizzard2, AID.Freeze);
 
         res.Define(Track.Thunder).As<ThunderStrategy>("DOT", "Thunder", 200)
             .AddOption(ThunderStrategy.Allow3, "Allow the use Thunder if target Has 3s or less remaining on DoT effect", 0, 0, ActionTargets.Hostile, 6)
@@ -37,7 +45,9 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
             .AddOption(ThunderStrategy.ForceST, "Force use of single-target Thunder regardless of DoT effect", 0, 30, ActionTargets.Hostile, 6)
             .AddOption(ThunderStrategy.ForceAOE, "Force use of AOE Thunder regardless of DoT effect", 0, 24, ActionTargets.Hostile, 26)
             .AddOption(ThunderStrategy.Forbid, "Forbid the use of Thunder for manual or strategic usage", 0, 0, ActionTargets.Hostile, 6)
-            .AddAssociatedActions(AID.Thunder1, AID.Thunder2, AID.Thunder3, AID.Thunder4, AID.HighThunder, AID.HighThunder2);
+            .AddAssociatedActions(
+                AID.Thunder1, AID.Thunder3, AID.HighThunder,
+                AID.Thunder2, AID.Thunder4, AID.HighThunder2);
 
         res.Define(Track.Ender).As<EnderStrategy>("AF.Ender", "Despair / Flare", 194)
             .AddOption(EnderStrategy.Automatic, "Automatically end fire phase with Despair or Flare based on targets nearby", 0, 0, ActionTargets.Hostile, 50)
@@ -164,37 +174,38 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
     private bool CanLL;
     private bool CanAmplify;
     private bool CanTC;
-    private bool CanMF;
     private bool CanRetrace;
     private bool CanBTL;
     private float ThunderLeft;
-    private bool ShouldUseAOE;
+    private bool WantAOE;
     private bool ShouldUseSTDOT;
-    private bool ShouldUseAOEDOT;
+    private bool WantAOEDOT;
     private int NumSplashTargets;
     private Enemy? BestSplashTargets;
     private Enemy? BestDOTTargets;
     private Enemy? BestSplashTarget;
     private Enemy? BestDOTTarget;
 
+    private bool ForceST;
+    private bool ForceAOE;
+
     private AID BestThunderST => Unlocked(AID.HighThunder) ? AID.HighThunder : Unlocked(AID.Thunder3) ? AID.Thunder3 : AID.Thunder1;
     private AID BestThunderAOE => Unlocked(AID.HighThunder2) ? AID.HighThunder2 : Unlocked(AID.Thunder4) ? AID.Thunder4 : Unlocked(AID.Thunder2) ? AID.Thunder2 : AID.Thunder1;
-    private AID BestThunder => ShouldUseAOE ? BestThunderAOE : BestThunderST;
-    private AID BestPolyglot => ShouldUseAOE ? AID.Foul : BestXenoglossy;
+    private AID BestThunder => WantAOE ? BestThunderAOE : BestThunderST;
+    private AID BestPolyglot => WantAOE ? AID.Foul : BestXenoglossy;
     private AID BestXenoglossy => Unlocked(AID.Xenoglossy) ? AID.Xenoglossy : AID.Foul;
     private AID BestBlizzardAOE => Unlocked(AID.HighBlizzard2) ? AID.HighBlizzard2 : Unlocked(AID.Blizzard2) ? AID.Blizzard2 : AID.Blizzard1;
     private AID BestDespair => Unlocked(AID.Despair) ? AID.Despair : AID.Flare;
 
-    private bool HasInstants(StrategyValues strategy, Actor? target) => HasSwiftcast || HasEffect(SID.Triplecast) || (Unlocked(AID.Fire3) && HasFirestarter && ((InAF && AF < 3) || (InUI && MaxUI))) || WantParadox || WantThunder(strategy, target).Condition || WantPolyglot(strategy, target).Condition || (Unlocked(AID.Despair) && Unlocked(AID.FlareStar) && InAF && MP < 1600 && Souls == 0);
+    private bool HasInstants(StrategyValues strategy, Actor? target) => HasSwiftcast || HasEffect(SID.Triplecast) || (Unlocked(AID.Fire3) && HasFirestarter && ((InAF && AF < 3) || (MaxUI))) || WantParadox || WantThunder(strategy, target).Condition || WantPolyglot(strategy, target).Condition || (Unlocked(AID.Despair) && Unlocked(AID.FlareStar) && InAF && MP < 1600 && Souls == 0);
     private static SID[] ThunderStatus() => [SID.Thunder, SID.ThunderII, SID.ThunderIII, SID.ThunderIV, SID.HighThunder, SID.HighThunderII];
     private float ThunderRemaining(Actor? target) => target == null ? float.MaxValue : ThunderStatus().Select(status => StatusDetails(target, (uint)status, Player.InstanceID).Left).FirstOrDefault(dur => dur > 0);
-    private bool WantParadox => CanParadox && !ShouldUseAOE && ((InAF && !HasFirestarter) || (InUI && Hearts == MaxHearts) || (InAF && Souls == 0 && MP < 3200));
+    private bool WantParadox => CanParadox && !WantAOE && ((InAF && !HasFirestarter) || (InUI && Hearts == MaxHearts) || (InAF && Souls == 0 && MP < 3200));
     private (bool Condition, AID Action, GCDPriority Priority) WantThunder(StrategyValues strategy, Actor? target)
     {
         var th = strategy.Option(Track.Thunder);
         var thStrat = th.As<ThunderStrategy>();
-        var thTarget = AOETargetChoice(target, BestDOTTarget?.Actor, th, strategy);
-        if (thTarget == null || !HasThunderhead || !In25y(thTarget))
+        if (target == null || !HasThunderhead || !In25y(target))
             return (false, AID.None, GCDPriority.None);
 
         return thStrat switch
@@ -218,13 +229,13 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
         var pgStrat = pg.As<PolyglotStrategy>();
         var veryclose = PolyglotTimer <= 4000f && HasMaxPolyglots;
         var overcap = PolyglotTimer <= 8000 && HasMaxPolyglots;
-        var openMF = CombatTimer < 40 && CDRemaining(AID.Manafont) <= 1.5f && InAF && MP <= 400;
+        var openMF = CombatTimer < 40 && Cooldown(AID.Manafont) <= 1.5f && InAF && MP <= 400;
         var ezTPSC = !Unlocked(AID.FlareStar) && Unlocked(AID.Xenoglossy) && ((InAF && MP == 0) || LastActionUsed(AID.Despair)); //Lv80-L99 - for easy weaving of TP+SC
-        var condition = Polyglots > 0 && InsideCombatWith(target) && ((Unlocked(AID.Xenoglossy) && InAF &&
-                (ShouldUseAOE ? HasParadox : !HasParadox) && MP < 800) || //MF prep
-                (Unlocked(AID.Amplifier) && CDRemaining(AID.Amplifier) < 1f)); //Amp prep
-        var prio = veryclose ? GCDPriority.ExtremelyHigh + 1 : GCDPriority.SlightlyHigh;
-        var spendAll = (condition || ezTPSC) && MaxPolyglots >= 1;
+        var condition = Polyglots > 0 && InCombat(target) && ((Unlocked(AID.Xenoglossy) && InAF &&
+                (WantAOE ? HasParadox : !HasParadox) && MP < 800) || //MF prep
+                (Unlocked(AID.Amplifier) && Cooldown(AID.Amplifier) < 1f)); //Amp prep
+        var prio = veryclose ? GCDPriority.ExtremelyHigh + 1 : ((WantAOE || ForceAOE) ? GCDPriority.Average : GCDPriority.SlightlyHigh);
+        var spendAll = (condition || ezTPSC || RaidBuffsLeft > 0) && MaxPolyglots >= 1;
         var hold1 = openMF || ezTPSC || (condition && (MaxPolyglots >= 2 ? Polyglots > 1 : Polyglots > 0));
         var hold2 = openMF || ezTPSC || (condition && (MaxPolyglots == 3 ? Polyglots > 2 : MaxPolyglots >= 2 ? Polyglots > 1 : Polyglots > 0));
         var hold3 = openMF || ezTPSC || (HasMaxPolyglots && overcap);
@@ -251,7 +262,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
 
     private void ST(StrategyValues strategy, Actor? target, GCDPriority prio)
     {
-        if (ShouldUseAOE)
+        if (WantAOE)
             return;
 
         if (Player.InCombat && NoUIorAF && target != null)
@@ -262,29 +273,51 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
             QueueGCD(AID.Blizzard3, target, prio);
         }
 
+        var sc = strategy.Option(Track.Swiftcast).As<UpgradeStrategy>();
+        var tc = strategy.Option(Track.Triplecast).As<ChargeStrategy>();
         if (InAF)
         {
-            if (MaxAF && (Hearts > 0 ? MP >= 800 : MP >= 1600) && (!Unlocked(AID.FlareStar) || Souls != 6))
-                QueueGCD(Unlocked(AID.Fire4) ? AID.Fire4 : AID.Fire1, target, StatusRemaining(Player, SID.Triplecast) is <= 4.5f and not 0 ? prio + 500 : prio);
-
-            var lowMP = MP < 800;
-            if (Unlocked(AID.Blizzard3) &&
-                ((Unlocked(AID.Flare) ? (Souls == 0 && (MP == 0 || LastActionUsed(AID.Flare) || LastActionUsed(AID.Despair))) : MP < 1600) ||
-                Unlocked(AID.FlareStar) ? lowMP && Souls != 6 : lowMP))
-                QueueGCD(AID.Blizzard3, target, prio);
+            if (MaxAF && MP >= (Hearts > 0 ? 800 : 1600) && (!Unlocked(AID.FlareStar) || Souls != 6))
+                QueueGCD(Unlocked(AID.Fire4) ? AID.Fire4 : AID.Fire1, target, StatusRemaining(Player, SID.Triplecast) is <= 4.5f and not 0 ? prio + 500 : prio + 2);
 
             //if we end up in a situation where we can't use FlareStar but we can end, we will use Flare to save rotation
             if (Unlocked(AID.FlareStar) && MP is < 2400 and > 800 && Souls is < 6 and >= 3)
                 QueueGCD(AID.Flare, target, prio + 1);
+
+            //if we so happen to not have AF3 on swap, then we instant-cast F3 for it
+            if (Unlocked(AID.Fire3) && !MaxAF && MP >= 2000 && !HasFirestarter)
+            {
+                if (target != null && CanSwiftcast && !HasEffect(SID.Triplecast) && sc != UpgradeStrategy.Delay)
+                    QueueGCD(AID.Swiftcast, target, prio + 3);
+
+                if (target != null && CanTC && !HasEffect(SID.Swiftcast) && tc != ChargeStrategy.Delay)
+                    QueueGCD(AID.Triplecast, target, prio + 2);
+
+                QueueGCD(AID.Fire3, target, prio + 1);
+            }
+
+            if (Unlocked(AID.Blizzard3) &&
+                (Unlocked(AID.FlareStar) ? MP < 800 && Souls != 6 :
+                (Unlocked(AID.Flare) ? (MP < 800 || LastActionUsed(AID.Flare) || LastActionUsed(AID.Despair)) :
+                MP < 1600)))
+                QueueGCD(AID.Blizzard3, target, prio);
         }
         if (InUI)
         {
             if (LastActionUsed(AID.Blizzard3) || (Unlocked(TraitID.UmbralHeart) ? (UI == 3 && !HasMaxHearts) : MP != MaxMP))
                 QueueGCD(Unlocked(AID.Blizzard4) ? AID.Blizzard4 : AID.Blizzard1, target, prio);
 
-            //if we so happen to not have UI3 on swap, then we B3 for it
+            //if we so happen to not have UI3 on swap, then we instant-cast B3 for it
             if (Unlocked(AID.Blizzard3) && UI != 3)
-                QueueGCD(AID.Blizzard3, target, prio);
+            {
+                if (target != null && CanSwiftcast && !HasEffect(SID.Triplecast) && sc != UpgradeStrategy.Delay)
+                    QueueGCD(AID.Swiftcast, target, prio + 3);
+
+                if (target != null && CanTC && !HasEffect(SID.Swiftcast) && tc != ChargeStrategy.Delay)
+                    QueueGCD(AID.Triplecast, target, prio + 2);
+
+                QueueGCD(AID.Blizzard3, target, prio + 1);
+            }
 
             //below Lv90 - we do not have access to Paradox, so we have to rawdog F3 after B4
             if (!HasParadox && Unlocked(AID.Fire3) && MaxUI)
@@ -293,52 +326,51 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
     }
     private void AOE(StrategyValues strategy, Actor? target, GCDPriority prio)
     {
-        if (!ShouldUseAOE)
+        if (!WantAOE)
             return;
 
-        var aoeTarget = strategy.AutoTarget() ? BestSplashTargets?.Actor : target;
         if (Player.InCombat && NoUIorAF && target != null)
         {
             if (CanSwiftcast)
-                QueueGCD(AID.Swiftcast, aoeTarget, prio);
+                QueueGCD(AID.Swiftcast, Player, prio);
 
-            QueueGCD(BestBlizzardAOE, aoeTarget, prio);
+            QueueGCD(BestBlizzardAOE, target, prio);
         }
 
         if (Unlocked(TraitID.UmbralHeart))
         {
             if (InUI)
             {
-                if (!HasMaxHearts)
-                    QueueGCD(AID.Freeze, aoeTarget, prio);
+                if (MP < 2400 && !HasMaxHearts)
+                    QueueGCD(AID.Freeze, target, prio);
 
                 if (HasMaxHearts)
                 {
-                    if (ActionReady(AID.Transpose))
-                        QueueGCD(AID.Transpose, Player, prio);
-
-                    if (HasThunderhead && (ThunderLeft < 15 || Polyglots == 0))
-                        QueueGCD(BestThunderAOE, aoeTarget, prio + 2);
+                    if (HasThunderhead && (!Unlocked(AID.Xenoglossy) || ThunderLeft is < 15))
+                        QueueGCD(BestThunderAOE, target, prio + 2);
 
                     if (Polyglots > 0)
-                        QueueGCD(AID.Foul, aoeTarget, prio + 1);
+                        QueueGCD(AID.Foul, target, Polyglots == MaxPolyglots ? prio + 3 : prio + 1);
+
+                    if (ActionReady(AID.Transpose) && MP >= 2400)
+                        QueueGCD(AID.Transpose, Player, prio);
                 }
             }
             if (InAF)
             {
                 if (MP >= 800)
-                    QueueGCD(AID.Flare, aoeTarget, prio);
+                    QueueGCD(AID.Flare, target, prio);
 
                 if (MP < 800 && (!Unlocked(AID.FlareStar) || Souls < 6))
                 {
-                    if (ActionReady(AID.Transpose))
-                        QueueGCD(AID.Transpose, aoeTarget, prio);
+                    if (HasThunderhead && (!Unlocked(AID.Xenoglossy) || ThunderLeft is < 9))
+                        QueueGCD(BestThunderAOE, target, prio + 2);
 
-                    if (HasThunderhead && (ThunderLeft < 15 || Polyglots == 0))
-                        QueueGCD(BestThunderAOE, aoeTarget, prio + 2);
+                    if (Unlocked(AID.Xenoglossy) && Polyglots > 0)
+                        QueueGCD(AID.Foul, target, Polyglots == MaxPolyglots ? prio + 3 : prio + 1);
 
-                    if (Polyglots > 0)
-                        QueueGCD(AID.Foul, aoeTarget, prio + 1);
+                    if (ActionReady(AID.Transpose) && Souls == 0)
+                        QueueGCD(AID.Transpose, Player, prio);
                 }
             }
         }
@@ -373,7 +405,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
         InAF = ElementStance is (1 or 2 or 3) and not (0 or -1 or -2 or -3); //fire
         InUI = ElementStance is (-1 or -2 or -3) and not (0 or 1 or 2 or 3); //ice
         AF = gauge.AstralStacks;
-        MaxAF = AF == MaxAspect;
+        MaxAF = InAF && AF == MaxAspect;
         Souls = gauge.AstralSoulStacks;
         MaxSouls = Unlocked(AID.FlareStar) ? 6 : 0;
         HasMaxSouls = Souls == MaxSouls;
@@ -381,7 +413,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
         Hearts = gauge.UmbralHearts;
         MaxHearts = Unlocked(TraitID.UmbralHeart) ? 3 : 0;
         HasMaxHearts = Hearts == MaxHearts;
-        MaxUI = UI == MaxAspect && HasMaxHearts;
+        MaxUI = InUI && UI == MaxAspect && HasMaxHearts && MP == MaxMP;
         Polyglots = gauge.PolyglotStacks;
         MaxPolyglots = Unlocked(TraitID.EnhancedPolyglotII) ? 3 : Unlocked(TraitID.EnhancedPolyglot) ? 2 : Unlocked(AID.Foul) ? 1 : 0;
         HasMaxPolyglots = Polyglots == MaxPolyglots;
@@ -390,10 +422,9 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
         CanFoul = Unlocked(AID.Foul) && Polyglots > 0;
         CanXG = Unlocked(AID.Xenoglossy) && Polyglots > 0;
         CanParadox = Unlocked(AID.Paradox) && HasParadox && MP >= 1600;
-        CanLL = Unlocked(AID.LeyLines) && CDRemaining(AID.LeyLines) <= 120 && !HasEffect(SID.LeyLines);
+        CanLL = Unlocked(AID.LeyLines) && Cooldown(AID.LeyLines) <= 120 && !HasEffect(SID.LeyLines);
         CanAmplify = ActionReady(AID.Amplifier);
-        CanTC = Unlocked(AID.Triplecast) && CDRemaining(AID.Triplecast) <= 60 && !HasEffect(SID.Triplecast);
-        CanMF = ActionReady(AID.Manafont) && InAF;
+        CanTC = Unlocked(AID.Triplecast) && Cooldown(AID.Triplecast) <= 60 && !HasEffect(SID.Triplecast);
         CanRetrace = ActionReady(AID.Retrace) && HasEffect(SID.LeyLines) && !HasEffect(SID.CircleOfPower);
         CanBTL = ActionReady(AID.BetweenTheLines) && HasEffect(SID.LeyLines) && !HasEffect(SID.CircleOfPower);
         HasThunderhead = HasEffect(SID.Thunderhead);
@@ -405,13 +436,17 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
             StatusDetails(BestSplashTarget?.Actor, SID.ThunderIV, Player.InstanceID, 21).Left,
             StatusDetails(BestSplashTarget?.Actor, SID.HighThunder, Player.InstanceID, 30).Left,
             StatusDetails(BestSplashTarget?.Actor, SID.HighThunderII, Player.InstanceID, 24).Left);
-        ShouldUseAOE = strategy.ForceAOE() || (Unlocked(AID.Blizzard2) && NumSplashTargets > 2);
+        WantAOE = ForceAOE || (Unlocked(AID.Blizzard2) && NumSplashTargets > 2);
         ShouldUseSTDOT = Unlocked(AID.Thunder1) && NumSplashTargets <= 2;
-        ShouldUseAOEDOT = strategy.ForceAOE() || Unlocked(AID.Thunder2) && NumSplashTargets > 2;
+        WantAOEDOT = ForceAOE || (Unlocked(AID.Thunder2) && NumSplashTargets > 2);
         (BestSplashTargets, NumSplashTargets) = GetBestTarget(primaryTarget, 25, IsSplashTarget);
         (BestDOTTargets, ThunderLeft) = GetDOTTarget(primaryTarget, ThunderRemaining, 2);
-        BestSplashTarget = ShouldUseAOE ? BestSplashTargets : primaryTarget;
-        BestDOTTarget = ShouldUseAOEDOT ? BestSplashTargets : ShouldUseSTDOT ? BestDOTTargets : primaryTarget;
+        BestSplashTarget = WantAOE && NumSplashTargets > 1 ? BestSplashTargets : primaryTarget;
+        BestDOTTarget = WantAOEDOT ? BestSplashTargets : ShouldUseSTDOT ? BestDOTTargets : primaryTarget;
+        var aoe = strategy.Option(Track.AOE);
+        var aoeStrat = aoe.As<AOEStrategy>();
+        ForceST = aoeStrat == AOEStrategy.ForceST;
+        ForceAOE = aoeStrat == AOEStrategy.ForceAOE;
         var mainTarget = primaryTarget?.Actor;
 
         if (strategy.HoldEverything())
@@ -423,8 +458,8 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
         var castingOk = casting == CastingOption.Allow || (casting != CastingOption.Forbid || (!IsMoving || HasInstants(strategy, mainTarget)));
         if (!strategy.HoldAbilities())
         {
-            if (mainTarget != null && NoUIorAF && CountdownRemaining is null or > 0 and < 4f)
-                QueueGCD(ShouldUseAOE ? AID.HighBlizzard2 : MP < 8000 ? AID.Blizzard3 : AID.Fire3, mainTarget, GCDPriority.SlightlyHigh);
+            if (mainTarget != null && NoUIorAF && CountdownRemaining is null or > 0 and < 3.7f)
+                QueueGCD(WantAOE ? AID.HighBlizzard2 : MP < 8000 ? AID.Blizzard3 : AID.Fire3, mainTarget, GCDPriority.SlightlyHigh);
 
             var tpusStrat = strategy.Option(Track.TPUS).As<TPUSStrategy>();
             var tpusOk = (tpusStrat == TPUSStrategy.Allow &&
@@ -457,23 +492,23 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
                     var mfMinimum = ActionReady(AID.Manafont) && InAF;
                     var (mfCondition, mfPrio) = mfStrat switch
                     {
-                        UpgradeStrategy.Automatic => (InsideCombatWith(mainTarget) && InAF && (ShouldUseAOE ? HasParadox : !HasParadox) && MP < 800, GCDPriority.ModeratelyLow + 4),
-                        UpgradeStrategy.Force or UpgradeStrategy.ForceEX => (CanMF, GCDPriority.Forced),
-                        UpgradeStrategy.ForceWeave or UpgradeStrategy.ForceWeaveEX => (CanMF && CanWeaveIn, GCDPriority.Forced),
+                        UpgradeStrategy.Automatic => (InCombat(mainTarget) && InAF && (!Unlocked(AID.Paradox) || (WantAOE ? HasParadox : !HasParadox)) && MP < 800, GCDPriority.ModeratelyLow + 4),
+                        UpgradeStrategy.Force or UpgradeStrategy.ForceEX => (true, GCDPriority.Forced),
+                        UpgradeStrategy.ForceWeave or UpgradeStrategy.ForceWeaveEX => (true && CanWeaveIn, GCDPriority.Forced),
                         _ => (false, GCDPriority.None)
                     };
-                    if (mfCondition)
+                    if (mfMinimum && mfCondition)
                         QueueGCD(AID.Manafont, Player, mfPrio + 2004);
 
                     var ll = strategy.Option(Track.LeyLines);
                     var llStrat = ll.As<ChargeStrategy>();
                     var (llCondition, llPrio) = llStrat switch
                     {
-                        ChargeStrategy.Automatic => (InsideCombatWith(mainTarget) && !IsMoving && (RaidBuffsLeft > 10f || RaidBuffsIn < 100), OGCDPriority.ModeratelyLow + 1),
+                        ChargeStrategy.Automatic => (InCombat(mainTarget) && !IsMoving && (RaidBuffsLeft > 10f || RaidBuffsIn < 100), OGCDPriority.ModeratelyLow + 1),
                         ChargeStrategy.Force => (true, OGCDPriority.Forced + 1500),
-                        ChargeStrategy.Force1 => (CDRemaining(AID.LeyLines) <= 5, OGCDPriority.Forced + 1500),
+                        ChargeStrategy.Force1 => (Cooldown(AID.LeyLines) <= 5, OGCDPriority.Forced + 1500),
                         ChargeStrategy.ForceWeave => (CanWeaveIn, OGCDPriority.Forced),
-                        ChargeStrategy.ForceWeave1 => (CanWeaveIn && CDRemaining(AID.LeyLines) <= 5, OGCDPriority.Forced),
+                        ChargeStrategy.ForceWeave1 => (CanWeaveIn && Cooldown(AID.LeyLines) <= 5, OGCDPriority.Forced),
                         _ => (false, OGCDPriority.None)
                     };
                     if (CanLL && llCondition)
@@ -489,51 +524,49 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
                 var scStrat = sc.As<UpgradeStrategy>();
                 var (scCondition, scPrio) = scStrat switch
                 {
-                    UpgradeStrategy.Automatic => (InsideCombatWith(mainTarget) && !HasEffect(SID.Swiftcast) && !HasEffect(SID.Triplecast) && MP == 0 && Souls == 0, GCDPriority.ModeratelyLow + 3),
+                    UpgradeStrategy.Automatic => (InCombat(mainTarget) && !HasEffect(SID.Swiftcast) && !HasEffect(SID.Triplecast) && MP == 0 && Souls == 0, GCDPriority.ModeratelyLow + 3),
                     UpgradeStrategy.Force or UpgradeStrategy.ForceEX => (true, GCDPriority.Forced + 1500),
                     UpgradeStrategy.ForceWeave or UpgradeStrategy.ForceWeaveEX => (CanWeaveIn, GCDPriority.Forced),
                     _ => (false, GCDPriority.None)
-
                 };
-                if (CanSwiftcast && scCondition)
+                if (CanSwiftcast && !WantAOE && scCondition)
                     QueueOGCD(AID.Swiftcast, Player, decreasePrio ? scPrio : GCDPriority.Average + 2003);
 
                 var tc = strategy.Option(Track.Triplecast);
                 var tcStrat = tc.As<ChargeStrategy>();
                 var (tcCondition, tcPrio) = tcStrat switch
                 {
-                    ChargeStrategy.Automatic => (InsideCombatWith(mainTarget) && !HasEffect(SID.Swiftcast) && !HasEffect(SID.Triplecast) && InAF && MP is <= 1600, GCDPriority.ModeratelyLow + 2),
+                    ChargeStrategy.Automatic => (InCombat(mainTarget) && !HasEffect(SID.Swiftcast) && !HasEffect(SID.Triplecast) && InAF && MP is <= 1600, GCDPriority.ModeratelyLow + 2),
                     ChargeStrategy.Force => (true, GCDPriority.Forced + 1500),
-                    ChargeStrategy.Force1 => (CDRemaining(AID.Triplecast) <= 5f, GCDPriority.Forced + 1500),
+                    ChargeStrategy.Force1 => (Cooldown(AID.Triplecast) <= 5f, GCDPriority.Forced + 1500),
                     ChargeStrategy.ForceWeave => (CanWeaveIn, GCDPriority.Forced),
-                    ChargeStrategy.ForceWeave1 => (CanWeaveIn && CDRemaining(AID.Triplecast) <= 5f, GCDPriority.Forced),
+                    ChargeStrategy.ForceWeave1 => (CanWeaveIn && Cooldown(AID.Triplecast) <= 5f, GCDPriority.Forced),
                     _ => (false, GCDPriority.None)
-
                 };
-                if (CanTC && tcCondition)
+                if (CanTC && !WantAOE && tcCondition)
                     QueueOGCD(AID.Triplecast, Player, decreasePrio ? tcPrio : GCDPriority.Average + 2001);
 
                 if (ActionReady(AID.Transpose) &&
                     ((MaxUI && Unlocked(AID.Paradox) && HasFirestarter && !HasParadox) ||
                     (MaxAF && (HasEffect(SID.Triplecast) || HasEffect(SID.Swiftcast)) &&
-                    (Unlocked(AID.Flare) ? (LastActionUsed(BestDespair) || (MP == 0 && Souls == 0)) : (LastActionUsed(AID.Fire1) && MP < 1600)))))
-                    QueueOGCD(AID.Transpose, Player, decreasePrio ? OGCDPriority.ExtremelyHigh : OGCDPriority.ModeratelyLow + 2000);
+                    (Unlocked(AID.Flare) ? (LastActionUsed(AID.Flare) || LastActionUsed(AID.Despair) || (MP == 0 && Souls == 0)) : (LastActionUsed(AID.Fire1) && MP < 1600)))))
+                    QueueGCD(AID.Transpose, Player, GCDPriority.High);
             }
             if (!strategy.HoldGauge())
             {
                 var th = strategy.Option(Track.Thunder);
                 var thStrat = th.As<ThunderStrategy>();
                 var thTarget = AOETargetChoice(mainTarget, BestDOTTarget?.Actor, th, strategy);
-                var thMinimum = InsideCombatWith(thTarget) && In25y(thTarget) && HasThunderhead;
+                var thMinimum = InCombat(thTarget) && In25y(thTarget) && HasThunderhead;
                 var (thCondition, thAction, thPrio) = WantThunder(strategy, thTarget);
                 if (thMinimum && thCondition)
                     QueueGCD(thAction, thTarget, thPrio);
 
-                if (Unlocked(AID.Fire3) && InsideCombatWith(mainTarget) && !ShouldUseAOE &&
+                if (Unlocked(AID.Fire3) && InCombat(mainTarget) && !WantAOE &&
                     (HasFirestarter ? ((InAF && AF < 3) || (InUI && MaxUI)) : castingOk && InUI && MaxUI))
                     QueueGCD(AID.Fire3, mainTarget, GCDPriority.Average);
 
-                if (InsideCombatWith(mainTarget) && WantParadox)
+                if (InCombat(mainTarget) && WantParadox)
                     QueueGCD(AID.Paradox, mainTarget, InUI ? GCDPriority.Average + 1 : GCDPriority.Average);
 
                 var pgTarget = AOETargetChoice(mainTarget, BestSplashTarget?.Actor, strategy.Option(Track.Polyglot), strategy);
@@ -542,7 +575,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
                     QueueGCD(pgAction, pgTarget, pgPrio);
             }
 
-            if (!(IsMoving || !HasInstants(strategy, mainTarget)) && InsideCombatWith(mainTarget))
+            if (IsMoving && !HasInstants(strategy, mainTarget) && InCombat(mainTarget))
             {
                 var m = strategy.Option(Track.Movement).As<MovementStrategy>();
 
@@ -559,16 +592,16 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
                 {
                     var th = strategy.Option(Track.Thunder);
                     var thStrat = th.As<ThunderStrategy>();
-                    var wantSTth = strategy.ForceST() || thStrat == ThunderStrategy.ForceST;
-                    var wantAOEth = ShouldUseAOE || thStrat == ThunderStrategy.ForceAOE;
+                    var wantSTth = ForceST || thStrat == ThunderStrategy.ForceST;
+                    var wantAOEth = WantAOE || thStrat == ThunderStrategy.ForceAOE;
                     var thTarget = AOETargetChoice(mainTarget, BestDOTTarget?.Actor, strategy.Option(Track.Thunder), strategy);
                     if (HasThunderhead)
                         QueueGCD(wantSTth ? BestThunderST : wantAOEth ? BestThunderAOE : BestThunder, thTarget, GCDPriority.Severe);
 
                     var pg = strategy.Option(Track.Polyglot);
                     var pgStrat = pg.As<PolyglotStrategy>();
-                    var wantSTpg = strategy.ForceST() || pgStrat is PolyglotStrategy.ForceXeno or PolyglotStrategy.XenoSpendAll or PolyglotStrategy.XenoHold1 or PolyglotStrategy.XenoHold2 or PolyglotStrategy.XenoHold3;
-                    var wantAOEpg = ShouldUseAOE || pgStrat is PolyglotStrategy.ForceFoul or PolyglotStrategy.FoulSpendAll or PolyglotStrategy.FoulHold1 or PolyglotStrategy.FoulHold2 or PolyglotStrategy.FoulHold3;
+                    var wantSTpg = ForceST || pgStrat is PolyglotStrategy.ForceXeno or PolyglotStrategy.XenoSpendAll or PolyglotStrategy.XenoHold1 or PolyglotStrategy.XenoHold2 or PolyglotStrategy.XenoHold3;
+                    var wantAOEpg = WantAOE || pgStrat is PolyglotStrategy.ForceFoul or PolyglotStrategy.FoulSpendAll or PolyglotStrategy.FoulHold1 or PolyglotStrategy.FoulHold2 or PolyglotStrategy.FoulHold3;
                     var pgTarget = AOETargetChoice(mainTarget, wantSTpg ? mainTarget : BestSplashTarget?.Actor, strategy.Option(Track.Polyglot), strategy);
                     if (Unlocked(TraitID.EnhancedPolyglot) && Polyglots > 0)
                         QueueGCD(wantSTpg ? BestXenoglossy : wantAOEpg ? AID.Foul : BestPolyglot, pgTarget, GCDPriority.Severe + 1);
@@ -576,7 +609,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
 
                 if (m is MovementStrategy.Allow or MovementStrategy.OnlyScathe)
                     if (Unlocked(AID.Scathe) && MP >= 800)
-                        QueueGCD(AID.Scathe, TargetChoice(strategy.Option(SharedTrack.AOE)) ?? mainTarget, GCDPriority.Low);
+                        QueueGCD(AID.Scathe, SingleTargetChoice(mainTarget, aoe), GCDPriority.ExtremelyLow);
             }
 
             if (strategy.Potion() switch
@@ -585,7 +618,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
                 PotionStrategy.Immediate => true,
                 _ => false
             })
-                ExecutePotINT();
+                QueuePotINT();
 
             if (CanRetrace && strategy.Option(Track.Retrace).As<CommonOption>() switch
             {
@@ -608,7 +641,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
         if (castingOk)
         {
             var fsTarget = strategy.AutoTarget() ? BestSplashTarget?.Actor : mainTarget;
-            if (InsideCombatWith(fsTarget) && Unlocked(AID.FlareStar) && HasMaxSouls)
+            if (InCombat(fsTarget) && Unlocked(AID.FlareStar) && HasMaxSouls)
                 QueueGCD(AID.FlareStar, fsTarget, GCDPriority.Average + 6);
 
             var e = strategy.Option(Track.Ender);
@@ -620,7 +653,7 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
             var eTarget = AOETargetChoice(mainTarget, BestSplashTarget?.Actor, e, strategy);
             var eST = MP is <= 1600 and >= 800 || fST;
             var eAOE = Unlocked(AID.FlareStar) ? (Souls != 6 && MP >= 800) : (Unlocked(TraitID.UmbralHeart) ? (Hearts > 0 || (Hearts == 0 && MP >= 800)) : MP is < 2400 and >= 800);
-            var eMinimum = fMinimum && In25y(eTarget) && (ShouldUseAOE ? eAOE : eST);
+            var eMinimum = fMinimum && In25y(eTarget) && (WantAOE ? eAOE : eST);
             var (eCondition, eAction, ePrio) = eStrat switch
             {
                 EnderStrategy.Automatic => (eMinimum, fST ? AID.Flare : AID.Despair, GCDPriority.Average),
@@ -633,22 +666,21 @@ public sealed class AkechiBLM(RotationModuleManager manager, Actor player) : Ake
             if (eCondition)
                 QueueGCD(eAction, eTarget, ePrio);
 
-            var aoePrio = StatusRemaining(Player, SID.Triplecast) is < 5f and > 0f ? GCDPriority.Average : GCDPriority.Low;
-            var aoe = strategy.Option(SharedTrack.AOE);
+            var aoePrio = StatusRemaining(Player, SID.Triplecast) is < 5f and > 2.5f ? GCDPriority.Average : StatusRemaining(Player, SID.Triplecast) is < 2.5f and > 0f ? GCDPriority.High + 1 : GCDPriority.Low;
             var aoeTarget = AOETargetChoice(mainTarget, BestSplashTarget?.Actor, aoe, strategy);
-            if (strategy.AutoFinish() || strategy.AutoBreak())
+            if (aoeStrat is AOEStrategy.Automatic)
             {
-                if (ShouldUseAOE)
+                if (WantAOE)
                     AOE(strategy, aoeTarget, aoePrio + 201);
-                else
+                if (!WantAOE)
                     ST(strategy, aoeTarget, aoePrio);
             }
 
-            if (strategy.ForceST())
-                ST(strategy, mainTarget, aoePrio);
+            if (ForceAOE)
+                AOE(strategy, aoeTarget, aoePrio + 201);
 
-            if (strategy.ForceAOE())
-                AOE(strategy, aoeTarget, aoePrio);
+            if (ForceST)
+                ST(strategy, aoeTarget, aoePrio);
         }
     }
 }

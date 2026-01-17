@@ -85,14 +85,14 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
         return res;
     }
 
-    public bool IsReady(AID aid) => CDRemaining(aid) <= 0.2f;
+    public bool IsReady(AID aid) => Cooldown(aid) <= 0.2f;
 
     public override void Execution(StrategyValues strategy, Enemy? primaryTarget)
     {
         if (Player.IsDeadOrDestroyed || Player.MountId != 0 || Player.FindStatus(ClassShared.SID.GuardPvP) != null)
             return;
 
-        var (BestConeTargets, NumConeTargets) = GetBestTarget(primaryTarget, 8, Is8yConeTarget);
+        var (BestConeTargets, NumConeTargets) = GetBestTarget(primaryTarget, 8, ConeTargetCheck(8));
         var (BestSplashTargets, NumSplashTargets) = GetBestTarget(primaryTarget, 25, IsSplashTarget);
         var (BestSlipstreamTargets, NumSlipstreamTargets) = GetBestTarget(primaryTarget, 25, Is10ySplashTarget);
         var BestConeTarget = NumConeTargets > 1 ? BestConeTargets : primaryTarget;
@@ -150,14 +150,14 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
                 var (r4Condition, r4Priority) = strategy.Option(Track.RuinIV).As<Ruin4Strategy>() switch
                 {
                     Ruin4Strategy.Early => (true, GCDPriority.High + 1),
-                    Ruin4Strategy.Late => (StatusRemaining(Player, SID.FurtherRuinPvP) <= 3f || CDRemaining(AID.NecrotizePvP) <= 1f, GCDPriority.ModeratelyHigh),
+                    Ruin4Strategy.Late => (StatusRemaining(Player, SID.FurtherRuinPvP) <= 3f || Cooldown(AID.NecrotizePvP) <= 1f, GCDPriority.ModeratelyHigh),
                     _ => (false, GCDPriority.None)
                 };
                 if (r4Condition)
                     QueueGCD(AID.Ruin4PvP, BestTarget, r4Priority);
             }
 
-            if (CDRemaining(AID.NecrotizePvP) < 10.6f && !HasEffect(SID.FurtherRuinPvP) && strategy.Option(Track.Necrotize).As<CommonStrategy>() == CommonStrategy.Allow)
+            if (Cooldown(AID.NecrotizePvP) < 10.6f && !HasEffect(SID.FurtherRuinPvP) && strategy.Option(Track.Necrotize).As<CommonStrategy>() == CommonStrategy.Allow)
                 QueueGCD(AID.NecrotizePvP, mainTarget, GCDPriority.SlightlyHigh);
 
             if (IsReady(AID.CrimsonCyclonePvP) && strategy.Option(Track.CrimsonCyclone).As<CycloneStrategy>() switch

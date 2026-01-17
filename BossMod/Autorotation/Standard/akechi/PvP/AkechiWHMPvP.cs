@@ -76,7 +76,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
         return res;
     }
 
-    public bool IsReady(AID aid) => CDRemaining(aid) <= 0.2f;
+    public bool IsReady(AID aid) => Cooldown(aid) <= 0.2f;
     public float DebuffsLeft(Actor? target) => Utils.MaxAll(
         StatusDetails(target, ClassShared.SID.StunPvP, Player.InstanceID, 5).Left,
         StatusDetails(target, ClassShared.SID.HeavyPvP, Player.InstanceID, 5).Left,
@@ -87,7 +87,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
 
     public override void Execution(StrategyValues strategy, Enemy? primaryTarget)
     {
-        var (BestLineTargets, NumLineTargets) = GetBestTarget(primaryTarget, 40, Is40yRectTarget);
+        var (BestLineTargets, NumLineTargets) = GetBestTarget(primaryTarget, 40, LineTargetCheck(40));
         var (BestSplashTargets, NumSplashTargets) = GetBestTarget(primaryTarget, 25, IsSplashTarget);
         var (BestSeraphStrikeTargets, NumSeraphStrikeTargets) = GetBestTarget(primaryTarget, 25, Is10ySplashTarget);
         var BestLineTarget = NumLineTargets > 1 ? BestLineTargets : primaryTarget;
@@ -162,7 +162,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
                 CureTargetStrategy.SelfOrParty => auto ? World.Party.WithoutSlot(excludeNPCs: true).Where(a => a.HPMP.CurHP != a.HPMP.MaxHP).OrderBy(a => (float)a.HPMP.CurHP / a.HPMP.MaxHP).FirstOrDefault() : mainTarget ?? Player,
                 _ => null
             };
-            if ((CDRemaining(AID.CureIIPvP) < 12.6f || HasEffect(SID.CureIIIReadyPvP)) && strategy.Option(Track.Cure).As<CureStrategy>() switch
+            if ((Cooldown(AID.CureIIPvP) < 12.6f || HasEffect(SID.CureIIIReadyPvP)) && strategy.Option(Track.Cure).As<CureStrategy>() switch
             {
                 CureStrategy.Eighty => HPP(healtarget) is < 80 and not 0,
                 CureStrategy.Seventy => HPP(healtarget) is < 70 and not 0,

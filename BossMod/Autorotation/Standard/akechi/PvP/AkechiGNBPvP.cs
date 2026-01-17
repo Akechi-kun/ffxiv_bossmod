@@ -166,13 +166,13 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
         })
             QueueGCD(AID.TerminalTriggerPvP, Player, GCDPriority.VeryHigh);
 
-        if (CDRemaining(AID.RoughDividePvP) < 14.6f && strategy.Option(Track.RoughDivide).As<DivideStrategy>() switch
+        if (Cooldown(AID.RoughDividePvP) < 14.6f && strategy.Option(Track.RoughDivide).As<DivideStrategy>() switch
         {
             DivideStrategy.Auto => !hasNM,
             DivideStrategy.AutoMelee => !hasNM && In5y(mainTarget),
             _ => false
         })
-            QueueOGCD(AID.RoughDividePvP, mainTarget, CDRemaining(AID.RoughDividePvP) < 0.6f ? OGCDPriority.High + 2001 : OGCDPriority.High);
+            QueueOGCD(AID.RoughDividePvP, mainTarget, Cooldown(AID.RoughDividePvP) < 0.6f ? OGCDPriority.High + 2001 : OGCDPriority.High);
 
         if (In5y(mainTarget) && HasLOS(mainTarget))
         {
