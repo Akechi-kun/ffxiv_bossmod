@@ -2,6 +2,8 @@
 
 namespace BossMod.Components;
 
+// TODO: this is more or less a generalization of all the other bait/spread/stack components, created because there was no fitting component for cone-shaped stack/spreads that are commonly used in savage
+// it might be good to reimplement other components in terms of this one to reduce code duplication
 class UntelegraphedBait(BossModule module, Enum? aid = null) : CastCounter(module, aid)
 {
     // indicate that `count` number of players matching some `targets` filter (e.g. both healers, all supports, 2 closest players, etc etc) will be hit by an aoe
@@ -36,6 +38,7 @@ class UntelegraphedBait(BossModule module, Enum? aid = null) : CastCounter(modul
 
     public bool IsStackTarget(int slot) => CurrentBaits.Any(b => b.IsStack && b.Targets[slot]);
     public bool IsSpreadTarget(int slot) => CurrentBaits.Any(b => b.IsSpread && b.Targets[slot]);
+    public bool IsDifferentTarget(in Bait b, int slot) => !b.Targets[slot] || b.Count > 1;
 
     public override void Update()
     {
@@ -59,9 +62,10 @@ class UntelegraphedBait(BossModule module, Enum? aid = null) : CastCounter(modul
         {
             if (bait.IsStack)
                 bait.Shape.Draw(Arena, bait.Position(pc), bait.Angle(pc), bait.ForbiddenTargets[pcSlot] ? ArenaColor.AOE : ArenaColor.SafeFromAOE);
-            else if (bait.Count > 1)
+
+            if (bait.Count > 1)
                 foreach (var b in PossibleTargets(bait).Exclude(pc))
-                    bait.Shape.Draw(Arena, bait.Position(b), bait.Angle(b), ArenaColor.AOE);
+                    bait.Shape.Draw(Arena, bait.Position(b), bait.Angle(b), bait.IsStack ? ArenaColor.SafeFromAOE : ArenaColor.AOE);
         }
 
         foreach (var bait in BaitsNotOn(pcSlot))
@@ -96,7 +100,7 @@ class UntelegraphedBait(BossModule module, Enum? aid = null) : CastCounter(modul
                 {
                     ++numStacked;
                     avoid |= myBait.ForbiddenTargets[j];
-                    overlap |= IsStackTarget(j) && !myBait.Targets[j];
+                    overlap |= IsStackTarget(j) && IsDifferentTarget(myBait, j);
                 }
                 hints.Add("Stack!", numStacked < myBait.StackSize);
                 if (avoid || overlap)
@@ -161,7 +165,7 @@ class UntelegraphedBait(BossModule module, Enum? aid = null) : CastCounter(modul
                 hints.AddForbiddenZone(actorSpread.Shape.CheckFn(actorSpread.Position(target), actorSpread.Angle(target)), actorSpread.Activation);
         }
 
-        foreach (var avoid in CurrentBaits.Where(s => !s.Targets[slot] && s.IsStack && s.ForbiddenTargets[slot]))
+        foreach (var avoid in CurrentBaits.Where(s => s.IsStack && s.ForbiddenTargets[slot]))
         {
             foreach (var t in PossibleTargets(avoid))
                 hints.AddForbiddenZone(avoid.Shape.CheckFn(avoid.Position(t), avoid.Angle(t)), avoid.Activation);
@@ -169,14 +173,16 @@ class UntelegraphedBait(BossModule module, Enum? aid = null) : CastCounter(modul
 
         if (CurrentBaits.Where(s => s.IsStack && s.Targets[slot]).FirstOrNull() is { } actorStack)
         {
-            foreach (var stackWith in CurrentBaits.Where(s => s.IsStack && !s.Targets[slot]))
+            // avoid stacks where we are not the target
+            // avoid multi-instance stacks where we are the target, since overlap is assumed to be fatal
+            foreach (var stackWith in CurrentBaits.Where(s => s.IsStack && IsDifferentTarget(s, slot)))
             {
                 foreach (var t in PossibleTargets(stackWith).Exclude(actor))
                     hints.AddForbiddenZone(stackWith.Shape.CheckFn(stackWith.Position(t), stackWith.Angle(t)), stackWith.Activation);
             }
 
             // stack with closest player who is either baiting the same aoe as us, or not baiting anything
-            var closest = Raid.WithSlot().Exclude(actor).ExcludedFromMask(actorStack.ForbiddenTargets).WhereSlot(p => actorStack.Targets[p] || !IsStackTarget(p) && !IsSpreadTarget(p)).Select(p => p.Item2).Closest(actor.Position);
+            var closest = Raid.WithSlot().Exclude(actor).ExcludedFromMask(actorStack.ForbiddenTargets).WhereSlot(p => !IsDifferentTarget(actorStack, p) || !IsStackTarget(p) && !IsSpreadTarget(p)).Select(p => p.Item2).Closest(actor.Position);
             if (closest != null)
             {
                 bool cf(WPos p) => !actorStack.Shape.Check(p, actorStack.Position(closest), actorStack.Angle(closest));
