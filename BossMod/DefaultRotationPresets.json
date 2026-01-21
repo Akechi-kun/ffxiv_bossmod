@@ -401,8 +401,8 @@
       "Modules": {
         "BossMod.Autorotation.MiscAI.AutoTarget": [
           {
-            "Track": "General",
-            "Option": "Aggressive"
+            "Track": "Retarget",
+            "Option": "Always"
           },
           {
             "Track": "FATE",
