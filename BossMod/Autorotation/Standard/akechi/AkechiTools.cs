@@ -1,11 +1,12 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Common.Component.BGCollision;
 using static BossMod.AIHints;
+using static FFXIVClientStructs.FFXIV.Client.Game.ActionManager;
 
 namespace BossMod.Autorotation.akechi;
 
 public enum SharedTrack { Targeting, Hold, Potion, Count }
-public enum SoftTargetStrategy { Automatic, Manual }
+public enum SoftTargetStrategy { Automatic, AutoHard, Manual }
 public enum HoldStrategy { DontHold, HoldCooldowns, HoldGauge, HoldBuffs, HoldAbilities, HoldEverything }
 public enum PotionStrategy { Manual, AlignWithBuffs, AlignWithRaidBuffs, Immediate }
 public enum GCDStrategy { Automatic, RaidBuffsOnly, Force, Delay }
@@ -18,15 +19,11 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
     protected bool QueueAction(AID aid, Actor? target, float priority, float delay, float castTime, Vector3 targetPos = default, Angle? facingAngle = null)
     {
         var ability = ActionDefinitions.Instance.Spell(aid);
+        if (ability == null ||
+            (uint)(object)aid == 0 ||
+            (ability.Range != 0 && target == null))
+            return false;
 
-        if ((uint)(object)aid == 0)
-            return false;
-        if (ability == null)
-            return false;
-        if (ability.Range != 0 && target == null)
-        {
-            return false;
-        }
         if (ability.AllowedTargets.HasFlag(ActionTargets.Area))
         {
             if (ability.Range == 0)
@@ -37,7 +34,15 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
         if (castTime == 0)
             castTime = 0;
 
-        Hints.ActionsToExecute.Push(ActionID.MakeSpell(aid), target, priority, delay: delay, castTime: castTime, targetPos: targetPos, facingAngle: facingAngle);
+        Hints.ActionsToExecute.Push(
+            ActionID.MakeSpell(aid),
+            target,
+            priority,
+            delay: delay,
+            castTime: castTime,
+            targetPos: targetPos,
+            facingAngle: facingAngle);
+
         return true;
     }
     protected void QueuePot(ActionID pot) => Hints.ActionsToExecute.Push(pot, Player, ActionQueue.Priority.High);
@@ -138,10 +143,21 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
     protected bool HasEffect<SID>(SID sid) where SID : Enum => Player.FindStatus(sid) != null;
     protected int StacksRemaining<SID>(Actor? target, SID sid, float duration = 1000f) where SID : Enum => StatusDetails(target, sid, Player.InstanceID, duration).Stacks;
     protected float StatusRemaining<SID>(Actor? target, SID sid, float duration = 1000f) where SID : Enum => StatusDetails(target, sid, Player.InstanceID, duration).Left;
+    protected bool StatusExpiringSoon<SID>(float numGCDs, params SID[] statuses) where SID : Enum
+    {
+        var timer = SkSGCDLength * numGCDs;
+        return statuses.Any(status => HasEffect(status) && StatusRemaining(Player, status) < timer);
+    }
     protected bool CanWeaveIn => GCD >= 0.6f;
     protected bool CanEarlyWeaveIn => GCD >= 1.26f;
     protected bool CanLateWeaveIn => GCD is <= 1.25f and >= 0.6f;
     protected bool CanQuarterWeaveIn => GCD is < 0.9f and >= 0.5f;
+    protected unsafe float ActualComboTimer => Instance()->Combo.Timer;
+    protected unsafe bool ComboExpiringSoon(float NumGCDs)
+    {
+        var GCD = SkSGCDLength * NumGCDs;
+        return ActualComboTimer != 0 && ActualComboTimer < GCD;
+    }
     #endregion
 
     #region Targeting
@@ -177,66 +193,72 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
         if (strategy.ManualTarget())
             return;
 
-        if (primaryTarget?.Actor == null || Player.DistanceToHitbox(primaryTarget.Actor) > range)
+        var currentTarget = primaryTarget?.Actor;
+        if (currentTarget == null || Player.DistanceToHitbox(currentTarget) > range)
         {
             var newTarget = Hints.PriorityTargets.FirstOrDefault(x => Player.DistanceToHitbox(x.Actor) <= range);
             if (newTarget != null)
-                primaryTarget = newTarget;
+            {
+                if (strategy.AutoTargeting())
+                {
+                    primaryTarget = newTarget;
+                    PlayerTarget = primaryTarget;
+                }
+                if (strategy.AutoHardTargeting())
+                {
+                    primaryTarget = newTarget;
+                    Hints.ForcedTarget = primaryTarget?.Actor;
+                }
+            }
         }
     }
 
-    protected (Enemy? Best, int Priority) GetTarget<P>(
-        Enemy? primaryTarget,
+    protected (Enemy? Best, int Priority) GetTarget<P>
+        (Enemy? primaryTarget,
         float range,
         PositionCheck isInAOE,
         PriorityFunc<P> prioritize,
         Func<P, int> simplify
         ) where P : struct, IComparable
     {
-        P targetPrio(Actor potentialTarget)
-        {
-            var numTargets = Hints.NumPriorityTargetsInAOE(enemy => isInAOE(potentialTarget, enemy.Actor));
-            return prioritize(numTargets, potentialTarget);
-        }
+        P targetPriority(Actor potentialTarget)
+            => prioritize(Hints.NumPriorityTargetsInAOE(enemy => isInAOE(potentialTarget, enemy.Actor)), potentialTarget);
 
-        var (newtarget, newprio) = FindBetterTargetBy(primaryTarget?.Actor, range, targetPrio);
-        var newnewprio = simplify(newprio);
-        return (newnewprio > 0 ? Hints.FindEnemy(newtarget) : null, newnewprio);
+        var (newTarget, newPrio) = FindBetterTargetBy(primaryTarget?.Actor, range, targetPriority);
+        var simplifiedPrio = simplify(newPrio);
+        return (simplifiedPrio > 0 ? Hints.FindEnemy(newTarget) : null, simplifiedPrio);
     }
 
     protected (Enemy? Best, int Targets) GetBestTarget(Enemy? primaryTarget, float range, PositionCheck isInAOE)
-        => GetTarget(primaryTarget, range, isInAOE, (numTargets, _) => numTargets, a => a);
+        => GetTarget(primaryTarget, range, isInAOE, (targets, _) => targets, a => a);
 
-    protected (Enemy? Best, P Timer) GetDOTTarget<P>(Enemy? initial, Func<Actor?, P> getTimer, int maxAllowedTargets, float range = 30) where P : struct, IComparable
+    protected (Enemy? Best, P Timer) GetDOTTarget<P>(Enemy? initial, Func<Actor?, P> getTimer, int maxAllowedTargets, float range = 30)
+        where P : struct, IComparable
     {
         if (initial == null || maxAllowedTargets <= 0 || Player.DistanceToHitbox(initial.Actor) > range)
-        {
             return (null, getTimer(null));
-        }
 
-        var newTarget = initial;
-        var initialTimer = getTimer(initial?.Actor);
-        var newTimer = initialTimer;
-        var numTargets = 0;
+        var bestTarget = initial;
+        var bestTimer = getTimer(initial.Actor);
+        var count = 0;
 
-        foreach (var dotTarget in Hints.PriorityTargets)
+        foreach (var target in Hints.PriorityTargets)
         {
-            if (dotTarget.ForbidDOTs || Player.DistanceToHitbox(dotTarget.Actor) > range)
+            if (target.ForbidDOTs || Player.DistanceToHitbox(target.Actor) > range)
                 continue;
 
-            if (++numTargets > maxAllowedTargets)
-                return (newTarget, newTimer);
+            if (++count > maxAllowedTargets)
+                break;
 
-            var thisTimer = getTimer(dotTarget.Actor);
-
-            if (thisTimer.CompareTo(newTimer) < 0)
+            var timer = getTimer(target.Actor);
+            if (timer.CompareTo(bestTimer) < 0)
             {
-                newTarget = dotTarget;
-                newTimer = thisTimer;
+                bestTarget = target;
+                bestTimer = timer;
             }
         }
 
-        return (newTarget, newTimer);
+        return (bestTarget, bestTimer);
     }
 
     #region PvP
@@ -261,49 +283,40 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
         var flags = stackalloc int[] { 0x4000, 0, 0x4000, 0 };
         return !Framework.Instance()->BGCollisionModule->RaycastMaterialFilter(&hit, &sourcePos, &direction, distance, 1, flags);
     }
-    public bool EnemiesTargetingSelf(int numEnemies) => Service.ObjectTable.Count(o => o.IsTargetable && !o.IsDead && o.TargetObjectId == Service.ObjectTable.LocalPlayer?.GameObjectId) >= numEnemies;
+    public bool EnemiesTargetingSelf(int numEnemies)
+        => Service.ObjectTable.Count(o => o.IsTargetable && !o.IsDead && o.TargetObjectId == Service.ObjectTable.LocalPlayer?.GameObjectId) >= numEnemies;
     protected void GetPvPTarget(float range)
     {
-        //max prio target - we want to burn down this target immediately
-        var high = Hints.PriorityTargets.Where(x =>
-                HasLOS(x.Actor) && //in line of sight
-                Player.DistanceToHitbox(x.Actor) <= range && //in range
-                !x.Actor.IsStrikingDummy && //not a dummy
-                x.Actor.NameID == 0 && //guaranteed enemy player
-                x.Actor.FindStatus(3039) == null && //no DRK invuln active - no point in attacking if invulnerable
-                x.Actor.FindStatus(1302) == null && //no PLD invuln active - no point in attacking if invulnerable
-                x.Actor.FindStatus(1301) == null && x.Actor.FindStatus(1300) == null && //no PLD Cover active - no point in attacking if resistant
-                x.Actor.FindStatus(1978) == null && //no Rampart active - no point in attacking if resistant
-                x.Actor.FindStatus(1240) == null && //no SAM buff active - attacking them with this up results in us receiving a debuff
-                x.Actor.FindStatus(ClassShared.SID.GuardPvP) == null) //no Guard active - no point in attacking if resistant
-                .OrderBy(x => (float)x.Actor.HPMP.CurHP / x.Actor.HPMP.MaxHP).FirstOrDefault()?.Actor; //order enemies from lowest to highest HP percentage
+        Actor? RetrieveTarget(Func<Enemy, bool> conditions)
+            => Hints.PriorityTargets
+                .Where(x => conditions(x) && HasLOS(x.Actor) && Player.DistanceToHitbox(x.Actor) <= range)
+                .OrderBy(x => (float)x.Actor.HPMP.CurHP / x.Actor.HPMP.MaxHP)
+                .FirstOrDefault()?.Actor;
 
-        //high prio target - if we do not have a max prio target, we want to have a good enough target to fall back on
-        var medium = Hints.PriorityTargets.Where(x =>
-                HasLOS(x.Actor) && //in line of sight
-                Player.DistanceToHitbox(x.Actor) <= range && //in range
-                !x.Actor.IsStrikingDummy && //not a dummy
-                x.Actor.FindStatus(ClassShared.SID.GuardPvP) == null) //no Guard active
-                .OrderBy(x => (float)x.Actor.HPMP.CurHP / x.Actor.HPMP.MaxHP).FirstOrDefault()?.Actor; //from lowest to highest HP percentage
+        //high priority - full checks for invulnerable/resistant statuses
+        var high = RetrieveTarget(x =>
+            !x.Actor.IsStrikingDummy &&
+            x.Actor.NameID == 0 &&
+            x.Actor.FindStatus(3039) == null &&
+            x.Actor.FindStatus(1302) == null &&
+            x.Actor.FindStatus(1301) == null &&
+            x.Actor.FindStatus(1300) == null &&
+            x.Actor.FindStatus(1978) == null &&
+            x.Actor.FindStatus(1240) == null &&
+            x.Actor.FindStatus(ClassShared.SID.GuardPvP) == null);
 
-        //low prio target - this target is the fallback target if we have nothing good enough left
-        var low = Hints.PriorityTargets.Where(x =>
-                HasLOS(x.Actor) && //in line of sight
-                Player.DistanceToHitbox(x.Actor) <= range) //in range
-                .OrderBy(x => (float)x.Actor.HPMP.CurHP / x.Actor.HPMP.MaxHP).FirstOrDefault()?.Actor; //from lowest to highest HP percentage
+        //medium priority - only Guard check
+        var medium = RetrieveTarget(x =>
+            !x.Actor.IsStrikingDummy &&
+            x.Actor.FindStatus(ClassShared.SID.GuardPvP) == null);
 
-        //special case for MCH - we want to prioritize any target that currently has Wildfire debuff for maximum DPS
-        if (Player.Class == Class.MCH && Player.FindStatus(MCH.SID.WildfirePlayerPvP) != null)
-        {
-            Hints.ForcedTarget = Hints.PriorityTargets.FirstOrDefault(x =>
-            HasLOS(x.Actor) &&
-            x.Actor.FindStatus(MCH.SID.WildfireTargetPvP) != null &&
-            Player.DistanceToHitbox(x.Actor) <= range)?.Actor;
-        }
-        else
-        {
-            Hints.ForcedTarget = high ?? medium ?? low;
-        }
+        //low priority - just in range and line of sight
+        var low = RetrieveTarget(x => true);
+
+        Hints.ForcedTarget =
+            (Player.Class == Class.MCH && Player.FindStatus(MCH.SID.WildfirePlayerPvP) != null) //special case for MCH - prioritize Wildfire debuffed targets
+                ? Hints.PriorityTargets.FirstOrDefault(x => HasLOS(x.Actor) && Player.DistanceToHitbox(x.Actor) <= range && x.Actor.FindStatus(MCH.SID.WildfireTargetPvP) != null)?.Actor
+            : high ?? medium ?? low;
     }
     #endregion
 
@@ -493,6 +506,22 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
         Forced = 1500, //makes priority higher than CDPlanner's automatic prio + 500, which is really only Medium prio
         ToGCDPriority = 2000 //converts OGCDPriority to GCDPriority by adding 2000 to the value
     }
+
+    //this is a special case prio where if a certain OGCD ability/action can be weaved, but is lost if you don't use it before next GCD (e.g. VPR:DeathRattle, GNB:Continuation)
+    //so to alleviate this, we will convert to GCD prio and push it to the front of the queue to ensure it does not get wasted
+    protected OGCDPriority DontLoseAbilityPrio(int lowPrio = 200, int highPrio = 400, bool emergencyCondition = true)
+    {
+        //can no longer weave - convert to GCD and send immediately
+        if (emergencyCondition && GCD < 0.5f)
+            return OGCDPriority.ToGCDPriority + 1000; //5000
+
+        //second weave - more priority
+        if (GCD is < 1.25f and >= 0.6f)
+            return OGCDPriority.None + highPrio; //2000 + value
+
+        //first weave - send whenever
+        return OGCDPriority.None + lowPrio; //2000 + value
+    }
     #endregion
 
     public sealed override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
@@ -533,8 +562,9 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
 static class ToolsExtensions
 {
     public static RotationModuleDefinition.ConfigRef<SoftTargetStrategy> DefineTargeting(this RotationModuleDefinition res)
-        => res.Define(SharedTrack.Targeting).As<SoftTargetStrategy>("S.Target", "Soft Targeting", 295)
-            .AddOption(SoftTargetStrategy.Automatic, "Allow auto-selecting best target for maximum optimal DPS output")
+        => res.Define(SharedTrack.Targeting).As<SoftTargetStrategy>("Targeting", "", 295)
+            .AddOption(SoftTargetStrategy.Automatic, "Allow auto-selecting best target for maximum optimal DPS output - does not change hard target")
+            .AddOption(SoftTargetStrategy.AutoHard, "Auto-select best target for maximum optimal DPS output - will change hard target")
             .AddOption(SoftTargetStrategy.Manual, "Forbid auto-selecting best target, instead executing only on whichever target is currently selected");
 
     public static RotationModuleDefinition.ConfigRef<HoldStrategy> DefineHold(this RotationModuleDefinition res)
@@ -602,7 +632,9 @@ static class ToolsExtensions
     }
 
     public static SoftTargetStrategy Targeting(this StrategyValues strategy) => strategy.Option(SharedTrack.Targeting).As<SoftTargetStrategy>();
-    public static bool AutoTarget(this StrategyValues strategy) => strategy.Targeting() == SoftTargetStrategy.Automatic;
+    public static bool AutoTarget(this StrategyValues strategy) => strategy.Targeting() is SoftTargetStrategy.Automatic or SoftTargetStrategy.AutoHard;
+    public static bool AutoTargeting(this StrategyValues strategy) => strategy.Targeting() == SoftTargetStrategy.Automatic;
+    public static bool AutoHardTargeting(this StrategyValues strategy) => strategy.Targeting() == SoftTargetStrategy.AutoHard;
     public static bool ManualTarget(this StrategyValues strategy) => strategy.Targeting() == SoftTargetStrategy.Manual;
 
     public static HoldStrategy Hold(this StrategyValues strategy) => strategy.Option(SharedTrack.Hold).As<HoldStrategy>();

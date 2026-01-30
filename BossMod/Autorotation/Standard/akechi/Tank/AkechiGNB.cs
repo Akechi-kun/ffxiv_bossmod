@@ -170,50 +170,75 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Ake
     private bool Slow => SkSGCDLength >= 2.5f;
     private bool Fast => SkSGCDLength < 2.5f;
 
-    private AID BestFatedCircle => Unlocked(AID.FatedCircle) ? AID.FatedCircle : AID.BurstStrike;
+    private AID ContinueST(AID last, bool overcap) => last switch
+    {
+        AID.BrutalShell =>
+            overcap && Ammo == MaxCartridges && Unlocked(AID.BurstStrike) ? AID.BurstStrike
+            : Unlocked(AID.SolidBarrel) ? AID.SolidBarrel
+            : AID.KeenEdge,
+
+        AID.KeenEdge => Unlocked(AID.BrutalShell) ? AID.BrutalShell : AID.KeenEdge,
+        _ => AID.KeenEdge,
+    };
+    private AID ContinueAOE(AID last, bool overcap)
+        => overcap && Ammo == MaxCartridges ? (Unlocked(AID.FatedCircle) ? AID.FatedCircle : AID.BurstStrike)
+            : last == AID.DemonSlice ? (Unlocked(AID.DemonSlaughter) ? AID.DemonSlaughter : AID.DemonSlice)
+            : AID.DemonSlice;
+
+    private AID ContinueSTNoOvercap(AID last) => ContinueST(last, overcap: false);
+    private AID ContinueSTWithOvercap(AID last) => ContinueST(last, overcap: true);
+    private AID ContinueAOENoOvercap(AID last) => ContinueAOE(last, overcap: false);
+    private AID ContinueAOEWithOvercap(AID last) => ContinueAOE(last, overcap: true);
+
+    private AID Finish(bool overcap,
+        Func<AID, AID> continueWithOvercap,
+        Func<AID, AID> continueNoOvercap)
+    {
+        var gnash = ComboLastMove switch
+        {
+            AID.GnashingFang => AID.SavageClaw,
+            AID.SavageClaw => AID.WickedTalon,
+            AID.ReignOfBeasts => AID.NobleBlood,
+            AID.NobleBlood => AID.LionHeart,
+            _ => AID.None,
+        };
+        return gnash != AID.None ? gnash //finish gauge combos first
+            : overcap ? continueWithOvercap(ComboLastMove) //finish combo with overcap protection
+            : continueNoOvercap(ComboLastMove); //just finish combo
+    }
+    private AID STFinish(bool overcap) => Finish(overcap, ContinueSTWithOvercap, ContinueSTNoOvercap);
+    private AID AOEFinish(bool overcap) => Finish(overcap, ContinueAOEWithOvercap, ContinueAOENoOvercap);
+
+    //we dont care about finishing combos with these methods, so we just send it
+    private AID STBreak(bool overcap) => overcap ? ContinueSTWithOvercap(ComboLastMove) : ContinueSTNoOvercap(ComboLastMove);
+    private AID AOEBreak(bool overcap) => overcap ? ContinueAOEWithOvercap(ComboLastMove) : ContinueAOENoOvercap(ComboLastMove);
 
     private bool ShouldUsePotion(StrategyValues strategy) => strategy.Potion() switch
     {
         PotionStrategy.AlignWithBuffs => Player.InCombat && BFcd <= 4f,
-        PotionStrategy.AlignWithRaidBuffs => Player.InCombat && (RaidBuffsIn <= 5000 || RaidBuffsLeft > 0),
+        PotionStrategy.AlignWithRaidBuffs => Player.InCombat && RaidBuffsLeft > 0,
         PotionStrategy.Immediate => true,
         _ => false
     };
 
-    #region Priorities
-    private OGCDPriority CommonContPrio()
-    {
-        //considering that this is free dmg that is lost if you do literally anything else.. we should never drop this, regardless of clipping
-        //so we just convert to GCD and send immediately if we enter a window where we can no longer weave oGCDs
-        if (GCD < 0.5f)
-            return OGCDPriority.Max + 2002;
-
-        //second weave - add priority, but not more than Bloodfest & No Mercy
-        if (GCD is < 1.25f and >= 0.6f)
-            return OGCDPriority.Severe - 1;
-
-        //first weave - send whenever
-        return OGCDPriority.Low;
-
-    }
     private OGCDPriority ContinuationPrio()
     {
+        var prio = DontLoseAbilityPrio(200, 749);
         //standard procs
         if (HasRip || HasTear || HasGouge)
-            return CommonContPrio();
+            return prio;
 
         //these require some tinkering because of the synergy with No Mercy & SkS
         if (HasBlast || HasRaze)
         {
             //if slow, send after NM - else just send it
-            return Slow ? CommonContPrio() : CommonContPrio() + 500;
+            return Slow ? prio : prio + 500;
         }
         return OGCDPriority.None;
     }
     private OGCDPriority SkSPrio(OGCDPriority slow, OGCDPriority notslow) => Slow ? slow : Fast ? notslow : OGCDPriority.None;
     private OGCDPriority BowPrio => SkSPrio(OGCDPriority.High, OGCDPriority.ModeratelyHigh);
     private OGCDPriority ZonePrio => SkSPrio(OGCDPriority.ModeratelyHigh, OGCDPriority.High);
-    #endregion
 
     public override void Execution(StrategyValues strategy, Enemy? primaryTarget)
     {
@@ -321,7 +346,7 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Ake
                     var gfMinimum = gfTarget != null && In3y(gfTarget) && Ammo >= 1 && Cooldown(AID.GnashingFang) < 30.6f && GunComboStep == 0;
                     var st = gfMinimum && !TargetsInAOECircle(5f, 4);
                     var burst = st && HasNM && NMstatus >= 12;
-                    var filler = st && NMcd > 7 && ComboTimer > SkSGCDLength * 4;
+                    var filler = st && NMcd > 7 && ActualComboTimer > SkSGCDLength * 4;
                     var overcap = st && Cooldown(AID.GnashingFang) < 0.6f && NMcd > 7;
                     var (gfCondition, gfAction, gfPrio) = gfStrat switch
                     {
@@ -497,93 +522,34 @@ public sealed class AkechiGNB(RotationModuleManager manager, Actor player) : Ake
         if (ShouldUsePotion(strategy))
             Hints.ActionsToExecute.Push(ActionDefinitions.IDPotionStr, Player, ActionQueue.Priority.VeryHigh + (int)OGCDPriority.VeryCritical, 0, GCD - 0.9f);
 
-        //ST & AOE
-        var stFinishNoOvercap = ComboLastMove switch
-        {
-            AID.GnashingFang => AID.SavageClaw,
-            AID.SavageClaw => AID.WickedTalon,
-            AID.ReignOfBeasts => AID.NobleBlood,
-            AID.NobleBlood => AID.LionHeart,
-            AID.DemonSlice => Unlocked(AID.DemonSlaughter) ? AID.DemonSlaughter : AID.KeenEdge,
-            AID.BrutalShell => Unlocked(AID.SolidBarrel) ? AID.SolidBarrel : AID.KeenEdge,
-            AID.KeenEdge => Unlocked(AID.BrutalShell) ? AID.BrutalShell : AID.KeenEdge,
-            _ => AID.KeenEdge,
-        };
-        var stFinishWithOvercap = ComboLastMove switch
-        {
-            AID.GnashingFang => AID.SavageClaw,
-            AID.SavageClaw => AID.WickedTalon,
-            AID.ReignOfBeasts => AID.NobleBlood,
-            AID.NobleBlood => AID.LionHeart,
-            AID.FatedCircle => AID.DemonSlaughter,
-            AID.DemonSlice => Ammo == MaxCartridges ? BestFatedCircle : Unlocked(AID.DemonSlaughter) ? AID.DemonSlaughter : AID.KeenEdge,
-            AID.BrutalShell => Ammo == MaxCartridges && Unlocked(AID.BurstStrike) ? AID.BurstStrike : Unlocked(AID.SolidBarrel) ? AID.SolidBarrel : AID.KeenEdge,
-            AID.KeenEdge => Unlocked(AID.BrutalShell) ? AID.BrutalShell : AID.KeenEdge,
-            _ => AID.KeenEdge,
-        };
-        var stBreakNoOvercap = ComboLastMove switch
-        {
-            AID.BrutalShell => Unlocked(AID.SolidBarrel) ? AID.SolidBarrel : AID.KeenEdge,
-            AID.KeenEdge => Unlocked(AID.BrutalShell) ? AID.BrutalShell : AID.KeenEdge,
-            _ => AID.KeenEdge,
-        };
-        var stBreakWithOvercap = ComboLastMove switch
-        {
-            AID.BrutalShell => Ammo == MaxCartridges ? (Unlocked(AID.BurstStrike) ? AID.BurstStrike : Unlocked(AID.SolidBarrel) ? AID.SolidBarrel : AID.KeenEdge) : AID.KeenEdge,
-            AID.KeenEdge => Unlocked(AID.BrutalShell) ? AID.BrutalShell : AID.KeenEdge,
-            _ => AID.KeenEdge,
-        };
-        var aoeFinishNoOvercap = ComboLastMove switch
-        {
-            AID.GnashingFang => AID.SavageClaw,
-            AID.SavageClaw => AID.WickedTalon,
-            AID.ReignOfBeasts => AID.NobleBlood,
-            AID.NobleBlood => AID.LionHeart,
-            AID.BrutalShell => Unlocked(AID.SolidBarrel) ? AID.SolidBarrel : AID.DemonSlice,
-            AID.KeenEdge => Unlocked(AID.BrutalShell) ? AID.BrutalShell : AID.DemonSlice,
-            AID.DemonSlice => Unlocked(AID.DemonSlaughter) ? AID.DemonSlaughter : AID.DemonSlice,
-            _ => AID.DemonSlice,
-        };
-        var aoeFinishWithOvercap = ComboLastMove switch
-        {
-            AID.GnashingFang => AID.SavageClaw,
-            AID.SavageClaw => AID.WickedTalon,
-            AID.ReignOfBeasts => AID.NobleBlood,
-            AID.NobleBlood => AID.LionHeart,
-            AID.BurstStrike => AID.SolidBarrel,
-            AID.BrutalShell => Ammo == MaxCartridges ? (Unlocked(AID.BurstStrike) ? AID.BurstStrike : Unlocked(AID.SolidBarrel) ? AID.SolidBarrel : AID.DemonSlice) : AID.DemonSlice,
-            AID.KeenEdge => Unlocked(AID.BrutalShell) ? AID.BrutalShell : AID.DemonSlice,
-            AID.DemonSlice => Ammo == MaxCartridges ? BestFatedCircle : Unlocked(AID.DemonSlaughter) ? AID.DemonSlaughter : AID.DemonSlice,
-            _ => AID.DemonSlice,
-        };
-        var justusedST = ComboLastMove is AID.KeenEdge or AID.BrutalShell;
+        var justusedST =
+            ComboLastMove is
+                AID.KeenEdge or AID.BrutalShell or //st
+                AID.GnashingFang or AID.SavageClaw or AID.ReignOfBeasts or AID.NobleBlood; //gauge
         var justusedAOE = ComboLastMove is AID.DemonSlice;
-        var aoeBreakNoOvercap = (ComboLastMove is AID.DemonSlice && Unlocked(AID.DemonSlaughter)) ? AID.DemonSlaughter : AID.DemonSlice;
-        var aoeBreakWithOvercap = ComboLastMove is AID.DemonSlice ? (Ammo == MaxCartridges ? BestFatedCircle : Unlocked(AID.DemonSlaughter) ? AID.DemonSlaughter : AID.DemonSlice) : AID.DemonSlice;
         var stTarget = SingleTargetChoice(mainTarget, aoe);
         var autoTarget = !WantAOE || justusedST ? stTarget : Player;
         var (aoeAction, aoeTarget) = aoeStrat switch
         {
-            AOEStrategy.AutoFinishWithOvercap => (WantAOE ? aoeFinishWithOvercap : stFinishWithOvercap, autoTarget),
-            AOEStrategy.AutoFinishWithoutOvercap => (WantAOE ? aoeFinishNoOvercap : stFinishNoOvercap, autoTarget),
-            AOEStrategy.ForceSTFinishWithOvercap => (stFinishWithOvercap, justusedAOE ? Player : stTarget),
-            AOEStrategy.ForceSTFinishWithoutOvercap => (stFinishNoOvercap, justusedAOE ? Player : stTarget),
-            AOEStrategy.ForceAOEFinishWithOvercap => (aoeFinishWithOvercap, justusedST ? stTarget : Player),
-            AOEStrategy.ForceAOEFinishWithoutOvercap => (aoeFinishNoOvercap, justusedST ? stTarget : Player),
-            AOEStrategy.AutoBreakWithOvercap => (WantAOE ? aoeBreakWithOvercap : stBreakWithOvercap, autoTarget),
-            AOEStrategy.AutoBreakWithoutOvercap => (WantAOE ? aoeBreakNoOvercap : stBreakNoOvercap, autoTarget),
-            AOEStrategy.ForceSTBreakWithOvercap => (stBreakWithOvercap, stTarget),
-            AOEStrategy.ForceSTBreakWithoutOvercap => (stBreakNoOvercap, stTarget),
-            AOEStrategy.ForceAOEBreakWithOvercap => (aoeBreakWithOvercap, Player),
-            AOEStrategy.ForceAOEBreakWithoutOvercap => (aoeBreakNoOvercap, Player),
-            _ => (AID.None, null)
+            AOEStrategy.AutoFinishWithOvercap => (WantAOE ? AOEFinish(true) : STFinish(true), autoTarget),
+            AOEStrategy.AutoFinishWithoutOvercap => (WantAOE ? AOEFinish(false) : STFinish(false), autoTarget),
+            AOEStrategy.AutoBreakWithOvercap => (WantAOE ? AOEBreak(true) : STBreak(true), autoTarget),
+            AOEStrategy.AutoBreakWithoutOvercap => (WantAOE ? AOEBreak(false) : STBreak(false), autoTarget),
+            AOEStrategy.ForceSTFinishWithOvercap => (STFinish(true), justusedAOE ? Player : stTarget),
+            AOEStrategy.ForceSTFinishWithoutOvercap => (STFinish(false), justusedAOE ? Player : stTarget),
+            AOEStrategy.ForceAOEFinishWithOvercap => (AOEFinish(true), justusedST ? stTarget : Player),
+            AOEStrategy.ForceAOEFinishWithoutOvercap => (AOEFinish(false), justusedST ? stTarget : Player),
+            AOEStrategy.ForceSTBreakWithOvercap => (STBreak(true), stTarget),
+            AOEStrategy.ForceSTBreakWithoutOvercap => (STBreak(false), stTarget),
+            AOEStrategy.ForceAOEBreakWithOvercap => (AOEBreak(true), Player),
+            AOEStrategy.ForceAOEBreakWithoutOvercap => (AOEBreak(false), Player),
+            _ => (AID.None, null),
         };
+
         if ((WantAOE ? In5y(aoeTarget) : In3y(aoeTarget)) && aoeTarget != null)
             QueueGCD(aoeAction, aoeTarget, GCDPriority.Low);
 
-        #region AI
         GetNextTarget(strategy, ref primaryTarget, 3);
         GoalZoneCombined(strategy, 3, Hints.GoalAOECircle(5), AID.DemonSlice, 2, maximumActionRange: 20);
-        #endregion
     }
 }
