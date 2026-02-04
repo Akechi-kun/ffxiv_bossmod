@@ -8,6 +8,10 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
     public abstract bool Visible { get; set; }
     protected Replay Replay;
     protected Replay.Encounter Encounter;
+    protected readonly ColorConfig _colors = Service.Config.Get<ColorConfig>();
+    protected Color Yellow = new(0xFF6AB0B8);
+    protected Color Red = new(0xFF202080);
+    protected Color Grey = new(0xFF7A7A7A);
 
     public static ColumnPlayerGauge? Create(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player, Class playerClass) => playerClass switch
     {
@@ -20,11 +24,11 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
         //Class.AST => new ColumnPlayerGaugeAST(timeline, tree, phaseBranches, replay, enc, player),
         //Class.SGE => new ColumnPlayerGaugeSGE(timeline, tree, phaseBranches, replay, enc, player),
         Class.MNK => new ColumnPlayerGaugeMNK(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.DRG => new ColumnPlayerGaugeDRG(timeline, tree, phaseBranches, replay, enc, player),
+        Class.DRG => new ColumnPlayerGaugeDRG(timeline, tree, phaseBranches, replay, enc, player),
         //Class.NIN => new ColumnPlayerGaugeNIN(timeline, tree, phaseBranches, replay, enc, player),
         Class.SAM => new ColumnPlayerGaugeSAM(timeline, tree, phaseBranches, replay, enc, player),
         //Class.RPR => new ColumnPlayerGaugeRPR(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.VPR => new ColumnPlayerGaugeVPR(timeline, tree, phaseBranches, replay, enc, player),
+        Class.VPR => new ColumnPlayerGaugeVPR(timeline, tree, phaseBranches, replay, enc, player),
         Class.BRD => new ColumnPlayerGaugeBRD(timeline, tree, phaseBranches, replay, enc, player),
         Class.MCH => new ColumnPlayerGaugeMCH(timeline, tree, phaseBranches, replay, enc, player),
         //Class.DNC => new ColumnPlayerGaugeDNC(timeline, tree, phaseBranches, replay, enc, player),
@@ -50,6 +54,40 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
         var minTime = MinTime();
         foreach (var frame in Replay.Ops.SkipWhile(op => op.Timestamp < minTime).TakeWhile(op => op.Timestamp <= Encounter.Time.End).OfType<WorldState.OpFrameStart>())
             yield return (frame.Timestamp, ClientState.GetGauge<T>(frame.GaugePayload));
+    }
+
+    protected void AddStackRange(
+        DateTime from, DateTime to,
+        ColumnGenericHistory selection,
+        int curStacks, int maxStacks, float increments,
+        Color? emptyColor = null, Color? anyColor = null, Color? fullColor = null,
+        bool otherCondition = true)
+    {
+        if (otherCondition && to > from)
+        {
+            var color =
+                curStacks == 0 ? (emptyColor ?? Grey) :
+                curStacks >= maxStacks ? (fullColor ?? Red) :
+                (anyColor ?? Yellow);
+            selection.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{curStacks} stack{(curStacks == 1 ? "" : "s")}", color.ABGR, curStacks * increments);
+        }
+    }
+
+    // used for adding Gauge
+    protected void AddGaugeRange(
+        DateTime from, DateTime to,
+        ColumnGenericHistory selection,
+        int curGauge, int maxGauge = 100,
+        Color? emptyColor = null, Color? anyColor = null, Color? fullColor = null)
+    {
+        if (to > from)
+        {
+            var color =
+                curGauge == 0 ? (emptyColor ?? Grey) :
+                curGauge >= maxGauge ? (fullColor ?? Red) :
+                (anyColor ?? Yellow);
+            selection.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{curGauge} gauge", color.ABGR, curGauge < 10 ? curGauge * 0.02f : curGauge * 0.01f);
+        }
     }
 }
 #endregion
@@ -107,19 +145,18 @@ public class ColumnPlayerGaugeWAR : ColumnPlayerGauge
 #region GNB
 public class ColumnPlayerGaugeGNB : ColumnPlayerGauge
 {
-    private readonly ColumnGenericHistory _gauge;
-    private readonly ColorConfig _colors = Service.Config.Get<ColorConfig>();
+    private readonly ColumnGenericHistory _carts;
 
     public override bool Visible
     {
-        get => _gauge.Width > 0;
-        set => _gauge.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
+        get => _carts.Width > 0;
+        set => _carts.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
     }
 
     public ColumnPlayerGaugeGNB(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
         : base(timeline, tree, phaseBranches, replay, enc, player)
     {
-        _gauge = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _carts = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
         var prevGauge = 0;
         var prevTime = MinTime();
@@ -128,22 +165,15 @@ public class ColumnPlayerGaugeGNB : ColumnPlayerGauge
             var count = gauge.Ammo;
             if (count != prevGauge)
             {
-                AddGaugeRange(prevTime, time, prevGauge);
+                AddCartRange(prevTime, time, prevGauge);
                 prevGauge = count;
                 prevTime = time;
             }
         }
-        AddGaugeRange(prevTime, enc.Time.End, prevGauge);
+        AddCartRange(prevTime, enc.Time.End, prevGauge);
     }
 
-    private void AddGaugeRange(DateTime from, DateTime to, int gauge)
-    {
-        if (to > from)
-        {
-            var color = (gauge == 3) ? _colors.PlannerWindow[2] : (gauge == 2) ? new(0xFF90E0FF) : (gauge == 1) ? new(0xFFD6F5FF) : new(0x80808080);
-            _gauge.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{gauge} Cartridge{(gauge == 1 ? "" : "s")}", color.ABGR, gauge * 0.31f);
-        }
-    }
+    private void AddCartRange(DateTime from, DateTime to, int carts) => AddStackRange(from, to, _carts, carts, 3, 0.31f);
 }
 #endregion
 
@@ -166,7 +196,6 @@ public class ColumnPlayerGaugeGNB : ColumnPlayerGauge
 #region MNK
 public class ColumnPlayerGaugeMNK : ColumnPlayerGauge
 {
-    private readonly ColorConfig _colors = Service.Config.Get<ColorConfig>();
     private readonly ColumnGenericHistory _chakras;
     private readonly ColumnGenericHistory _beast1;
     private readonly ColumnGenericHistory _beast2;
@@ -290,7 +319,38 @@ public class ColumnPlayerGaugeMNK : ColumnPlayerGauge
 #endregion
 
 #region DRG
-// TODO: add DRG gauge
+public class ColumnPlayerGaugeDRG : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _focus;
+
+    public override bool Visible
+    {
+        get => _focus.Width > 0;
+        set => _focus.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
+    }
+
+    public ColumnPlayerGaugeDRG(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _focus = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevGauge = 0;
+        var prevTime = MinTime();
+        foreach (var (time, gauge) in EnumerateGauge<DragoonGauge>())
+        {
+            var count = gauge.FirstmindsFocusCount;
+            if (count != prevGauge)
+            {
+                AddCartRange(prevTime, time, prevGauge);
+                prevGauge = count;
+                prevTime = time;
+            }
+        }
+        AddCartRange(prevTime, enc.Time.End, prevGauge);
+    }
+
+    private void AddCartRange(DateTime from, DateTime to, int focus) => AddStackRange(from, to, _focus, focus, 2, 0.49f);
+}
 #endregion
 
 #region NIN
@@ -303,7 +363,6 @@ public class ColumnPlayerGaugeSAM : ColumnPlayerGauge
     private readonly ColumnGenericHistory _kenki;
     private readonly ColumnGenericHistory _sen;
     private readonly ColumnGenericHistory _meditation;
-    private readonly ColorConfig _colors = Service.Config.Get<ColorConfig>();
 
     public override bool Visible
     {
@@ -406,13 +465,58 @@ public class ColumnPlayerGaugeSAM : ColumnPlayerGauge
 #endregion
 
 #region VPR
-// TODO: add VPR gauge
+public class ColumnPlayerGaugeVPR : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _coils;
+    private readonly ColumnGenericHistory _offerings;
+
+    public override bool Visible
+    {
+        get => _coils.Width > 0 || _offerings.Width > 0;
+        set => _coils.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
+    }
+
+    public ColumnPlayerGaugeVPR(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _coils = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _offerings = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevCoil = 0;
+        var prevOffering = 0;
+        var prevCoilTime = MinTime();
+        var prevOfferingTime = MinTime();
+        foreach (var (time, gauge) in EnumerateGauge<ViperGauge>())
+        {
+            var coil = gauge.RattlingCoilStacks;
+            if (coil != prevCoil)
+            {
+                AddCoilRange(prevCoilTime, time, prevCoil);
+                prevCoil = coil;
+                prevCoilTime = time;
+            }
+
+            var offering = gauge.SerpentOffering;
+            if (offering != prevOffering)
+            {
+                AddOfferingsRange(prevOfferingTime, time, prevOffering);
+                prevOffering = offering;
+                prevOfferingTime = time;
+            }
+        }
+
+        AddCoilRange(prevCoilTime, enc.Time.End, prevCoil);
+        AddOfferingsRange(prevOfferingTime, enc.Time.End, prevOffering);
+    }
+
+    private void AddCoilRange(DateTime from, DateTime to, int coils) => AddStackRange(from, to, _coils, coils, 3, 0.31f, anyColor: new(0xFF3A7AC8));
+    private void AddOfferingsRange(DateTime from, DateTime to, int offerings) => AddGaugeRange(from, to, _offerings, offerings, anyColor: new(0xFFE8CFA8));
+}
 #endregion
 
 #region BRD
 public class ColumnPlayerGaugeBRD : ColumnPlayerGauge
 {
-    private readonly ColorConfig _colors = Service.Config.Get<ColorConfig>();
     private readonly ColumnGenericHistory _songs;
     private readonly ColumnGenericHistory _soul;
 
@@ -488,7 +592,6 @@ public class ColumnPlayerGaugeBRD : ColumnPlayerGauge
 #region MCH
 public class ColumnPlayerGaugeMCH : ColumnPlayerGauge
 {
-    private readonly ColorConfig _colors = Service.Config.Get<ColorConfig>();
     private readonly ColumnGenericHistory _heat;
     private readonly ColumnGenericHistory _battery;
 
