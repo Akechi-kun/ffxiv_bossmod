@@ -56,39 +56,31 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
             yield return (frame.Timestamp, ClientState.GetGauge<T>(frame.GaugePayload));
     }
 
-    protected void AddStackRange(
+    protected void AddRange(
         DateTime from, DateTime to,
-        ColumnGenericHistory selection,
-        int curStacks, int maxStacks, float increments,
-        Color? emptyColor = null, Color? anyColor = null, Color? fullColor = null,
-        bool otherCondition = true)
+        ColumnGenericHistory cgh,
+        int curValue, int maxValue,
+        string label,
+        Func<int, float> height,
+        bool otherCondition = true,
+        Color? anyColor = null, Color? fullColor = null)
     {
-        if (otherCondition && to > from)
+        var color =
+            curValue == 0 ? Grey :
+            curValue >= maxValue ? (fullColor ?? Red) :
+            (anyColor ?? Yellow);
+
+        if (otherCondition && from > to)
         {
-            var color =
-                curStacks == 0 ? (emptyColor ?? Grey) :
-                curStacks >= maxStacks ? (fullColor ?? Red) :
-                (anyColor ?? Yellow);
-            selection.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{curStacks} stack{(curStacks == 1 ? "" : "s")}", color.ABGR, curStacks * increments);
+            cgh.AddHistoryEntryRange(Encounter.Time.Start, from, to, label, color.ABGR, height(curValue));
         }
     }
 
-    // used for adding Gauge
-    protected void AddGaugeRange(
-        DateTime from, DateTime to,
-        ColumnGenericHistory selection,
-        int curGauge, int maxGauge = 100,
-        Color? emptyColor = null, Color? anyColor = null, Color? fullColor = null)
-    {
-        if (to > from)
-        {
-            var color =
-                curGauge == 0 ? (emptyColor ?? Grey) :
-                curGauge >= maxGauge ? (fullColor ?? Red) :
-                (anyColor ?? Yellow);
-            selection.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{curGauge} gauge", color.ABGR, curGauge < 10 ? curGauge * 0.02f : curGauge * 0.01f);
-        }
-    }
+    protected void AddCountRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curCounts, int maxCounts, float increments, bool otherCondition = true, string labelName = "Count", Color? anyColor = null, Color? fullColor = null)
+        => AddRange(from, to, cgh, curCounts, maxCounts, $"{labelName}: {curCounts}", v => v * increments, otherCondition, anyColor, fullColor);
+
+    protected void AddGaugeRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curGauge, int maxGauge = 100, bool otherCondition = true, string labelName = "Gauge", Color? anyColor = null, Color? fullColor = null)
+        => AddRange(from, to, cgh, curGauge, maxGauge, $"{labelName}: {curGauge}", v => v < 10 ? v * 0.02f : v * 0.01f, otherCondition, anyColor, fullColor);
 }
 #endregion
 
@@ -173,7 +165,7 @@ public class ColumnPlayerGaugeGNB : ColumnPlayerGauge
         AddCartRange(prevTime, enc.Time.End, prevGauge);
     }
 
-    private void AddCartRange(DateTime from, DateTime to, int carts) => AddStackRange(from, to, _carts, carts, 3, 0.31f);
+    private void AddCartRange(DateTime from, DateTime to, int carts) => AddCountRange(from, to, _carts, carts, 3, 0.31f, labelName: "Cartridges:");
 }
 #endregion
 
@@ -341,15 +333,15 @@ public class ColumnPlayerGaugeDRG : ColumnPlayerGauge
             var count = gauge.FirstmindsFocusCount;
             if (count != prevGauge)
             {
-                AddCartRange(prevTime, time, prevGauge);
+                AddFocusRange(prevTime, time, prevGauge);
                 prevGauge = count;
                 prevTime = time;
             }
         }
-        AddCartRange(prevTime, enc.Time.End, prevGauge);
+        AddFocusRange(prevTime, enc.Time.End, prevGauge);
     }
 
-    private void AddCartRange(DateTime from, DateTime to, int focus) => AddStackRange(from, to, _focus, focus, 2, 0.49f);
+    private void AddFocusRange(DateTime from, DateTime to, int focus) => AddCountRange(from, to, _focus, focus, 2, 0.49f, labelName: "Firstminds' Focus");
 }
 #endregion
 
@@ -509,7 +501,7 @@ public class ColumnPlayerGaugeVPR : ColumnPlayerGauge
         AddOfferingsRange(prevOfferingTime, enc.Time.End, prevOffering);
     }
 
-    private void AddCoilRange(DateTime from, DateTime to, int coils) => AddStackRange(from, to, _coils, coils, 3, 0.31f, anyColor: new(0xFF3A7AC8));
+    private void AddCoilRange(DateTime from, DateTime to, int coils) => AddCountRange(from, to, _coils, coils, 3, 0.31f, anyColor: new(0xFF3A7AC8), labelName: "Rattling Coils");
     private void AddOfferingsRange(DateTime from, DateTime to, int offerings) => AddGaugeRange(from, to, _offerings, offerings, anyColor: new(0xFFE8CFA8));
 }
 #endregion
