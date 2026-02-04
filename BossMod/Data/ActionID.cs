@@ -48,9 +48,8 @@ public readonly record struct ActionID(uint Raw)
     {
         ActionType.Spell => Service.LuminaRow<Lumina.Excel.Sheets.Action>(ID)?.Name.ToString() ?? "<not found>",
         ActionType.Item => $"{Service.LuminaRow<Lumina.Excel.Sheets.Item>(ID % 1000000)?.Name ?? "<not found>"}{(ID > 1000000 ? " (HQ)" : "")}", // see Dalamud.Game.Text.SeStringHandling.Payloads.GetAdjustedId; TODO: id > 500000 is "collectible", >2000000 is "event" ??
-        ActionType.BozjaHolsterSlot0 or ActionType.BozjaHolsterSlot1 => Service.LuminaRow<Lumina.Excel.Sheets.MYCTemporaryItem>(ID)?.Action.ValueNullable?.Name.ToString() ?? "<not found>",
+        ActionType.BozjaHolsterSlot0 or ActionType.BozjaHolsterSlot1 => $"{(BozjaHolsterID)ID}",
         ActionType.PetAction => Service.LuminaRow<Lumina.Excel.Sheets.PetAction>(ID)?.Name.ToString() ?? "<not found>",
-        ActionType.Pomander => Service.LuminaRow<Lumina.Excel.Sheets.DeepDungeonItem>(ID)?.Name.ToString() ?? "<not found>",
         _ => ""
     };
 
@@ -58,7 +57,7 @@ public readonly record struct ActionID(uint Raw)
     public readonly uint SpellId() => Type switch
     {
         ActionType.Spell => ID,
-        ActionType.Item => Service.LuminaRow<Lumina.Excel.Sheets.Item>(ID % 500000)?.ItemAction.ValueNullable?.Type ?? 0,
+        ActionType.Item => Service.LuminaRow<Lumina.Excel.Sheets.Item>(ID % 500000)?.ItemAction.ValueNullable?.Action.RowId ?? 0,
         ActionType.KeyItem => Service.LuminaRow<Lumina.Excel.Sheets.EventItem>(ID)?.Action.RowId ?? 0,
         ActionType.Ability => 2, // 'interaction'
         ActionType.General => Service.LuminaRow<Lumina.Excel.Sheets.GeneralAction>(ID)?.Action.RowId ?? 0, // note: duty action 1/2 (26/27) use special code

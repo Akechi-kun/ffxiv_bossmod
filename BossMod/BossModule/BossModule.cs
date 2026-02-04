@@ -119,6 +119,7 @@ public abstract class BossModule : IDisposable
             WorldState.Actors.EventObjectStateChange.Subscribe(OnActorEState),
             WorldState.Actors.EventObjectAnimation.Subscribe(OnActorEAnim),
             WorldState.Actors.PlayActionTimelineEvent.Subscribe(OnActorPlayActionTimelineEvent),
+            WorldState.Actors.PlayActionTimelineSync.Subscribe(OnActorPlayActionTimelineSync),
             WorldState.Actors.EventNpcYell.Subscribe(OnActorNpcYell),
             WorldState.Actors.ModelStateChanged.Subscribe(OnActorModelStateChange),
             WorldState.MapEffect.Subscribe(OnMapEffect),
@@ -201,6 +202,8 @@ public abstract class BossModule : IDisposable
             Arena.CardinalNames();
         if (WindowConfig.ShowWaymarks)
             DrawWaymarks();
+        if (WindowConfig.ShowSigns)
+            DrawSigns();
 
         // draw non-player alive party members
         DrawPartyMembers(pcSlot, pc);
@@ -343,6 +346,26 @@ public abstract class BossModule : IDisposable
             if (WindowConfig.ShowOutlinesAndShadows)
                 Arena.TextWorld(new(pos.Value.XZ()), text, 0xFF000000, 25);
             Arena.TextWorld(new(pos.Value.XZ()), text, color, 22);
+        }
+    }
+
+    private void DrawSigns()
+    {
+        for (var i = Sign.Attack1; i < Sign.Count; i++)
+        {
+            var actor = WorldState.Actors.Find(WorldState.Waymarks[i]);
+            if (actor == null)
+                continue;
+
+            var iconId = i.IconId();
+            if (Service.Texture.TryGetFromGameIcon(iconId, out var tex))
+            {
+                var wrap = tex.GetWrapOrEmpty();
+                var pos = Arena.WorldPositionToScreenPosition(actor.Position);
+                var scale = WindowConfig.ArenaScale * 24;
+
+                ImGui.GetWindowDrawList().AddImage(wrap.Handle, pos - new Vector2(scale), pos);
+            }
         }
     }
 
@@ -512,6 +535,12 @@ public abstract class BossModule : IDisposable
     {
         foreach (var comp in _components)
             comp.OnActorPlayActionTimelineEvent(actor, id);
+    }
+
+    private void OnActorPlayActionTimelineSync(Actor actor, List<(ulong, ushort)> events)
+    {
+        foreach (var comp in _components)
+            comp.OnActorPlayActionTimelineSync(actor, events);
     }
 
     private void OnActorNpcYell(Actor actor, ushort id)

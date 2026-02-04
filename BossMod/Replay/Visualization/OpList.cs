@@ -117,12 +117,15 @@ class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Info? modu
             ActorState.OpEffectResult => false,
             PartyState.OpLimitBreakChange => false,
             ClientState.OpActionRequest => false,
+            ClientState.OpForcedMovementDirectionChange => false,
+            ClientState.OpActiveCompanionChange => false,
             //ClientState.OpActionReject => false,
             ClientState.OpProcTimersChange => false,
             ClientState.OpAnimationLockChange => false,
             ClientState.OpComboChange => false,
             ClientState.OpCooldown => false,
             ClientState.OpHateChange => false,
+            ActorState.OpIncomingEffect => false,
             NetworkState.OpServerIPC => false,
             _ => true
         };
@@ -164,6 +167,7 @@ class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Info? modu
             ActorState.OpEventObjectStateChange op => $"EObjState: {ActorString(op.InstanceID, op.Timestamp)} = {op.State:X4}",
             ActorState.OpEventObjectAnimation op => $"EObjAnim: {ActorString(op.InstanceID, op.Timestamp)} = {((uint)op.Param1 << 16) | op.Param2:X8}",
             ActorState.OpPlayActionTimelineEvent op => $"Play action timeline: {ActorString(op.InstanceID, op.Timestamp)} = {op.ActionTimelineID:X4}",
+            ActorState.OpPlayActionTimelineSync op => $"Play action timeline multi: {ActorString(op.InstanceID, op.Timestamp)}",
             ActorState.OpEventNpcYell op => $"Yell: {ActorString(op.InstanceID, op.Timestamp)} = {op.Message} '{Service.LuminaRow<Lumina.Excel.Sheets.NpcYell>(op.Message)?.Text}'",
             ClientState.OpDutyActionsChange op => $"Player duty actions change: {string.Join(", ", op.Slots)}",
             ClientState.OpBozjaHolsterChange op => $"Player bozja holster change: {string.Join(", ", op.Contents.Select(e => $"{e.count}x {e.entry}"))}",
@@ -172,12 +176,13 @@ class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Info? modu
             ClientState.OpClassJobLevelsChange op => $"Player levels: {string.Join(", ", op.Values)}",
             ClientState.OpActiveFateChange op => $"FATE: {op.Value.ID} '{Service.LuminaRow<Lumina.Excel.Sheets.Fate>(op.Value.ID)?.Name}' {op.Value.Progress}%",
             ClientState.OpActivePetChange op => $"Player pet: {ActorString(op.Value.InstanceID, op.Timestamp)}",
-            ClientState.OpInventoryChange op => $"Item quantity: {op.ItemId % 500000} '{Service.LuminaRow<Lumina.Excel.Sheets.Item>(op.ItemId % 500000)?.Name}' (hq={op.ItemId > 1000000}) x{op.Quantity}",
+            ClientState.OpInventoryChange op => ItemString(op),
             PartyState.OpModify op => $"Party slot {op.Slot}: {op.Member.InstanceId:X8} {op.Member.Name}",
             WorldState.OpMapEffect op => $"MapEffect: {op.Index:X2} {op.State:X8}",
             WorldState.OpLegacyMapEffect op => $"MapEffect (legacy): seq={op.Sequence} param={op.Param} data={string.Join(" ", op.Data.Select(d => d.ToString("X2")))}",
             WorldState.OpSystemLogMessage op => $"LogMessage {op.MessageId}: '{Service.LuminaRow<Lumina.Excel.Sheets.LogMessage>(op.MessageId)?.Text}' [{string.Join(", ", op.Args)}]",
             WorldState.OpZoneChange op => $"Zone change: {op.Zone} ({Service.LuminaRow<Lumina.Excel.Sheets.TerritoryType>(op.Zone)?.PlaceName.Value.Name}) / {op.CFCID} ({(op.CFCID > 0 ? Service.LuminaRow<Lumina.Excel.Sheets.ContentFinderCondition>(op.CFCID)?.Name : "n/a")})",
+            WaymarkState.OpSignChange op => op.Target == 0 ? $"Sign: {op.ID} cleared" : $"Sign: {op.ID} on {ActorString(op.Target, op.Timestamp)}",
             _ => DumpOp(o)
         };
     }
@@ -187,6 +192,7 @@ class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Info? modu
         return o switch
         {
             ActorState.OpCastEvent op => op.Value.Targets.Count != 0 ? tree => DrawEventCast(tree, op) : null,
+            ActorState.OpPlayActionTimelineSync op => tree => DrawActionTimelineSync(tree, op),
             _ => null
         };
     }
@@ -208,6 +214,11 @@ class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Info? modu
                 tree.LeafNodes(t.Effects, ReplayUtils.ActionEffectString);
             }
         }
+    }
+
+    private void DrawActionTimelineSync(UITree tree, ActorState.OpPlayActionTimelineSync op)
+    {
+        tree.LeafNodes(op.Actions, iii => $"{ActorString(iii.Item1, op.Timestamp)}: {iii.Item2:X4}");
     }
 
     private Action? OpContextMenu(WorldState.Operation o)
@@ -309,5 +320,13 @@ class OpList(Replay replay, Replay.Encounter? enc, BossModuleRegistry.Info? modu
                 yield return "lose";
         }
         return string.Join("; ", FindStatuses(instanceID, index, timestamp).Select(s => $"{string.Join("/", Classify(s))} {Utils.StatusString(s.ID)} ({ModuleInfo?.StatusIDType?.GetEnumName(s.ID)}) ({s.StartingExtra:X}), {s.InitialDuration:f2}s / {s.Time}, from {ActorString(s.Source, timestamp)}"));
+    }
+
+    private string ItemString(ClientState.OpInventoryChange op)
+    {
+        if (op.ItemId > 2000000)
+            return $"Item quantity: {op.ItemId} '{Service.LuminaRow<Lumina.Excel.Sheets.EventItem>(op.ItemId)?.Name}' x{op.Quantity}";
+
+        return $"Item quantity: {op.ItemId % 500000} '{Service.LuminaRow<Lumina.Excel.Sheets.Item>(op.ItemId % 500000)?.Name}' (hq={op.ItemId > 1000000}) x{op.Quantity}";
     }
 }

@@ -140,10 +140,11 @@ public static class ActorEnumeration
 
     // find closest actor to point
     public static Actor? Closest(this IEnumerable<Actor> range, WPos origin) => range.MinBy(a => (a.Position - origin).LengthSq());
-    public static (int, Actor) Closest(this IEnumerable<(int, Actor)> range, WPos origin) => range.MinBy(ia => (ia.Item2.Position - origin).LengthSq());
+    public static (int, Actor?) Closest(this IEnumerable<(int, Actor)> range, WPos origin) => range.MinBy(ia => (ia.Item2.Position - origin).LengthSq());
 
     // find farthest actor from point
     public static Actor? Farthest(this IEnumerable<Actor> range, WPos origin) => range.MaxBy(a => (a.Position - origin).LengthSq());
+    public static (int, Actor?) Farthest(this IEnumerable<(int, Actor)> range, WPos origin) => range.MaxBy(a => (a.Item2.Position - origin).LengthSq());
 
     // count num actors matching and not matching a condition
     public static (int match, int mismatch) CountByCondition(this IEnumerable<Actor> range, Func<Actor, bool> condition)
@@ -173,4 +174,31 @@ public static class ActorEnumeration
             sum /= count;
         return sum.ToWPos();
     }
+
+    public static IEnumerable<(int, Actor)> ClockOrder(this IEnumerable<(int, Actor)> range, Actor starting, WPos center, bool counterclockwise = false)
+    {
+        var startingAngle = (starting.Position - center).ToAngle();
+
+        return counterclockwise
+            ? range.OrderBy(r =>
+            {
+                var (slot, actor) = r;
+                var thisAngle = (actor.Position - center).ToAngle();
+                if (actor != starting && thisAngle.Rad < startingAngle.Rad)
+                    thisAngle.Rad += MathF.PI * 2;
+
+                return thisAngle.Rad;
+            })
+            : range.OrderByDescending(r =>
+            {
+                var (slot, actor) = r;
+                var thisAngle = (actor.Position - center).ToAngle();
+                if (actor != starting && thisAngle.Rad > startingAngle.Rad)
+                    thisAngle.Rad -= MathF.PI * 2;
+
+                return thisAngle.Rad;
+            });
+    }
+
+    public static IEnumerable<Actor> ClockOrder(this IEnumerable<Actor> range, Actor starting, WPos center, bool counterclockwise = false) => range.Select(r => (0, r)).ClockOrder(starting, center, counterclockwise).Select(r => r.Item2);
 }

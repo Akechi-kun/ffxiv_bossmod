@@ -85,6 +85,8 @@ public sealed record class ActionDefinition(ActionID ID)
     public SmartTargetDelegate? SmartTarget; // optional target transformation for 'smart targeting' feature
     public TransformAngleDelegate? TransformAngle; // optional facing angle transformation
 
+    public float TotalDuration => CastTime > 0 ? CastTime + CastAnimLock : InstantAnimLock;
+
     // note: this does *not* include quest-locked overrides
     // the way game works is - when you use first charge, total is set to cd*max-at-cap, and elapsed is set to cd*(max-at-level - 1)
     public int MaxChargesAtCap()
@@ -171,11 +173,11 @@ public sealed class ActionDefinitions : IDisposable
     public static readonly ActionID IDSprint = new(ActionType.Spell, 3);
     public static readonly ActionID IDAutoAttack = new(ActionType.Spell, 7);
     public static readonly ActionID IDAutoShot = new(ActionType.Spell, 8);
-    public static readonly ActionID IDPotionStr = new(ActionType.Item, 1045995); // hq grade 3 gemdraught of strength
-    public static readonly ActionID IDPotionDex = new(ActionType.Item, 1045996); // hq grade 3 gemdraught of dexterity
-    public static readonly ActionID IDPotionVit = new(ActionType.Item, 1045997); // hq grade 3 gemdraught of vitality
-    public static readonly ActionID IDPotionInt = new(ActionType.Item, 1045998); // hq grade 3 gemdraught of intelligence
-    public static readonly ActionID IDPotionMnd = new(ActionType.Item, 1045999); // hq grade 3 gemdraught of mind
+    public static readonly ActionID IDPotionStr = new(ActionType.Item, 1049234); // hq grade 3 gemdraught of strength
+    public static readonly ActionID IDPotionDex = new(ActionType.Item, 1049235); // hq grade 3 gemdraught of dexterity
+    public static readonly ActionID IDPotionVit = new(ActionType.Item, 1049236); // hq grade 3 gemdraught of vitality
+    public static readonly ActionID IDPotionInt = new(ActionType.Item, 1049237); // hq grade 3 gemdraught of intelligence
+    public static readonly ActionID IDPotionMnd = new(ActionType.Item, 1049238); // hq grade 3 gemdraught of mind
 
     // content specific consumables
     public static readonly ActionID IDPotionSustaining = new(ActionType.Item, 20309);
@@ -248,7 +250,7 @@ public sealed class ActionDefinitions : IDisposable
         RegisterItem(IDPotionUltra, 1.1f);
         RegisterItem(IDPotionPilgrim, 1.1f);
 
-        RegisterItem(IDMiscItemGreens, 2.1f);
+        RegisterItem(IDMiscItemGreens, 1.1f);
 
         // special content actions - bozja, deep dungeons, etc
         for (var i = BozjaHolsterID.None + 1; i < BozjaHolsterID.Count; ++i)
@@ -309,10 +311,15 @@ public sealed class ActionDefinitions : IDisposable
             return true;
 
         var dist = player.DistanceToHitbox(target);
-        var dir = player.DirectionTo(target).Normalized();
+        var dir = player.AngleTo(target);
         var src = player.Position;
 
-        return IsDashDangerous(src, src + dir * MathF.Max(0, dist), hints);
+        // facing target (to dash) would make us fail gaze, directional bait, etc
+        // TODO: only forbid if dash duration is longer than time to deadline?
+        if (hints.ForbiddenDirections.Any(d => dir.AlmostEqual(d.center, d.halfWidth.Rad)))
+            return true;
+
+        return IsDashDangerous(src, src + dir.ToDirection() * MathF.Max(0, dist), hints);
     }
 
     public static bool DashToPositionCheck(WorldState _, Actor player, ActionQueue.Entry action, AIHints hints)
@@ -518,13 +525,14 @@ public sealed class ActionDefinitions : IDisposable
         var baseId = aid.ID % 500000;
         var item = ItemData(baseId);
         var itemAction = item.ItemAction.Value;
-        var spellId = itemAction.Type;
+        var spellId = itemAction.Action.RowId;
         var cdgroup = SpellMainCDGroup(spellId);
         float cooldown = item.Cooldowns;
         var targets = SpellAllowedTargets(spellId);
         var range = SpellRange(spellId);
         var castTime = item.CastTimeSeconds /*?? 2*/;
         var aidNQ = new ActionID(ActionType.Item, baseId);
+        var castAnimLock = castTime > 0 ? animLock : 0.1f;
         _definitions[aidNQ] = new(aidNQ)
         {
             AllowedTargets = targets,
@@ -533,6 +541,7 @@ public sealed class ActionDefinitions : IDisposable
             MainCooldownGroup = cdgroup,
             Cooldown = cooldown,
             InstantAnimLock = animLock,
+            CastAnimLock = castAnimLock
         };
         var aidHQ = new ActionID(ActionType.Item, baseId + 1000000);
         _definitions[aidHQ] = new(aidHQ)
@@ -542,7 +551,8 @@ public sealed class ActionDefinitions : IDisposable
             CastTime = castTime,
             MainCooldownGroup = cdgroup,
             Cooldown = cooldown * 0.9f,
-            InstantAnimLock = animLock
+            InstantAnimLock = animLock,
+            CastAnimLock = castAnimLock
         };
 
         SupportedItems.Add(aidNQ.ID);

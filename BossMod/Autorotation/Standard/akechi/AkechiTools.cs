@@ -414,7 +414,7 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
 
     #region Lines (AOE Rectangles)
     /// <summary>Creates a <b>Position Check</b> for <b>Line AOE (AOE Rectangle)</b> attacks with the given range.</summary>
-    private PositionCheck LineTargetCheck(float range, float halfWidth = 2) => (primary, other) => Hints.TargetInAOERect(other, Player.Position, Player.DirectionTo(primary), range, halfWidth);
+    private PositionCheck LineTargetCheck(float range, float halfWidth = 2) => (primary, other) => AIHints.TargetInAOERect(other, Player.Position, Player.DirectionTo(primary), range, halfWidth);
 
     /// <summary>Checks if the target is within a <b>10-yalm AOE Rect</b> range.</summary>
     protected PositionCheck Is10yRectTarget => LineTargetCheck(10);
@@ -511,7 +511,7 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
     }
 
     /// <summary>Checks the <b>quantity of enemies</b> currently targeting the <b>Player</b></summary>
-    public bool EnemiesTargetingSelf(int numEnemies) => Service.ObjectTable.Count(o => o.IsTargetable && !o.IsDead && o.TargetObjectId == Service.ClientState.LocalPlayer?.GameObjectId) >= numEnemies;
+    public bool EnemiesTargetingSelf(int numEnemies) => Service.ObjectTable.Count(o => o.IsTargetable && !o.IsDead && o.TargetObjectId == Player.InstanceID) >= numEnemies;
     //public bool TeammatesTargetingEnemy() => World.Party.WithoutSlot().Count(a => a.TargetID == )?.A;
 
     /// <summary>Attempts to <b>select</b> the most suitable <b>PvP target</b> automatically, prioritizing the target with the <b>lowest HP percentage</b> within range.<para/>
