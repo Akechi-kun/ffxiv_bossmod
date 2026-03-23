@@ -88,10 +88,7 @@ sealed class WorldStateGameSync : IDisposable
 
     private readonly unsafe delegate* unmanaged<ContainerInterface*, float> _calculateMoveSpeedMulti;
 
-    private unsafe delegate void ApplyKnockbackDelegate(Character* thisPtr, float a2, float a3, float a4, byte a5, int a6);
-    private readonly Hook<ApplyKnockbackDelegate> _applyKnockbackHook;
-
-    private unsafe delegate void InventoryAckDelegate(uint a1, void* a2);
+    private unsafe delegate void InventoryAckDelegate(InventoryManager* mgr, uint a1, void* a2);
     private readonly Hook<InventoryAckDelegate> _inventoryAckHook;
 
     private unsafe delegate void ProcessPacketPlayActionTimelineSync(Network.ServerIPC.PlayActionTimelineSync* data);
@@ -181,14 +178,7 @@ sealed class WorldStateGameSync : IDisposable
         _processLegacyMapEffectHook.Enable();
         Service.Log($"[WSG] LegacyMapEffect address = {_processLegacyMapEffectHook.Address:X}");
 
-        _applyKnockbackHook = Service.Hook.HookFromSignature<ApplyKnockbackDelegate>("E8 ?? ?? ?? ?? 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? FF C6", ApplyKnockbackDetour);
-        //if (Service.IsDev)
-        //{
-        //    _applyKnockbackHook.Enable();
-        //    Service.Log($"[WSG] ApplyKnockback address = {_applyKnockbackHook.Address:X}");
-        //}
-
-        _inventoryAckHook = Service.Hook.HookFromSignature<InventoryAckDelegate>("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 48 8D 57 10 41 8B CE E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 48 8B D7", InventoryAckDetour);
+        _inventoryAckHook = Service.Hook.HookFromSignature<InventoryAckDelegate>("48 89 5C 24 ?? 57 48 83 EC 30 48 8B 05 ?? ?? ?? ?? 48 8B D9 41 0F B6 50 ??", InventoryAckDetour);
         _inventoryAckHook.Enable();
         Service.Log($"[WSG] InventoryAck address = {_inventoryAckHook.Address:X}");
 
@@ -201,7 +191,6 @@ sealed class WorldStateGameSync : IDisposable
     {
         _processPlayActionTimelineSyncHook.Dispose();
         _inventoryAckHook.Dispose();
-        _applyKnockbackHook.Dispose();
         _processLegacyMapEffectHook.Dispose();
         _processMapEffect1Hook.Dispose();
         _processMapEffect2Hook.Dispose();
@@ -1137,25 +1126,16 @@ sealed class WorldStateGameSync : IDisposable
         }
     }
 
-    private unsafe void ApplyKnockbackDetour(Character* thisPtr, float a2, float a3, float a4, byte a5, int a6)
-    {
-        _applyKnockbackHook.Original(thisPtr, a2, a3, a4, a5, a6);
-        if (Service.IsDev)
-            _globalOps.Add(new WorldState.OpUserMarker($"Knockback applied to player with a2={a2:f3}, a3={a3:f3}, a4={a4:f3}, a5={a5:X2}, a6={a6:X8}"));
-    }
-
     private unsafe byte ProcessLegacyMapEffectDetour(EventFramework* fwk, EventId eventId, byte seq, byte unk, void* data, ulong length)
     {
         var res = _processLegacyMapEffectHook.Original(fwk, eventId, seq, unk, data, length);
-
         _globalOps.Add(new WorldState.OpLegacyMapEffect(seq, unk, new Span<byte>(data, (int)length).ToArray()));
-
         return res;
     }
 
-    private unsafe void InventoryAckDetour(uint a1, void* a2)
+    private unsafe void InventoryAckDetour(InventoryManager* mgr, uint a1, void* a2)
     {
-        _inventoryAckHook.Original(a1, a2);
+        _inventoryAckHook.Original(mgr, a1, a2);
         _needInventoryUpdate = true;
     }
 
