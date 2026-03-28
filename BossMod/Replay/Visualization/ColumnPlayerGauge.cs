@@ -1186,11 +1186,177 @@ public class ColumnPlayerGaugeMCH : ColumnPlayerGauge
 #endregion
 
 #region DNC
-// TODO: add DNC gauge
+public class ColumnPlayerGaugeDNC : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _ff;
+    private readonly ColumnGenericHistory _espirit;
+
+    public override bool Visible
+    {
+        get => _ff.Width > 0 || _espirit.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _ff.Width = width;
+            _espirit.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugeDNC(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _ff = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _espirit = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevFF = 0;
+        var prevEspirit = 0;
+        var prevFFTime = MinTime();
+        var prevEspiritTime = MinTime();
+
+        foreach (var (time, gauge) in EnumerateGauge<DancerGauge>())
+        {
+            var ff = gauge.Feathers;
+            if (ff != prevFF)
+            {
+                AddFeatherRange(prevFFTime, time, prevFF);
+                prevFF = ff;
+                prevFFTime = time;
+            }
+
+            var espirit = gauge.Esprit;
+            if (espirit != prevEspirit)
+            {
+                AddEspiritRange(prevEspiritTime, time, prevEspirit);
+                prevEspirit = espirit;
+                prevEspiritTime = time;
+            }
+        }
+
+        AddFeatherRange(prevFFTime, enc.Time.End, prevFF);
+        AddEspiritRange(prevEspiritTime, enc.Time.End, prevEspirit);
+    }
+
+    private void AddFeatherRange(DateTime from, DateTime to, int ff)
+        => AddCountRange(from, to, _ff, ff, 4, 0.22f, color: new(0xFF80FFFF), label: "Feathers");
+    private void AddEspiritRange(DateTime from, DateTime to, int espirit)
+        => AddGaugeRange(from, to, _espirit, espirit, color: new(0xFF80C0FF), label: "Espirit");
+}
 #endregion
 
 #region BLM
-// TODO: add BLM gauge
+public class ColumnPlayerGaugeBLM : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _element;
+    private readonly ColumnGenericHistory _polyglot;
+    private readonly ColumnGenericHistory _paradox;
+    private readonly ColumnGenericHistory _souls;
+
+    public override bool Visible
+    {
+        get => _element.Width > 0 || _polyglot.Width > 0 || _paradox.Width > 0 || _souls.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _element.Width = width;
+            _polyglot.Width = width;
+            _paradox.Width = width;
+            _souls.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugeBLM(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _element = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _polyglot = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _paradox = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _souls = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevFire = 0;
+        var prevIce = 0;
+        var prevHearts = 0;
+        var prevElementActive = 0;
+        var prevElementTime = MinTime();
+
+        var prevEnochianTimer = 0;
+        var prevEnochianActive = 0;
+        var prevPolyglot = 0;
+        var prevPolyglotTime = MinTime();
+
+        var prevParadox = 0;
+        var prevParadoxTime = MinTime();
+
+        var prevSouls = 0;
+        var prevSoulsTime = MinTime();
+
+        foreach (var (time, gauge) in EnumerateGauge<BlackMageGauge>())
+        {
+            var enochianTimer = gauge.EnochianTimer / 1000;
+            var enochianActive = gauge.EnochianActive ? 1 : 0;
+            var polyglot = gauge.PolyglotStacks;
+            if (polyglot != prevPolyglot ||
+                enochianActive != prevEnochianActive ||
+                (enochianActive == 1 && enochianTimer != prevEnochianTimer))
+            {
+                AddPolyglotRange(prevPolyglotTime, time, prevEnochianActive, prevEnochianTimer, prevPolyglot);
+                prevEnochianActive = enochianActive;
+                prevEnochianTimer = enochianTimer;
+                prevPolyglotTime = time;
+            }
+
+            var element = gauge.ElementStance;
+            var isFire = element is (1 or 2 or 3) and not (0 or -1 or -2 or -3);
+            var isIce = element is (-1 or -2 or -3) and not (0 or 1 or 2 or 3);
+            var elementActive = isIce ? 2 : isFire ? 1 : 0;
+            var fire = gauge.AstralStacks;
+            var ice = gauge.UmbralStacks;
+            var hearts = gauge.UmbralHearts;
+            if (elementActive != prevElementActive ||
+                hearts != prevHearts ||
+                (elementActive == 1 && fire != prevFire) ||
+                (elementActive == 2 && ice != prevIce))
+            {
+                AddElementRange(prevElementTime, time, prevElementActive, prevFire, prevIce);
+                prevElementActive = elementActive;
+                prevFire = fire;
+                prevIce = ice;
+                prevElementTime = time;
+            }
+
+            var paradox = gauge.ParadoxActive ? 1 : 0;
+            if (paradox != prevParadox)
+            {
+                AddParadoxRange(prevParadoxTime, enc.Time.End, prevParadox);
+                prevParadox = paradox;
+                prevParadoxTime = time;
+            }
+
+            var souls = gauge.AstralSoulStacks;
+            if (souls != prevSouls)
+            {
+                AddSoulsRange(prevSoulsTime, time, prevSouls);
+                prevSouls = souls;
+                prevSoulsTime = time;
+            }
+        }
+
+        AddElementRange(prevElementTime, enc.Time.End, prevElementActive, prevFire, prevIce);
+        AddPolyglotRange(prevPolyglotTime, enc.Time.End, prevEnochianActive, prevEnochianTimer, prevPolyglot);
+        AddParadoxRange(prevParadoxTime, enc.Time.End, prevParadox);
+        AddSoulsRange(prevSoulsTime, enc.Time.End, prevSouls);
+    }
+
+    private void AddElementRange(DateTime from, DateTime to, int active, int fire, int ice)
+        => AddActiveRange(from, to, _element, active,
+            label: active == 2 ? $"Ice (UI{ice})" : active == 1 ? $"Fire (AF{fire})" : "Element",
+            color: active == 2 ? new(0xFFFFE0A0) : active == 1 ? new(0xFF003CFF) : Bad);
+    private void AddPolyglotRange(DateTime from, DateTime to, int active, int timer, int stacks)
+        => AddActiveRange(from, to, _polyglot, active, label: active != 0 ? $"Polyglots: {stacks} - Enochian ({timer / 1000}s)" : $"Polyglots: {stacks} - Enochian", color: new(0xFF800080));
+    private void AddParadoxRange(DateTime from, DateTime to, int active)
+        => AddActiveRange(from, to, _paradox, active, label: "Paradox", color: new(0xFFE6B8E6));
+    private void AddSoulsRange(DateTime from, DateTime to, int souls)
+        => AddCountRange(from, to, _souls, souls, 6, 0.12f, label: "Astral Souls", color: new(0xFF003CFF));
+}
 #endregion
 
 #region SMN
