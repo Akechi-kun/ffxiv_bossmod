@@ -9,9 +9,9 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
     protected Replay Replay;
     protected Replay.Encounter Encounter;
     protected readonly ColorConfig _colors = Service.Config.Get<ColorConfig>();
-    protected Color Yellow = new(0xFF6AB0B8); //yellow as default color for any gauge present
-    protected Color Red = new(0xFF202080); //red as default color for any gauge full
 
+    protected Color Good => _colors.PlannerWindow[7];
+    protected Color Bad => new(0x8A0000FF);
     public static ColumnPlayerGauge? Create(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player, Class playerClass) => playerClass switch
     {
         Class.PLD => new ColumnPlayerGaugePLD(timeline, tree, phaseBranches, replay, enc, player),
@@ -20,13 +20,13 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
         Class.GNB => new ColumnPlayerGaugeGNB(timeline, tree, phaseBranches, replay, enc, player),
         Class.WHM => new ColumnPlayerGaugeWHM(timeline, tree, phaseBranches, replay, enc, player),
         Class.SCH => new ColumnPlayerGaugeSCH(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.AST => new ColumnPlayerGaugeAST(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.SGE => new ColumnPlayerGaugeSGE(timeline, tree, phaseBranches, replay, enc, player),
+        Class.AST => new ColumnPlayerGaugeAST(timeline, tree, phaseBranches, replay, enc, player),
+        Class.SGE => new ColumnPlayerGaugeSGE(timeline, tree, phaseBranches, replay, enc, player),
         Class.MNK => new ColumnPlayerGaugeMNK(timeline, tree, phaseBranches, replay, enc, player),
         Class.DRG => new ColumnPlayerGaugeDRG(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.NIN => new ColumnPlayerGaugeNIN(timeline, tree, phaseBranches, replay, enc, player),
+        Class.NIN => new ColumnPlayerGaugeNIN(timeline, tree, phaseBranches, replay, enc, player),
         Class.SAM => new ColumnPlayerGaugeSAM(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.RPR => new ColumnPlayerGaugeRPR(timeline, tree, phaseBranches, replay, enc, player),
+        Class.RPR => new ColumnPlayerGaugeRPR(timeline, tree, phaseBranches, replay, enc, player),
         Class.VPR => new ColumnPlayerGaugeVPR(timeline, tree, phaseBranches, replay, enc, player),
         Class.BRD => new ColumnPlayerGaugeBRD(timeline, tree, phaseBranches, replay, enc, player),
         Class.MCH => new ColumnPlayerGaugeMCH(timeline, tree, phaseBranches, replay, enc, player),
@@ -41,7 +41,7 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
     protected ColumnPlayerGauge(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
         : base(timeline)
     {
-        Name = "G";
+        Name = "G.";
         Replay = replay;
         Encounter = enc;
     }
@@ -59,6 +59,7 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
             yield return (frame.Timestamp, ClientState.GetGauge<T>(frame.GaugePayload));
         }
     }
+
     protected void AddRange(
         DateTime from, DateTime to,
         ColumnGenericHistory cgh,
@@ -66,30 +67,21 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
         string label,
         Func<int, float> height,
         bool condition = true,
-        Color? curColor = null, Color? fullColor = null)
+        Color? color = null
+    )
     {
-        var color = curValue >= maxValue ? (fullColor ?? Red) : (curColor ?? Yellow);
         if (condition && to > from)
         {
-            cgh.AddHistoryEntryRange(Encounter.Time.Start, from, to, label, color.ABGR, height(curValue));
+            cgh.AddHistoryEntryRange(Encounter.Time.Start, from, to, label, (curValue >= maxValue && maxValue != 1 ? Bad : (color ?? Good)).ABGR, height(curValue));
         }
     }
 
-    protected void AddCountRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curCount, int maxCount, float increments, bool condition = true, string label = "Count", Color? curColor = null, Color? maxColor = null)
-        => AddRange(from, to, cgh, curCount, maxCount, $"{label}: {curCount}", v => v * increments, condition, curColor, maxColor);
-    protected void AddGaugeRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curGauge, int maxGauge = 100, bool condition = true, string label = "Gauge", Color? curColor = null, Color? maxColor = null)
-        => AddRange(from, to, cgh, curGauge, maxGauge, $"{label}: {curGauge}", v => v < 10 ? v * 0.02f : v * 0.01f, condition, curColor, maxColor);
-    protected void AddTimerRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curTimer, int maxTimer = 60, bool condition = true, string label = "Gauge Timer", Color? color = null)
-        => AddRange(from, to, cgh, (int)(curTimer * 0.001f), (int)(maxTimer * 0.001f), $"{label} Active - Current Duration: {curTimer}", v => v * 0.99f, condition, color);
-    protected void AddActiveRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curState, int activeState = 1, bool condition = true, string label = "Active", Color? color = null)
-        => AddRange(from, to, cgh, curState, activeState, $"{label} Active", v => v * 0.99f, condition, color);
-    protected void AddCardRange(DateTime from, DateTime to, ColumnGenericHistory cgh, AstrologianCard curCard, bool condition = true, string label = "Card", Color? curColor = null)
-    {
-        if (condition && to > from)
-        {
-            cgh.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{label}: {curCard}", (color ?? Yellow).ABGR, curCard != default ? 0.99f : 0);
-        }
-    }
+    protected void AddCountRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curCount, int maxCount, float increments, bool condition = true, string label = "Count", Color? color = null)
+        => AddRange(from, to, cgh, curCount, maxCount, $"{label}: {curCount}", v => v * increments, condition, color);
+    protected void AddGaugeRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curGauge, int maxGauge = 100, bool condition = true, string label = "Gauge", Color? color = null)
+        => AddRange(from, to, cgh, curGauge, maxGauge, $"{label}: {curGauge}", v => v < 10 ? v * 0.02f : v * 0.008f, condition, color);
+    protected void AddActiveRange(DateTime from, DateTime to, ColumnGenericHistory cgh, int curState, bool condition = true, string label = "Active", Color? color = null)
+        => AddRange(from, to, cgh, curState > 0 ? 1 : 0, 1, $"{label}: {(curState > 0 ? "Active" : "Inactive")}", v => v * 0.9f, condition, color);
 }
 #endregion
 
@@ -97,16 +89,14 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
 public class ColumnPlayerGaugePLD : ColumnPlayerGauge
 {
     private readonly ColumnGenericHistory _oath;
-    private readonly ColumnGenericHistory _ironwill;
 
     public override bool Visible
     {
-        get => _oath.Width > 0 || _ironwill.Width > 0;
+        get => _oath.Width > 0;
         set
         {
             var width = value ? ColumnGenericHistory.DefaultWidth : 0;
             _oath.Width = width;
-            _ironwill.Width = width;
         }
     }
 
@@ -114,7 +104,6 @@ public class ColumnPlayerGaugePLD : ColumnPlayerGauge
         : base(timeline, tree, phaseBranches, replay, enc, player)
     {
         _oath = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
-        _ironwill = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
         var prevOath = 0;
         var prevOathTime = MinTime();
@@ -133,7 +122,7 @@ public class ColumnPlayerGaugePLD : ColumnPlayerGauge
     }
 
     private void AddOathRange(DateTime from, DateTime to, int oath)
-        => AddGaugeRange(from, to, _oath, oath, label: "Oath Gauge", curColor: new(0xFFFFF6B0));
+        => AddGaugeRange(from, to, _oath, oath, label: "Oath Gauge", color: new(0xFFFFF6B0));
 }
 #endregion
 
@@ -169,7 +158,7 @@ public class ColumnPlayerGaugeWAR : ColumnPlayerGauge
     }
 
     private void AddBeastRange(DateTime from, DateTime to, int beast)
-        => AddGaugeRange(from, to, _beast, beast, label: "Beast Gauge", curColor: new(0xFFFF7A45));
+        => AddGaugeRange(from, to, _beast, beast, label: "Beast Gauge", color: new(0xFFFF7A45));
 }
 #endregion
 
@@ -177,20 +166,20 @@ public class ColumnPlayerGaugeWAR : ColumnPlayerGauge
 public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
 {
     private readonly ColumnGenericHistory _blood;
-    private readonly ColumnGenericHistory _darkarts;
-    private readonly ColumnGenericHistory _darkside;
-    private readonly ColumnGenericHistory _livingshadow;
+    private readonly ColumnGenericHistory _da;
+    private readonly ColumnGenericHistory _ds;
+    private readonly ColumnGenericHistory _ls;
 
     public override bool Visible
     {
-        get => _blood.Width > 0 || _darkarts.Width > 0 || _darkside.Width > 0 || _livingshadow.Width > 0;
+        get => _blood.Width > 0 || _da.Width > 0 || _ds.Width > 0 || _ls.Width > 0;
         set
         {
             var width = value ? ColumnGenericHistory.DefaultWidth : 0;
             _blood.Width = width;
-            _darkarts.Width = width;
-            _darkside.Width = width;
-            _livingshadow.Width = width;
+            _da.Width = width;
+            _ds.Width = width;
+            _ls.Width = width;
         }
     }
 
@@ -198,17 +187,19 @@ public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
         : base(timeline, tree, phaseBranches, replay, enc, player)
     {
         _blood = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
-        _darkarts = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
-        _darkside = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
-        _livingshadow = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _ds = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _ls = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _da = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
         var prevBlood = 0;
         var prevBloodTime = MinTime();
         var prevDA = 0;
         var prevDATime = MinTime();
-        var prevDS = 0;
+        var prevDSActive = 0;
+        var prevDSTimer = 0;
         var prevDSTime = MinTime();
-        var prevLS = 0;
+        var prevLSActive = 0;
+        var prevLSTimer = 0;
         var prevLSTime = MinTime();
 
         foreach (var (time, gauge) in EnumerateGauge<DarkKnightGauge>())
@@ -221,6 +212,30 @@ public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
                 prevBloodTime = time;
             }
 
+            var DSTimer = gauge.DarksideTimer;
+            var DSActive = DSTimer > 0 ? 1 : 0;
+            var DSTimerSec = DSTimer / 1000;
+            var prevDSTimerSec = prevDSTimer / 1000;
+            if (DSActive != prevDSActive || (DSActive == 1 && DSTimerSec != prevDSTimerSec))
+            {
+                AddDarksideRange(prevDSTime, time, prevDSActive, prevDSTimer);
+                prevDSActive = DSActive;
+                prevDSTimer = DSTimer;
+                prevDSTime = time;
+            }
+
+            var LSTimer = gauge.ShadowTimer;
+            var LSActive = LSTimer > 0.0f ? 1 : 0;
+            var LSTimerSecs = LSTimer / 1000;
+            var prevLSTimerSecs = prevLSTimer / 1000;
+            if (LSActive != prevLSActive || (LSActive == 1 && LSTimerSecs != prevLSTimerSecs))
+            {
+                AddLivingShadowRange(prevLSTime, time, prevLSActive, prevLSTimer);
+                prevLSActive = LSActive;
+                prevLSTimer = LSTimer;
+                prevLSTime = time;
+            }
+
             var da = gauge.DarkArtsState;
             if (da != prevDA)
             {
@@ -228,75 +243,59 @@ public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
                 prevDA = da;
                 prevDATime = time;
             }
-
-            var ds = gauge.DarksideTimer * 0.001f;
-            if (ds != prevDS)
-            {
-                AddDarksideRange(prevDSTime, time, prevDS);
-                prevDS = (int)ds;
-                prevDSTime = time;
-            }
-
-            var ls = gauge.ShadowTimer * 0.001f;
-            if (ls != prevLS)
-            {
-                AddLivingShadowRange(prevLSTime, time, prevLS);
-                prevLS = (int)ls;
-                prevLSTime = time;
-            }
         }
 
         AddBloodRange(prevBloodTime, enc.Time.End, prevBlood);
+        AddDarksideRange(prevDSTime, enc.Time.End, prevDSActive, prevDSTimer);
+        AddLivingShadowRange(prevLSTime, enc.Time.End, prevLSActive, prevLSTimer);
         AddDarkArtsRange(prevDATime, enc.Time.End, prevDA);
-        AddDarksideRange(prevDSTime, enc.Time.End, prevDS);
-        AddLivingShadowRange(prevLSTime, enc.Time.End, prevLS);
     }
 
     private void AddBloodRange(DateTime from, DateTime to, int blood)
-        => AddGaugeRange(from, to, _blood, blood, label: "Blood", curColor: new(0xFFFFF6B0));
+        => AddGaugeRange(from, to, _blood, blood, label: "Blood", color: new(0xAA00D7FF));
     private void AddDarkArtsRange(DateTime from, DateTime to, int da)
-        => AddActiveRange(from, to, _darkarts, da, label: "Dark Arts", color: new(0xFF331F66));
-    private void AddDarksideRange(DateTime from, DateTime to, int ds)
-        => AddTimerRange(from, to, _darkside, ds, label: "Darkside", color: new(0xFF7F4DFF));
-    private void AddLivingShadowRange(DateTime from, DateTime to, int ls)
-        => AddTimerRange(from, to, _livingshadow, ls, label: "Living Shadow", color: new(0xFF66445E));
+        => AddActiveRange(from, to, _da, da, label: "Dark Arts", color: new(0xFF000080));
+    private void AddDarksideRange(DateTime from, DateTime to, int active, int timer)
+        => AddActiveRange(from, to, _ds, active, label: active != 0 ? $"Darkside ({timer / 1000}s)" : "Darkside", color: new(0xFF800080));
+    private void AddLivingShadowRange(DateTime from, DateTime to, int active, int timer)
+        => AddActiveRange(from, to, _ls, active, label: active != 0 ? $"Living Shadow ({timer / 1000}s)" : "Living Shadow", color: new(0xAA800080));
 }
 #endregion
 
 #region GNB
 public class ColumnPlayerGaugeGNB : ColumnPlayerGauge
 {
-    private readonly ColumnGenericHistory _carts;
+    private readonly ColumnGenericHistory _ammo;
 
     public override bool Visible
     {
-        get => _carts.Width > 0;
-        set => _carts.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
+        get => _ammo.Width > 0;
+        set => _ammo.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
     }
 
     public ColumnPlayerGaugeGNB(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
         : base(timeline, tree, phaseBranches, replay, enc, player)
     {
-        _carts = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _ammo = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
-        var prevGauge = 0;
+        var prevAmmo = 0;
         var prevTime = MinTime();
         foreach (var (time, gauge) in EnumerateGauge<GunbreakerGauge>())
         {
             var ammo = gauge.Ammo;
-            if (ammo != prevGauge)
+            if (ammo != prevAmmo)
             {
-                AddCartRange(prevTime, time, prevGauge);
-                prevGauge = ammo;
+                AddCartRange(prevTime, time, prevAmmo);
+                prevAmmo = ammo;
                 prevTime = time;
             }
         }
 
-        AddCartRange(prevTime, enc.Time.End, prevGauge);
+        AddCartRange(prevTime, enc.Time.End, prevAmmo);
     }
 
-    private void AddCartRange(DateTime from, DateTime to, int carts)
-        => AddCountRange(from, to, _carts, carts, 3, 0.31f, label: "Cartridges");
+    private void AddCartRange(DateTime from, DateTime to, int ammo)
+        => AddCountRange(from, to, _ammo, ammo, 3, 0.31f, label: "Cartridges");
 }
 #endregion
 
@@ -350,12 +349,12 @@ public class ColumnPlayerGaugeWHM : ColumnPlayerGauge
         AddBloodLilyRange(prevBloodTime, enc.Time.End, prevBloodLily);
     }
 
-    private void AddLilyRange(DateTime from, DateTime to, int lily, ColumnGenericHistory cgh, string label, Color? curColor)
-        => AddCountRange(from, to, cgh, lily, 3, 0.31f, label: label, curColor: curColor);
+    private void AddLilyRange(DateTime from, DateTime to, int lily, ColumnGenericHistory cgh, string label, Color? color)
+        => AddCountRange(from, to, cgh, lily, 3, 0.31f, label: label, color: color);
     private void AddNormalLilyRange(DateTime from, DateTime to, int lily)
-        => AddLilyRange(from, to, lily, _nLily, "Lilies", new(0xFF87E7FF));
+        => AddLilyRange(from, to, lily, _nLily, "Lilies", new(0xFFC7F464));
     private void AddBloodLilyRange(DateTime from, DateTime to, int lily)
-        => AddLilyRange(from, to, lily, _bLily, "Blood Lilies", new(0xFFFF637D));
+        => AddLilyRange(from, to, lily, _bLily, "Blood Lilies", new(0xFF4B0082));
 }
 #endregion
 
@@ -410,9 +409,9 @@ public class ColumnPlayerGaugeSCH : ColumnPlayerGauge
     }
 
     private void AddAetherflowRange(DateTime from, DateTime to, int aetherflow)
-        => AddCountRange(from, to, _aetherflow, aetherflow, 3, 0.31f, label: "Aetherflow", curColor: new(0xFFA3FFA9));
+        => AddCountRange(from, to, _aetherflow, aetherflow, 3, 0.31f, label: "Aetherflow", color: new(0xFFC7F464));
     private void AddFaerieRange(DateTime from, DateTime to, int faerie)
-        => AddGaugeRange(from, to, _faerie, faerie, label: "Faerie Gauge", curColor: new(0xFFFFFD94));
+        => AddGaugeRange(from, to, _faerie, faerie, label: "Faerie Gauge", color: new(0xFF008080));
 }
 #endregion
 
@@ -445,59 +444,154 @@ public class ColumnPlayerGaugeAST : ColumnPlayerGauge
         _currentCards = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
         _currentDraw = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
-        var prevCard = 0;
-        var prevCardTime = MinTime();
+        var prevCards = 0;
+        var prevCardsTime = MinTime();
         var prevCurArcana = default(AstrologianCard);
         var prevCurArcanaTime = MinTime();
-        var prevCurCards = default(AstrologianCard);
+        var prevCurCards = default(AstrologianCard[]);
         var prevCurCardsTime = MinTime();
-        var prevCurDraw = default(AstrologianCard);
+        var prevCurDraw = default(AstrologianDraw);
         var prevCurDrawTime = MinTime();
 
         foreach (var (time, gauge) in EnumerateGauge<AstrologianGauge>())
         {
             var cards = gauge.Cards;
-            if (cards != prevCard)
+            if (cards != prevCards)
             {
-                AddAetherflowRange(prevCardTime, time, cards);
-                prevCard = cards;
-                prevCardTime = time;
+                AddCardsRange(prevCardsTime, time, cards);
+                prevCards = cards;
+                prevCardsTime = time;
             }
+
             var curArcana = gauge.CurrentArcana;
             if (curArcana != prevCurArcana)
             {
-                AddArcanaRange(prevCurArcanaTime, time, curArcana);
+                AddCurArcanaRange(prevCurArcanaTime, time, curArcana);
                 prevCurArcana = curArcana;
                 prevCurArcanaTime = time;
             }
-            var curCards = gauge.Cards;
+
+            var curCards = gauge.CurrentCards;
             if (curCards != prevCurCards)
             {
-                AddArcanaRange(prevCurArcanaTime, time, curCards);
-                prevCurArcana = curCards;
-                prevCurArcanaTime = time;
+                AddCurCardsRange(prevCurCardsTime, time, curCards);
+                prevCurCards = curCards;
+                prevCurCardsTime = time;
+            }
+
+            var curDraw = gauge.CurrentDraw;
+            if (curDraw != prevCurDraw)
+            {
+                AddCurDrawRange(prevCurDrawTime, time, curDraw);
+                prevCurDraw = curDraw;
+                prevCurDrawTime = time;
             }
         }
 
-        AddAetherflowRange(prevCardTime, enc.Time.End, prevCard);
-        AddArcanaRange(prevCurArcanaTime, enc.Time.End, prevCurArcana);
-        AddCardsRange(prevCurCardsTime, enc.Time.End, prevCurCards);
-        AddDrawRange(prevCurDrawTime, enc.Time.End, prevCurDraw);
+        AddCardsRange(prevCardsTime, enc.Time.End, prevCards);
+        AddCurArcanaRange(prevCurArcanaTime, enc.Time.End, prevCurArcana);
+        AddCurCardsRange(prevCurCardsTime, enc.Time.End, prevCurCards);
+        AddCurDrawRange(prevCurDrawTime, enc.Time.End, prevCurDraw);
     }
 
-    private void AddAetherflowRange(DateTime from, DateTime to, int aetherflow)
-        => AddCountRange(from, to, _cards, aetherflow, 3, 0.31f, label: "Aetherflow", curColor: new(0xFFA3FFA9));
-    private void AddArcanaRange(DateTime from, DateTime to, AstrologianCard arcana)
-        => AddCardRange(from, to, _currentArcana, arcana, label: "Current Arcana", curColor: new(0xFFFFFD94));
-    private void AddCardsRange(DateTime from, DateTime to, AstrologianCard card)
-        => AddCountRange(from, to, _currentArcana, card, label: "Current Card", curColor: new(0xFFFFFD94));
-    private void AddDrawRange(DateTime from, DateTime to, AstrologianCard draw)
-        => AddCardRange(from, to, _currentArcana, draw, label: "Current Draw", curColor: new(0xFFFFFD94));
+    private void AddCardsRange(DateTime from, DateTime to, int cards)
+        => AddCountRange(from, to, _cards, cards, 4, 0.24f, label: "Cards", color: new(0xFFA3FFA9));
+    private void AddCurArcanaRange(DateTime from, DateTime to, AstrologianCard arcana)
+    {
+        if (to > from)
+        {
+            _currentArcana.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"Current Arcana: {arcana}", Good.ABGR, 0.99f);
+        }
+    }
+    private void AddCurCardsRange(DateTime from, DateTime to, AstrologianCard[]? curCards)
+    {
+        if (to > from)
+        {
+            _currentCards.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"Current Cards: {curCards}", Good.ABGR, 0.99f);
+        }
+    }
+    private void AddCurDrawRange(DateTime from, DateTime to, AstrologianDraw draw)
+    {
+        AstrologianCard card = default;
+
+        var color = card switch
+        {
+            AstrologianCard.Arrow => Good.ABGR,
+            AstrologianCard.Balance => Good.ABGR,
+            AstrologianCard.Bole => Good.ABGR,
+            AstrologianCard.Ewer => Good.ABGR,
+            AstrologianCard.Lady => Good.ABGR,
+            AstrologianCard.Lord => Good.ABGR,
+            AstrologianCard.Spear => Good.ABGR,
+            AstrologianCard.Spire => Good.ABGR,
+            _ => Bad.ABGR,
+        };
+        if (to > from)
+        {
+            _currentDraw.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"Current Draw: {draw}", color, 0.99f);
+        }
+    }
 }
 #endregion
 
 #region SGE
-// TODO: add SGE gauge
+public class ColumnPlayerGaugeSGE : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _addersgall;
+    private readonly ColumnGenericHistory _addersting;
+
+    public override bool Visible
+    {
+        get => _addersgall.Width > 0 || _addersting.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _addersgall.Width = width;
+            _addersting.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugeSGE(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _addersgall = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _addersting = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevAddersgall = 0;
+        var prevAddersgallTimer = 0;
+        var prevAddersgallTime = MinTime();
+        var prevAddersting = 0;
+        var prevAdderstingTime = MinTime();
+
+        foreach (var (time, gauge) in EnumerateGauge<SageGauge>())
+        {
+            var addersgall = gauge.Addersgall;
+            var addersgallTimer = gauge.AddersgallTimer / 1000;
+            if (addersgall != prevAddersgall || addersgallTimer != prevAddersgallTimer)
+            {
+                AddAddersgallRange(prevAddersgallTime, time, addersgall);
+                prevAddersgall = addersgall;
+                prevAddersgallTime = time;
+            }
+
+            var addersting = gauge.Addersting;
+            if (addersting != prevAddersting)
+            {
+                AddAdderstingRange(prevAdderstingTime, time, addersting);
+                prevAddersting = addersting;
+                prevAdderstingTime = time;
+            }
+        }
+
+        AddAddersgallRange(prevAddersgallTime, enc.Time.End, prevAddersgall);
+        AddAdderstingRange(prevAdderstingTime, enc.Time.End, prevAddersting);
+    }
+
+    private void AddAddersgallRange(DateTime from, DateTime to, int addersgall)
+        => AddCountRange(from, to, _addersgall, addersgall, 3, 0.31f, label: "Addersgall", color: new(0xFFC7F464));
+    private void AddAdderstingRange(DateTime from, DateTime to, int addersting)
+        => AddCountRange(from, to, _addersting, addersting, 3, 0.31f, label: "Addersting", color: new(0xFF008080));
+}
 #endregion
 
 #region MNK
@@ -591,7 +685,7 @@ public class ColumnPlayerGaugeMNK : ColumnPlayerGauge
         {
             var color = gauge switch
             {
-                5 => Red,
+                5 => Bad,
                 4 => new(0xFFE8FAFF),
                 3 => new(0xFFBEEFFF),
                 2 => new(0xFF90E0FF),
@@ -605,7 +699,7 @@ public class ColumnPlayerGaugeMNK : ColumnPlayerGauge
     {
         if (count != BeastChakraType.None && to > from)
         {
-            var color = count == BeastChakraType.None ? Red : new(0xFF0066FF);
+            var color = count == BeastChakraType.None ? Bad : new(0xFF0066FF);
             col.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{label}: {count}", color.ABGR);
         }
     }
@@ -618,7 +712,7 @@ public class ColumnPlayerGaugeMNK : ColumnPlayerGauge
                 NadiFlags.Solar => new(0xFF90E0FF),
                 NadiFlags.Lunar => new(0xFFFFA500),
                 0 => new(0x80808080),
-                _ => Red
+                _ => Bad
             };
             col.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{label}: {nadi}", color.ABGR, 100);
         }
@@ -654,15 +748,70 @@ public class ColumnPlayerGaugeDRG : ColumnPlayerGauge
                 prevTime = time;
             }
         }
+
         AddFocusRange(prevTime, enc.Time.End, prevGauge);
     }
 
-    private void AddFocusRange(DateTime from, DateTime to, int focus) => AddCountRange(from, to, _focus, focus, 2, 0.49f, label: "Firstminds' Focus");
+    private void AddFocusRange(DateTime from, DateTime to, int focus)
+        => AddCountRange(from, to, _focus, focus, 2, 0.49f, label: "Firstminds' Focus");
 }
 #endregion
 
 #region NIN
-// TODO: add NIN gauge
+public class ColumnPlayerGaugeNIN : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _ninki;
+    private readonly ColumnGenericHistory _kazematoi;
+
+    public override bool Visible
+    {
+        get => _ninki.Width > 0 || _kazematoi.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _ninki.Width = width;
+            _kazematoi.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugeNIN(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _ninki = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _kazematoi = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevKazematoi = 0;
+        var prevKazematoiTime = MinTime();
+        var prevNinki = 0;
+        var prevNinkiTime = MinTime();
+
+        foreach (var (time, gauge) in EnumerateGauge<NinjaGauge>())
+        {
+            var kazematoi = gauge.Kazematoi;
+            if (kazematoi != prevKazematoi)
+            {
+                AddKazematoiRange(prevKazematoiTime, time, kazematoi);
+                prevKazematoi = kazematoi;
+                prevKazematoiTime = time;
+            }
+            var ninki = gauge.Ninki;
+            if (ninki != prevNinki)
+            {
+                AddNinkiRange(prevNinkiTime, time, ninki);
+                prevNinki = ninki;
+                prevNinkiTime = time;
+            }
+        }
+
+        AddKazematoiRange(prevKazematoiTime, enc.Time.End, prevKazematoi);
+        AddNinkiRange(prevNinkiTime, enc.Time.End, prevNinki);
+    }
+
+    private void AddKazematoiRange(DateTime from, DateTime to, int kazematoi)
+        => AddCountRange(from, to, _kazematoi, kazematoi, 3, 0.18f, label: "Kazematoi", color: new(0xFFCC99FF));
+    private void AddNinkiRange(DateTime from, DateTime to, int ninki)
+        => AddGaugeRange(from, to, _ninki, ninki, label: "Ninki", color: new(0xFF007FFF));
+}
 #endregion
 
 #region SAM
@@ -734,7 +883,7 @@ public class ColumnPlayerGaugeSAM : ColumnPlayerGauge
     {
         if (Kenki != 0 && to > from)
         {
-            var color = Kenki == 100 ? Red : new(0xFF90E0FF);
+            var color = Kenki == 100 ? Bad : new(0xFF90E0FF);
             _kenki.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{Kenki} Kenki", color.ABGR, Kenki < 10 ? Kenki * 0.02f : Kenki * 0.01f);
         }
     }
@@ -754,7 +903,7 @@ public class ColumnPlayerGaugeSAM : ColumnPlayerGauge
     {
         if (sen != SenFlags.None && to > from)
         {
-            var color = GetSenCount(sen) == 3 ? Red : new(0xFFFFAACC);
+            var color = GetSenCount(sen) == 3 ? Bad : new(0xFFFFAACC);
             _sen.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{sen}", color.ABGR, GetSenCount(sen) == 3 ? 1f : GetSenCount(sen) == 2 ? 0.6f : GetSenCount(sen) == 1 ? 0.3f : 1f);
         }
     }
@@ -762,7 +911,7 @@ public class ColumnPlayerGaugeSAM : ColumnPlayerGauge
     {
         if (mediStacks != 0 && to > from)
         {
-            var color = mediStacks == 3 ? Red : new(0xFF8080FF);
+            var color = mediStacks == 3 ? Bad : new(0xFF8080FF);
             _meditation.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{mediStacks} Meditation stack{(mediStacks == 1 ? "" : "s")}", color.ABGR, mediStacks * 0.31f);
         }
     }
@@ -770,62 +919,142 @@ public class ColumnPlayerGaugeSAM : ColumnPlayerGauge
 #endregion
 
 #region RPR
-// TODO: add RPR gauge
+public class ColumnPlayerGaugeRPR : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _soul;
+    private readonly ColumnGenericHistory _shroud;
+    private readonly ColumnGenericHistory _enshroud;
+
+    public override bool Visible
+    {
+        get => _soul.Width > 0 || _shroud.Width > 0 || _enshroud.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _soul.Width = width;
+            _shroud.Width = width;
+            _enshroud.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugeRPR(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _soul = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _shroud = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _enshroud = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevSoul = 0;
+        var prevSoulTime = MinTime();
+        var prevShroud = 0;
+        var prevShroudTime = MinTime();
+        var prevEnshroudActive = 0;
+        var prevEnshroudTimeLeft = 0;
+        var prevEnshroudTime = MinTime();
+        var prevLemureShroud = 0;
+        var prevVoidShroud = 0;
+
+        foreach (var (time, gauge) in EnumerateGauge<ReaperGauge>())
+        {
+            var soul = gauge.Soul;
+            if (soul != prevSoul)
+            {
+                AddSoulRange(prevSoulTime, time, prevSoul);
+                prevSoul = soul;
+                prevSoulTime = time;
+            }
+
+            var shroud = gauge.Shroud;
+            if (soul != prevShroud)
+            {
+                AddShroudRange(prevShroudTime, time, prevShroud);
+                prevShroud = soul;
+                prevShroudTime = time;
+            }
+
+            var enshroudTimeLeft = gauge.EnshroudedTimeRemaining / 1000;
+            var enshroudActive = enshroudTimeLeft > 0 ? 1 : 0;
+            var lemures = gauge.LemureShroud;
+            var voids = gauge.VoidShroud;
+            if (enshroudActive != prevEnshroudActive ||
+                (enshroudActive == 1 &&
+                    (enshroudTimeLeft != prevEnshroudTimeLeft || lemures != prevLemureShroud || voids != prevVoidShroud)))
+            {
+                AddEnshroudRange(prevEnshroudTime, time, prevEnshroudActive, prevEnshroudTimeLeft, prevLemureShroud, prevVoidShroud);
+                prevEnshroudActive = enshroudActive;
+                prevEnshroudTimeLeft = enshroudTimeLeft;
+                prevEnshroudTime = time;
+            }
+        }
+
+        AddSoulRange(prevSoulTime, enc.Time.End, prevSoul);
+        AddShroudRange(prevShroudTime, enc.Time.End, prevShroud);
+        AddEnshroudRange(prevEnshroudTime, enc.Time.End, prevEnshroudActive, prevEnshroudTimeLeft, prevLemureShroud, prevVoidShroud);
+    }
+
+    private void AddSoulRange(DateTime from, DateTime to, int soul)
+        => AddGaugeRange(from, to, _soul, soul, label: "Soul Gauge", color: new(0xAA00D7FF));
+    private void AddShroudRange(DateTime from, DateTime to, int shroud)
+        => AddGaugeRange(from, to, _shroud, shroud, label: "Shroud Gauge", color: new(0xAA00D7FF));
+    private void AddEnshroudRange(DateTime from, DateTime to, int active, int timer, int lemures, int voids)
+        => AddActiveRange(from, to, _enshroud, active, label: active != 0 ? $"Enshroud ({timer / 1000}s, {lemures}, {voids})" : "Enshroud", color: new(0xFF800080));
+}
 #endregion
 
 #region VPR
 public class ColumnPlayerGaugeVPR : ColumnPlayerGauge
 {
-    private readonly ColumnGenericHistory _coils;
-    private readonly ColumnGenericHistory _offerings;
+    private readonly ColumnGenericHistory _rc;
+    private readonly ColumnGenericHistory _so;
 
     public override bool Visible
     {
-        get => _coils.Width > 0 || _offerings.Width > 0;
-        set => _coils.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
+        get => _rc.Width > 0 || _so.Width > 0;
+        set => _rc.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
     }
 
     public ColumnPlayerGaugeVPR(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
         : base(timeline, tree, phaseBranches, replay, enc, player)
     {
-        _coils = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
-        _offerings = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _rc = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _so = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
-        var prevCoil = 0;
-        var prevOffering = 0;
-        var prevCoilTime = MinTime();
-        var prevOfferingTime = MinTime();
+        var prevRC = 0;
+        var prevSO = 0;
+        var prevRCTime = MinTime();
+        var prevSOTime = MinTime();
         foreach (var (time, gauge) in EnumerateGauge<ViperGauge>())
         {
-            var coil = gauge.RattlingCoilStacks;
-            if (coil != prevCoil)
+            var rc = gauge.RattlingCoilStacks;
+            if (rc != prevRC)
             {
-                AddCoilRange(prevCoilTime, time, prevCoil);
-                prevCoil = coil;
-                prevCoilTime = time;
+                AddRattlingCoilRange(prevRCTime, time, prevRC);
+                prevRC = rc;
+                prevRCTime = time;
             }
 
-            var offering = gauge.SerpentOffering;
-            if (offering != prevOffering)
+            var so = gauge.SerpentOffering;
+            if (so != prevSO)
             {
-                AddOfferingsRange(prevOfferingTime, time, prevOffering);
-                prevOffering = offering;
-                prevOfferingTime = time;
+                AddSerpentOfferingRange(prevSOTime, time, prevSO);
+                prevSO = so;
+                prevSOTime = time;
             }
         }
 
-        AddCoilRange(prevCoilTime, enc.Time.End, prevCoil);
-        AddOfferingsRange(prevOfferingTime, enc.Time.End, prevOffering);
+        AddRattlingCoilRange(prevRCTime, enc.Time.End, prevRC);
+        AddSerpentOfferingRange(prevSOTime, enc.Time.End, prevSO);
     }
 
-    private void AddCoilRange(DateTime from, DateTime to, int coils)
-        => AddCountRange(from, to, _coils, coils, 3, 0.31f, curColor: new(0xFF3A7AC8), label: "Rattling Coils");
-    private void AddOfferingsRange(DateTime from, DateTime to, int offerings)
-        => AddGaugeRange(from, to, _offerings, offerings, curColor: new(0xFFE8CFA8), label: "Serpent Offering");
+    private void AddRattlingCoilRange(DateTime from, DateTime to, int rc)
+        => AddCountRange(from, to, _rc, rc, 3, 0.31f, color: new(0xFF3A7AC8), label: "Rattling Coils");
+    private void AddSerpentOfferingRange(DateTime from, DateTime to, int so)
+        => AddGaugeRange(from, to, _so, so, color: new(0xFFE8CFA8), label: "Serpent Offering");
 }
 #endregion
 
 #region BRD
+//TODO: revise
 public class ColumnPlayerGaugeBRD : ColumnPlayerGauge
 {
     private readonly ColumnGenericHistory _songs;
@@ -876,7 +1105,7 @@ public class ColumnPlayerGaugeBRD : ColumnPlayerGauge
             {
                 SongFlags.MagesBallad => (_colors.PlannerWindow[0], 1),
                 SongFlags.ArmysPaeon => (_colors.PlannerWindow[1], 0.2f),
-                SongFlags.WanderersMinuet => (Red, 0.25f),
+                SongFlags.WanderersMinuet => (Bad, 0.25f),
                 _ => (new(0x80808080), 1),
             };
             var e = _songs.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{song}, {repertoire} rep, {timer:f3} at start", color.ABGR, (1 + repertoire) * scale);
@@ -921,9 +1150,7 @@ public class ColumnPlayerGaugeMCH : ColumnPlayerGauge
         : base(timeline, tree, phaseBranches, replay, enc, player)
     {
         _heat = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
-        _heat.Name = "Heat";
         _battery = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
-        _battery.Name = "Battery";
 
         var prevHeat = 0;
         var prevBattery = 0;
@@ -931,37 +1158,30 @@ public class ColumnPlayerGaugeMCH : ColumnPlayerGauge
         var prevBatteryTime = MinTime();
         foreach (var (time, gauge) in EnumerateGauge<MachinistGauge>())
         {
-            if (gauge.Heat != prevHeat)
+            var heat = gauge.Heat;
+            if (heat != prevHeat)
             {
-                AddGaugeRange(_heat, prevHeatTime, time, prevHeat, _heat.Name);
-                prevHeat = gauge.Heat;
+                AddHeatRange(prevHeatTime, time, prevHeat);
+                prevHeat = heat;
                 prevHeatTime = time;
             }
-            if (gauge.Battery != prevBattery)
+
+            var battery = gauge.Battery;
+            if (battery != prevBattery)
             {
-                AddGaugeRange(_battery, prevBatteryTime, time, prevBattery, _battery.Name);
-                prevBattery = gauge.Battery;
+                AddHeatRange(prevHeatTime, time, prevHeat);
+                prevBattery = battery;
                 prevBatteryTime = time;
             }
         }
-        AddGaugeRange(_heat, prevHeatTime, enc.Time.End, prevHeat, _heat.Name);
-        AddGaugeRange(_battery, prevBatteryTime, enc.Time.End, prevBattery, _battery.Name);
+        AddHeatRange(prevHeatTime, enc.Time.End, prevHeat);
+        AddBatteryRange(prevBatteryTime, enc.Time.End, prevBattery);
     }
 
-    private void AddGaugeRange(ColumnGenericHistory col, DateTime from, DateTime to, int gauge, string label)
-    {
-        if (to > from)
-        {
-            var color = (gauge == 100) ? Red : label switch
-            {
-                "Heat" => new(0xFF90E0FF),
-                "Battery" => new(0xFFFFA500),
-                _ => new(0x08080808)
-            };
-            var width = gauge < 10 ? gauge * 0.02f : gauge * 0.01f; //if Heat = 5, it will not show on Visualizer, instead showing as 0.. so here's a small hack-around to make it visible
-            col.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{label}: {gauge}", color.ABGR, width);
-        }
-    }
+    private void AddHeatRange(DateTime from, DateTime to, int heat)
+        => AddGaugeRange(from, to, _heat, heat, label: "Heat", color: new(0xFF90E0FF));
+    private void AddBatteryRange(DateTime from, DateTime to, int battery)
+        => AddGaugeRange(from, to, _battery, battery, label: "Battery", color: new(0xFFFFA500));
 }
 #endregion
 
