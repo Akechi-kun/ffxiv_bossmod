@@ -1,6 +1,4 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
-using System.Collections;
-using TerraFX.Interop.Windows;
 
 namespace BossMod.ReplayVisualization;
 
@@ -200,10 +198,10 @@ public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
         var prevBlood = 0;
         var prevBloodTime = MinTime();
         var prevDSActive = 0;
-        var prevDSRawTimer = 0;
+        var prevDSTimer = 0;
         var prevDSTime = MinTime();
         var prevLSActive = 0;
-        var prevLSRawTimer = 0;
+        var prevLSTimer = 0;
         var prevLSTime = MinTime();
         var prevDA = 0;
         var prevDATime = MinTime();
@@ -218,10 +216,8 @@ public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
                 prevBloodTime = time;
             }
 
-            var DSRawTimer = gauge.DarksideTimer / 1000;
-            var DSActive = DSRawTimer > 0 ? 1 : 0;
-            var DSTimer = DSRawTimer / 1000;
-            var prevDSTimer = prevDSRawTimer / 1000;
+            var DSTimer = gauge.DarksideTimer / 1000;
+            var DSActive = DSTimer > 0 ? 1 : 0;
             if (DSActive != prevDSActive || (DSActive == 1 && DSTimer != prevDSTimer))
             {
                 AddDarksideRange(prevDSTime, time, prevDSActive, prevDSTimer);
@@ -230,10 +226,8 @@ public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
                 prevDSTime = time;
             }
 
-            var LSRawTimer = gauge.ShadowTimer / 1000;
-            var LSActive = LSRawTimer > 0 ? 1 : 0;
-            var LSTimer = LSRawTimer / 1000;
-            var prevLSTimer = prevLSRawTimer / 1000;
+            var LSTimer = gauge.ShadowTimer / 1000;
+            var LSActive = LSTimer > 0 ? 1 : 0;
             if (LSActive != prevLSActive || (LSActive == 1 && LSTimer != prevLSTimer))
             {
                 AddLivingShadowRange(prevLSTime, time, prevLSActive, prevLSTimer);
@@ -252,8 +246,8 @@ public class ColumnPlayerGaugeDRK : ColumnPlayerGauge
         }
 
         AddBloodRange(prevBloodTime, enc.Time.End, prevBlood);
-        AddDarksideRange(prevDSTime, enc.Time.End, prevDSActive, prevDSRawTimer);
-        AddLivingShadowRange(prevLSTime, enc.Time.End, prevLSActive, prevLSRawTimer);
+        AddDarksideRange(prevDSTime, enc.Time.End, prevDSActive, prevDSTimer);
+        AddLivingShadowRange(prevLSTime, enc.Time.End, prevLSActive, prevLSTimer);
         AddDarkArtsRange(prevDATime, enc.Time.End, prevDA);
     }
 
@@ -427,10 +421,9 @@ public class ColumnPlayerGaugeAST : ColumnPlayerGauge
     private readonly ColumnGenericHistory _currentArcana;
     private readonly ColumnGenericHistory _currentDraw;
 
-    public AstrologianCard[] Cards = [];
-    public AstrologianCard Arcana;
-
-    public int NumCards => Cards.Count(x => x != AstrologianCard.None);
+    private readonly AstrologianCard Arcana;
+    private readonly AstrologianCard[] Cards = [];
+    private int NumCards => Cards.Count(x => x != AstrologianCard.None);
 
     public override bool Visible
     {
@@ -444,141 +437,105 @@ public class ColumnPlayerGaugeAST : ColumnPlayerGauge
         }
     }
 
-    public ColumnPlayerGaugeAST(
-        Timeline timeline,
-        StateMachineTree tree,
-        List<int> phaseBranches,
-        Replay replay,
-        Replay.Encounter enc,
-        Replay.Participant player)
+    public ColumnPlayerGaugeAST(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
         : base(timeline, tree, phaseBranches, replay, enc, player)
     {
         _cards = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
         _currentArcana = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
         _currentDraw = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
-        var prevCurCards = default(AstrologianCard[]);
-        var prevNumCards = 0;
+        var prevCards = default(AstrologianCard[]);
         var prevCardsTime = MinTime();
-
-        var prevCurArcana = default(AstrologianCard);
-        var prevCurArcanaTime = MinTime();
-
-        var prevCurDraw = default(AstrologianDraw);
-        var prevCurDrawTime = MinTime();
+        var prevArcana = AstrologianCard.None;
+        var prevArcanaTime = MinTime();
+        var prevDraw = default(AstrologianDraw);
+        var prevDrawTime = MinTime();
 
         foreach (var (time, gauge) in EnumerateGauge<AstrologianGauge>())
         {
-            var curCards = gauge.CurrentCards ?? [];
-            var numCards = curCards.Count(c => c != AstrologianCard.None);
-
-            if (!curCards.SequenceEqual(prevCurCards) || numCards != prevNumCards)
+            Cards = gauge.CurrentCards;
+            var curCards = (Cards ?? []).Where(c => c != AstrologianCard.None).ToArray();
+            if (!curCards.SequenceEqual(prevCards))
             {
-                AddCardsRange(prevCardsTime, time, curCards, numCards);
-
-                prevCurCards = [.. curCards];
-                prevNumCards = numCards;
+                AddCardRange(prevCardsTime, time, curCards);
+                prevCards = [.. curCards];
                 prevCardsTime = time;
             }
-            var curArcana = gauge.CurrentArcana;
-            if (curArcana != prevCurArcana)
+
+            //something feels off about this in GUI - investigate later
+            Arcana = gauge.CurrentArcana;
+            if (Arcana != prevArcana)
             {
-                AddCurArcanaRange(prevCurArcanaTime, time, curArcana);
-                prevCurArcana = curArcana;
-                prevCurArcanaTime = time;
+                AddArcanaRange(prevArcanaTime, time, Arcana);
+                prevArcana = Arcana;
+                prevArcanaTime = time;
             }
 
-            var curDraw = gauge.CurrentDraw;
-            if (curDraw != prevCurDraw)
+            var draw = gauge.CurrentDraw;
+            if (draw != prevDraw)
             {
-                AddCurDrawRange(prevCurDrawTime, time, curDraw);
-                prevCurDraw = curDraw;
-                prevCurDrawTime = time;
+                AddDrawRange(prevDrawTime, time, draw);
+                prevDraw = draw;
+                prevDrawTime = time;
             }
         }
 
-        AddCardsRange(prevCardsTime, enc.Time.End, prevCurCards, prevNumCards);
-        AddCurArcanaRange(prevCurArcanaTime, enc.Time.End, prevCurArcana);
-        AddCurDrawRange(prevCurDrawTime, enc.Time.End, prevCurDraw);
+        AddCardRange(prevCardsTime, enc.Time.End, prevCards!);
+        AddArcanaRange(prevArcanaTime, enc.Time.End, prevArcana);
+        AddDrawRange(prevDrawTime, enc.Time.End, prevDraw);
     }
 
-    private void AddCardsRange(DateTime from, DateTime to, AstrologianCard[] cards, int numCards)
+    private void AddCardRange(DateTime from, DateTime to, AstrologianCard[] cards)
     {
-        if (to < from)
-            return;
-
-        var activeCards = cards
-            .Where(c => c != AstrologianCard.None)
-            .Distinct()
-            .ToArray();
-
-        // 1. Number of cards
-        // 2. Active state (implicit if > 0)
-        // 3. Which cards
-        var label = activeCards.Length > 0
-            ? $"Cards Active [{numCards}] - {string.Join(", ", activeCards)}"
-            : "Cards Active [0]";
-
-        var color = activeCards.Length switch
+        if (to > from)
         {
-            0 => Bad.ABGR,
-            1 => activeCards[0] switch
-            {
-                AstrologianCard.Lord => 0xFFB04C2A,
-                AstrologianCard.Lady => 0xFF4CC7FF,
-                _ => Good.ABGR
-            },
-            _ => Good.ABGR
-        };
-
-        _cards.AddHistoryEntryRange(
-            Encounter.Time.Start,
-            from,
-            to,
-            label,
-            color,
-            0.24f);
+            _cards.AddHistoryEntryRange(
+                Encounter.Time.Start, from, to,
+                NumCards > 0 ? $"Cards: {NumCards} - {string.Join(", ", cards!.Where(c => c != AstrologianCard.None))}" : "Cards: None",
+                0xFF66FF66,
+                NumCards switch
+                {
+                    1 => 0.31f,
+                    2 => 0.62f,
+                    3 => 0.93f,
+                    _ => 0.0f
+                }
+            );
+        }
     }
-    private void AddCurArcanaRange(DateTime from, DateTime to, AstrologianCard arcana)
+    private void AddArcanaRange(DateTime from, DateTime to, AstrologianCard arcana)
     {
-        if (to < from)
-            return;
-
-        var color = arcana switch
+        if (to > from)
         {
-            AstrologianCard.Lord => 0xFFB04C2A,
-            AstrologianCard.Lady => 0xFF4CC7FF,
-            _ => Good.ABGR
-        };
-
-        _currentArcana.AddHistoryEntryRange(
-            Encounter.Time.Start,
-            from,
-            to,
-            arcana == AstrologianCard.None ? "Arcana: None" : $"Arcana: {arcana}",
-            color,
-            0.99f);
+            _currentArcana.AddHistoryEntryRange(
+                Encounter.Time.Start, from, to,
+                $"Arcana: {arcana}",
+                arcana switch
+                {
+                    AstrologianCard.Lord => 0xFF00C8FF,
+                    AstrologianCard.Lady => 0xFFE0A0E0,
+                    _ => default
+                },
+                0.9f
+            );
+        }
     }
-
-    private void AddCurDrawRange(DateTime from, DateTime to, AstrologianDraw draw)
+    private void AddDrawRange(DateTime from, DateTime to, AstrologianDraw draw)
     {
-        if (to < from)
-            return;
-
-        var color = draw switch
+        if (to > from)
         {
-            AstrologianDraw.Astral => 0xFF4CC7FF,
-            AstrologianDraw.Umbral => 0xFFB04C2A,
-            _ => Bad.ABGR,
-        };
-
-        _currentDraw.AddHistoryEntryRange(
-            Encounter.Time.Start,
-            from,
-            to,
-            draw is not (AstrologianDraw.Astral or AstrologianDraw.Umbral) ? "Draw: None" : $"Draw: {draw}",
-            color,
-            0.99f);
+            _currentDraw.AddHistoryEntryRange(
+                Encounter.Time.Start, from, to,
+                $"Draw: {draw}",
+                draw switch
+                {
+                    AstrologianDraw.Astral => 0xFF4CC7FF,
+                    AstrologianDraw.Umbral => 0xFFB04C2A,
+                    _ => Bad.ABGR,
+                },
+                0.9f
+            );
+        }
     }
 }
 #endregion
@@ -606,40 +563,41 @@ public class ColumnPlayerGaugeSGE : ColumnPlayerGauge
         _addersgall = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
         _addersting = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
 
-        var prevAddersgall = 0;
-        var prevAddersgallTimer = 0;
-        var prevAddersgallTime = MinTime();
-        var prevAddersting = 0;
-        var prevAdderstingTime = MinTime();
+        var prevGall = 0;
+        var prevGallTimer = 0;
+        var prevGallTime = MinTime();
+        var prevSting = 0;
+        var prevStingTime = MinTime();
 
         foreach (var (time, gauge) in EnumerateGauge<SageGauge>())
         {
-            var addersgall = gauge.Addersgall;
-            var addersgallTimer = gauge.AddersgallTimer / 1000;
-            if (addersgall != prevAddersgall || addersgallTimer != prevAddersgallTimer)
+            var gallTimer = (int)MathF.Max(0, 20f - gauge.AddersgallTimer / 1000f);
+            var gall = gauge.Addersgall;
+            if (gall != prevGall || gallTimer != prevGallTimer)
             {
-                AddAddersgallRange(prevAddersgallTime, time, addersgall);
-                prevAddersgall = addersgall;
-                prevAddersgallTime = time;
+                AddAddersgallRange(prevGallTime, time, gall, prevGallTimer);
+                prevGall = gall;
+                prevGallTimer = gallTimer;
+                prevGallTime = time;
             }
 
-            var addersting = gauge.Addersting;
-            if (addersting != prevAddersting)
+            var sting = gauge.Addersting;
+            if (sting != prevSting)
             {
-                AddAdderstingRange(prevAdderstingTime, time, addersting);
-                prevAddersting = addersting;
-                prevAdderstingTime = time;
+                AddAdderstingRange(prevStingTime, time, sting);
+                prevSting = sting;
+                prevStingTime = time;
             }
         }
 
-        AddAddersgallRange(prevAddersgallTime, enc.Time.End, prevAddersgall);
-        AddAdderstingRange(prevAdderstingTime, enc.Time.End, prevAddersting);
+        AddAddersgallRange(prevGallTime, enc.Time.End, prevGall, prevGallTimer);
+        AddAdderstingRange(prevStingTime, enc.Time.End, prevSting);
     }
 
-    private void AddAddersgallRange(DateTime from, DateTime to, int addersgall)
-        => AddCountRange(from, to, _addersgall, addersgall, 3, 0.31f, label: "Addersgall", color: new(0xFFC7F464));
+    private void AddAddersgallRange(DateTime from, DateTime to, int addersgall, int timer)
+        => AddCountRange(from, to, _addersgall, addersgall, 3, 0.31f, label: $"Addersgall ({timer}s)", color: new(0xFFC7F464));
     private void AddAdderstingRange(DateTime from, DateTime to, int addersting)
-        => AddCountRange(from, to, _addersting, addersting, 3, 0.31f, label: "Addersting", color: new(0xFF008080));
+        => AddCountRange(from, to, _addersting, addersting, 3, 0.31f, label: "Addersting", color: new(0xFFC7F464));
 }
 #endregion
 
