@@ -30,11 +30,11 @@ public abstract class ColumnPlayerGauge : Timeline.ColumnGroup, IToggleableColum
         Class.VPR => new ColumnPlayerGaugeVPR(timeline, tree, phaseBranches, replay, enc, player),
         Class.BRD => new ColumnPlayerGaugeBRD(timeline, tree, phaseBranches, replay, enc, player),
         Class.MCH => new ColumnPlayerGaugeMCH(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.DNC => new ColumnPlayerGaugeDNC(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.BLM => new ColumnPlayerGaugeBLM(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.SMN => new ColumnPlayerGaugeSMN(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.RDM => new ColumnPlayerGaugeRDM(timeline, tree, phaseBranches, replay, enc, player),
-        //Class.PCT => new ColumnPlayerGaugePCT(timeline, tree, phaseBranches, replay, enc, player),
+        Class.DNC => new ColumnPlayerGaugeDNC(timeline, tree, phaseBranches, replay, enc, player),
+        Class.BLM => new ColumnPlayerGaugeBLM(timeline, tree, phaseBranches, replay, enc, player),
+        Class.SMN => new ColumnPlayerGaugeSMN(timeline, tree, phaseBranches, replay, enc, player),
+        Class.RDM => new ColumnPlayerGaugeRDM(timeline, tree, phaseBranches, replay, enc, player),
+        Class.PCT => new ColumnPlayerGaugePCT(timeline, tree, phaseBranches, replay, enc, player),
         _ => null
     };
 
@@ -416,6 +416,7 @@ public class ColumnPlayerGaugeSCH : ColumnPlayerGauge
 #endregion
 
 #region AST
+//TODO: review this - looks wrong
 public class ColumnPlayerGaugeAST : ColumnPlayerGauge
 {
     private readonly ColumnGenericHistory _cards;
@@ -1010,7 +1011,12 @@ public class ColumnPlayerGaugeVPR : ColumnPlayerGauge
     public override bool Visible
     {
         get => _rc.Width > 0 || _so.Width > 0;
-        set => _rc.Width = value ? ColumnGenericHistory.DefaultWidth : 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _rc.Width = width;
+            _so.Width = width;
+        }
     }
 
     public ColumnPlayerGaugeVPR(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
@@ -1277,15 +1283,12 @@ public class ColumnPlayerGaugeBLM : ColumnPlayerGauge
         var prevHearts = 0;
         var prevElementActive = 0;
         var prevElementTime = MinTime();
-
         var prevEnochianTimer = 0;
         var prevEnochianActive = 0;
         var prevPolyglot = 0;
         var prevPolyglotTime = MinTime();
-
         var prevParadox = 0;
         var prevParadoxTime = MinTime();
-
         var prevSouls = 0;
         var prevSoulsTime = MinTime();
 
@@ -1311,8 +1314,8 @@ public class ColumnPlayerGaugeBLM : ColumnPlayerGauge
             var fire = gauge.AstralStacks;
             var ice = gauge.UmbralStacks;
             var hearts = gauge.UmbralHearts;
-            if (elementActive != prevElementActive ||
-                hearts != prevHearts ||
+            if (hearts != prevHearts ||
+                elementActive != prevElementActive ||
                 (elementActive == 1 && fire != prevFire) ||
                 (elementActive == 2 && ice != prevIce))
             {
@@ -1360,13 +1363,312 @@ public class ColumnPlayerGaugeBLM : ColumnPlayerGauge
 #endregion
 
 #region SMN
-// TODO: add SMN gauge
+[Flags]
+public enum GaugeFlags
+{
+    None = 0,
+    OneAetherflow = 1 << 0,
+    TwoAetherflow = 1 << 1,
+    Phoenix = 1 << 2,
+    SolarBahamut = 1 << 3,
+    Ruby = 1 << 5,
+    Topaz = 1 << 6,
+    Emerald = 1 << 7
+}
+public enum AttunementType
+{
+    None = 0,
+    Ruby = 1,
+    Topaz = 2,
+    Emerald = 3
+}
+public enum SummonType
+{
+    None,
+    Ifrit,
+    Titan,
+    Garuda,
+    Bahamut,
+    Phoenix
+}
+
+public class ColumnPlayerGaugeSMN : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _aetherflow;
+    private readonly ColumnGenericHistory _summon;
+
+    public override bool Visible
+    {
+        get => _aetherflow.Width > 0 || _summon.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _aetherflow.Width = width;
+            _summon.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugeSMN(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _aetherflow = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _summon = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevAetherflow = 0;
+        var prevAetherflowTime = MinTime();
+
+        var prevSummon = SummonType.None;
+        var prevSummonTime = MinTime();
+        var prevSummonTimer = 0;
+
+        foreach (var (time, gauge) in EnumerateGauge<SummonerGauge>())
+        {
+            var flags = (GaugeFlags)gauge.AetherFlags;
+            var aetherflow =
+                flags.HasFlag(GaugeFlags.TwoAetherflow) ? 2 :
+                flags.HasFlag(GaugeFlags.OneAetherflow) ? 1 : 0;
+
+            if (aetherflow != prevAetherflow)
+            {
+                AddAetherflowRange(prevAetherflowTime, time, prevAetherflow);
+                prevAetherflow = aetherflow;
+                prevAetherflowTime = time;
+            }
+
+            var summon =
+                flags.HasFlag(GaugeFlags.SolarBahamut) ? SummonType.Bahamut :
+                flags.HasFlag(GaugeFlags.Phoenix) ? SummonType.Phoenix :
+                ((AttunementType)(gauge.Attunement & 3)) switch
+                {
+                    AttunementType.Ruby => SummonType.Ifrit,
+                    AttunementType.Topaz => SummonType.Titan,
+                    AttunementType.Emerald => SummonType.Garuda,
+                    _ => SummonType.None
+                };
+
+            var summonTimer = gauge.SummonTimer / 1000;
+            if (summon != prevSummon || summonTimer != prevSummonTimer)
+            {
+                AddSummonRange(prevSummonTime, time, prevSummon, prevSummonTimer);
+                prevSummon = summon;
+                prevSummonTimer = summonTimer;
+                prevSummonTime = time;
+            }
+        }
+
+        AddAetherflowRange(prevAetherflowTime, enc.Time.End, prevAetherflow);
+        AddSummonRange(prevSummonTime, enc.Time.End, prevSummon, prevSummonTimer);
+    }
+
+    private void AddAetherflowRange(DateTime from, DateTime to, int aetherflow)
+        => AddCountRange(from, to, _aetherflow, aetherflow, 2, 0.45f, label: "Aetherflow", color: new(0xFFC7F464));
+
+    private void AddSummonRange(DateTime from, DateTime to, SummonType summon, int timer)
+    {
+        if (to < from)
+            return;
+
+        var (color, name) = summon switch
+        {
+            SummonType.Garuda => (new(0xFF00FF00), "Garuda"),
+            SummonType.Titan => (new(0xFFFFFF00), "Titan"),
+            SummonType.Ifrit => (new(0xFFFF0000), "Ifrit"),
+            SummonType.Bahamut => (new(0xFF00FFFF), "Bahamut"),
+            SummonType.Phoenix => (new(0xFFFF8000), "Phoenix"),
+            _ => (Bad, "Summon")
+        };
+        _summon.AddHistoryEntryRange(Encounter.Time.Start, from, to, $"{name} ({timer}s)", color.ABGR, 0.95f);
+    }
+}
 #endregion
 
 #region RDM
-// TODO: add RDM gauge
+public class ColumnPlayerGaugeRDM : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _black;
+    private readonly ColumnGenericHistory _white;
+    private readonly ColumnGenericHistory _mana;
+
+    public override bool Visible
+    {
+        get => _mana.Width > 0 || _white.Width > 0 || _black.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _black.Width = width;
+            _white.Width = width;
+            _mana.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugeRDM(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _black = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _white = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _mana = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevMana = 0;
+        var prevManaTime = MinTime();
+        var prevBlack = 0;
+        var prevBlackTime = MinTime();
+        var prevWhite = 0;
+        var prevWhiteTime = MinTime();
+
+        foreach (var (time, gauge) in EnumerateGauge<RedMageGauge>())
+        {
+            var mana = gauge.ManaStacks;
+            if (mana != prevMana)
+            {
+                AddManaRange(prevManaTime, time, prevMana);
+                prevMana = mana;
+                prevManaTime = time;
+            }
+
+            var black = gauge.BlackMana;
+            if (black != prevBlack)
+            {
+                AddBlackRange(prevBlackTime, time, prevBlack);
+                prevBlack = black;
+                prevBlackTime = time;
+            }
+            var white = gauge.WhiteMana;
+            if (white != prevWhite)
+            {
+                AddWhiteRange(prevWhiteTime, time, prevWhite);
+                prevWhite = white;
+                prevWhiteTime = time;
+            }
+        }
+
+        AddBlackRange(prevBlackTime, enc.Time.End, prevBlack);
+        AddWhiteRange(prevWhiteTime, enc.Time.End, prevWhite);
+        AddManaRange(prevManaTime, enc.Time.End, prevMana);
+    }
+
+    private void AddManaRange(DateTime from, DateTime to, int mana)
+        => AddCountRange(from, to, _mana, mana, 3, 0.31f, color: new(0xFF3A7AC8), label: "Mana");
+    private void AddBlackRange(DateTime from, DateTime to, int black)
+        => AddGaugeRange(from, to, _black, black, color: new(0xFFE8CFA8), label: "Black Mana");
+    private void AddWhiteRange(DateTime from, DateTime to, int white)
+        => AddGaugeRange(from, to, _white, white, color: new(0xFFE8CFA8), label: "White Mana");
+}
 #endregion
 
 #region PCT
-// TODO: add PCT gauge
+public class ColumnPlayerGaugePCT : ColumnPlayerGauge
+{
+    private readonly ColumnGenericHistory _palette;
+    private readonly ColumnGenericHistory _paint;
+    private readonly ColumnGenericHistory _creature;
+    private readonly ColumnGenericHistory _weapon;
+    private readonly ColumnGenericHistory _landscape;
+
+    public override bool Visible
+    {
+        get => _palette.Width > 0 || _paint.Width > 0 || _creature.Width > 0 || _weapon.Width > 0 || _landscape.Width > 0;
+        set
+        {
+            var width = value ? ColumnGenericHistory.DefaultWidth : 0;
+            _palette.Width = width;
+            _paint.Width = width;
+            _creature.Width = width;
+            _weapon.Width = width;
+            _landscape.Width = width;
+        }
+    }
+
+    public ColumnPlayerGaugePCT(Timeline timeline, StateMachineTree tree, List<int> phaseBranches, Replay replay, Replay.Encounter enc, Replay.Participant player)
+        : base(timeline, tree, phaseBranches, replay, enc, player)
+    {
+        _palette = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _paint = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _creature = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _weapon = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+        _landscape = Add(new ColumnGenericHistory(timeline, tree, phaseBranches));
+
+        var prevPalette = 0;
+        var prevPaletteTime = MinTime();
+
+        var prevPaint = 0;
+        var prevPaintTime = MinTime();
+
+        var prevCreature = 0;
+        var prevCreatureTime = MinTime();
+
+        var prevWeapon = 0;
+        var prevWeaponTime = MinTime();
+
+        var prevLandscape = 0;
+        var prevLandscapeTime = MinTime();
+
+        foreach (var (time, gauge) in EnumerateGauge<PictomancerGauge>())
+        {
+            var palette = gauge.PalleteGauge;
+            if (palette != prevPalette)
+            {
+                AddPaletteRange(prevPaletteTime, time, prevPalette);
+                prevPalette = palette;
+                prevPaletteTime = time;
+            }
+
+            var paint = gauge.Paint;
+            if (paint != prevPaint)
+            {
+                AddPaintRange(prevPaintTime, time, prevPaint);
+                prevPaint = paint;
+                prevPaintTime = time;
+            }
+
+            var canvases = gauge.CanvasFlags;
+            var creatures = gauge.CreatureFlags;
+            var pomclaw = canvases.HasFlag(CanvasFlags.Pom) || canvases.HasFlag(CanvasFlags.Claw);
+            var wingfang = canvases.HasFlag(CanvasFlags.Wing) || canvases.HasFlag(CanvasFlags.Maw);
+            var creaturePainted = (pomclaw || wingfang) ? 1 : 0;
+            if (creaturePainted != prevCreature)
+            {
+                AddCreatureRange(prevCreatureTime, time, prevCreature);
+                prevCreature = creaturePainted;
+                prevCreatureTime = time;
+            }
+
+            var weaponPainted = canvases.HasFlag(CanvasFlags.Weapon) ? 1 : 0;
+            if (weaponPainted != prevWeapon)
+            {
+                AddWeaponRange(prevWeaponTime, time, prevWeapon);
+                prevWeapon = weaponPainted;
+                prevWeaponTime = time;
+            }
+
+            var landscapePainted = canvases.HasFlag(CanvasFlags.Landscape) ? 1 : 0;
+            if (landscapePainted != prevLandscape)
+            {
+                AddLandscapeRange(prevLandscapeTime, time, prevLandscape);
+                prevLandscape = landscapePainted;
+                prevLandscapeTime = time;
+            }
+        }
+
+        AddPaletteRange(prevPaletteTime, enc.Time.End, prevPalette);
+        AddPaintRange(prevPaintTime, enc.Time.End, prevPaint);
+        AddCreatureRange(prevCreatureTime, enc.Time.End, prevCreature);
+        AddWeaponRange(prevWeaponTime, enc.Time.End, prevWeapon);
+        AddLandscapeRange(prevLandscapeTime, enc.Time.End, prevLandscape);
+    }
+
+    private void AddPaletteRange(DateTime from, DateTime to, int palette)
+        => AddGaugeRange(from, to, _palette, palette, label: "Palette", color: new(0xFFB0E0E6));
+
+    private void AddPaintRange(DateTime from, DateTime to, int paint)
+        => AddCountRange(from, to, _paint, paint, 5, 0.18f, label: "Paint", color: new(0xFFFFAACC));
+
+    private void AddCreatureRange(DateTime from, DateTime to, int creature)
+        => AddActiveRange(from, to, _creature, creature, label: "Creature", color: new(0xFF80FF80));
+
+    private void AddWeaponRange(DateTime from, DateTime to, int weapon)
+        => AddActiveRange(from, to, _weapon, weapon, label: "Weapon", color: new(0xFFFFD700));
+
+    private void AddLandscapeRange(DateTime from, DateTime to, int landscape)
+        => AddActiveRange(from, to, _landscape, landscape, label: "Landscape", color: new(0xFF87CEEB));
+}
 #endregion
