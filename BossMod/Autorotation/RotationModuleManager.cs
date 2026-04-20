@@ -27,6 +27,7 @@ public sealed class RotationModuleManager : IDisposable
     private readonly EventSubscriptions _subscriptions;
     private List<(int index, ActiveModule module)>? _activeModules;
     private IEnumerable<ActiveModule> ActiveModulesFlat => _activeModules?.Select(m => m.module) ?? [];
+    private bool WantsLoSFix => ActiveModulesFlat.Any(m => m.Module.WantsLoSFix);
 
     public static readonly Preset ForceDisable = new(""); // empty preset, so if it's activated, rotation is force disabled
 
@@ -372,6 +373,12 @@ public sealed class RotationModuleManager : IDisposable
 
     private void OnLoSFailed(ClientState.OpActionFailedLoS op)
     {
+        if (!WantsLoSFix)
+        {
+            LoSFix = null;
+            return;
+        }
+
         if (Hints.PathfindMapObstacles.Bitmap is null)
             return;
 

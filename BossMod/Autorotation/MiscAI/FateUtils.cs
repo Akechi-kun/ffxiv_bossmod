@@ -2,6 +2,8 @@ namespace BossMod.Autorotation.MiscAI;
 
 public sealed class FateUtils(RotationModuleManager manager, Actor player) : RotationModule(manager, player)
 {
+    public override bool WantsLoSFix => true;
+
     public enum Track { Handin, Collect, Sync, Chocobo }
     public enum Flag { Enabled, Disabled }
 
