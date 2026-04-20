@@ -41,96 +41,66 @@ public sealed class FateUtils(RotationModuleManager manager, Actor player) : Rot
         if (strategy.Option(Track.Chocobo).As<Flag>() == Flag.Enabled && World.Client.GetInventoryItemQuantity(ActionDefinitions.IDMiscItemGreens.ID) > 0 && World.Client.ActiveCompanion is { TimeLeft: < 60, Stabled: false })
             Hints.ActionsToExecute.Push(ActionDefinitions.IDMiscItemGreens, Player, ActionQueue.Priority.VeryHigh);
 
-        var fateID = World.Client.ActiveFate.ID;
-        if (primaryTarget is { FateID: > 0 } target && target.FateID == fateID)
-            AddLOSGoalForTarget(target);
-
-        if (strategy.Option(Track.Handin).As<Flag>() != Flag.Enabled)
-            return;
-
-        var item = Utils.GetFateItem(fateID);
-        if (item == 0)
-            return;
-
-        // already turned in enough, fate is ending, do nothing
-        if (World.Client.ActiveFate.HandInCount >= TurnInGoldReq && World.Client.ActiveFate.Progress >= 100)
-            return;
-
-        // until fate is completed, hand in batches of 10; if other people complete the fate, we stop doing stuff
-        if (World.Client.GetInventoryItemQuantity(item) >= TurnInGoldReq)
+        var goal = GetGoal(strategy);
+        if (goal is CollectFateGoal.HandIn)
         {
             Hints.InteractWithTarget = World.Actors.Find(World.Client.ActiveFate.ObjectiveNpc);
             return;
         }
-
-        // otherwise, pick up stuff
-        if (strategy.Option(Track.Collect).As<Flag>() == Flag.Enabled && !Player.InCombat)
-            Hints.InteractWithTarget = World.Actors.Where(a => a.FateID == fateID && a.IsTargetable && a.Type == ActorType.EventObj).MinBy(Player.DistanceToHitbox);
-
-    }
-
-    private void AddLOSGoalForTarget(Actor target)
-    {
-        if (Hints.PathfindMapObstacles.Bitmap is not { } bitmap)
+        else if (goal is CollectFateGoal.Pickup)
+        {
+            Hints.InteractWithTarget = World.Actors.Where(a => a.FateID == World.Client.ActiveFate.ID && a.IsTargetable && a.Type == ActorType.EventObj).MinBy(Player.DistanceToHitbox);
             return;
+        }
 
-        var rect = Hints.PathfindMapObstacles.Rect;
-        var mapCenter = Hints.PathfindMapCenter;
-        var targetPos = target.Position;
-        var targetRange = (Player.Role is Role.Melee or Role.Tank ? 3.5f : 24.5f) + target.HitboxRadius;
-
-        // blacklist current tile if no LoS
-        Hints.GoalZones.Add(p => HasLineOfSight(bitmap, rect, mapCenter, p, targetPos) ? 0 : -100);
-        Hints.GoalZones.Add(p =>
+        if (Manager.LoSFix is { } los)
         {
-            if (!HasLineOfSight(bitmap, rect, mapCenter, p, targetPos))
-                return 0;
-            return (p - targetPos).LengthSq() <= targetRange * targetRange ? 20 : 8;
-        });
-    }
+            var losDelta = los.Destination - los.Origin;
+            var losDist = losDelta.Length();
+            var losDir = losDist > 1e-3f ? losDelta / losDist : default;
 
-    private static bool HasLineOfSight(Bitmap map, Bitmap.Rect rect, WPos mapCenter, WPos from, WPos to)
-    {
-        if (!TryWorldToBitmapCell(map, rect, mapCenter, from, out var x0, out var y0) || !TryWorldToBitmapCell(map, rect, mapCenter, to, out var x1, out var y1))
-            return true; // if mapping fails, don't block movement
-
-        var dx = Math.Abs(x1 - x0);
-        var sx = x0 < x1 ? 1 : -1;
-        var dy = -Math.Abs(y1 - y0);
-        var sy = y0 < y1 ? 1 : -1;
-        var err = dx + dy;
-        var x = x0;
-        var y = y0;
-
-        while (true)
-        {
-            if ((uint)x < map.Width && (uint)y < map.Height && map[x, y])
-                return false;
-            if (x == x1 && y == y1)
-                return true;
-            var e2 = 2 * err;
-            if (e2 >= dy)
+            // tight spot with high reward to get out of where we're at
+            Hints.GoalZones.Add(Hints.GoalSingleTarget(los.Destination, 0.3f, 120));
+            // add a penalty to current position to actually encourage moving out of it
+            Hints.GoalZones.Add(p => p.InCircle(los.Origin, 1.0f) ? -25 : 0);
+            // more encouragement for going towards the destination, but need to cap it or else it'll just keep going
+            Hints.GoalZones.Add(p =>
             {
-                err += dy;
-                x += sx;
-            }
-            if (e2 <= dx)
-            {
-                err += dx;
-                y += sy;
-            }
+                var progress = WDir.Dot(p - los.Origin, losDir);
+                if (progress <= 0)
+                    return 0;
+
+                var cappedProgress = MathF.Min(progress, losDist);
+                var overshoot = MathF.Max(0, progress - losDist);
+                return cappedProgress * 8 - overshoot * 16;
+            });
         }
     }
 
-    private static bool TryWorldToBitmapCell(Bitmap map, Bitmap.Rect rect, WPos mapCenter, WPos pos, out int x, out int y)
+    private CollectFateGoal GetGoal(StrategyValues strategy)
     {
-        var centerCellX = (rect.Left + rect.Right) * 0.5f;
-        var centerCellY = (rect.Top + rect.Bottom) * 0.5f;
-        var invRes = 1.0f / map.PixelSize;
-        var delta = (pos - mapCenter) * invRes;
+        if (strategy.Option(Track.Handin).As<Flag>() != Flag.Enabled)
+            return CollectFateGoal.None;
 
-        x = (int)MathF.Round(centerCellX + delta.X);
-        y = (int)MathF.Round(centerCellY + delta.Z);
-        return (uint)x < map.Width && (uint)y < map.Height;
+        if (Utils.GetFateItem(World.Client.ActiveFate.ID) is not (not 0 and var itemId))
+            return CollectFateGoal.None;
+
+        // already turned in enough, fate is ending, do nothing
+        if (World.Client.ActiveFate.HandInCount >= TurnInGoldReq && World.Client.ActiveFate.Progress >= 100)
+            return CollectFateGoal.None;
+
+        // until fate is completed, hand in batches of 10; if other people complete the fate, we stop doing stuff
+        if (World.Client.GetInventoryItemQuantity(itemId) >= TurnInGoldReq)
+            return CollectFateGoal.HandIn;
+
+        // pick up stuff
+        return strategy.Option(Track.Collect).As<Flag>() == Flag.Enabled && !Player.InCombat ? CollectFateGoal.Pickup : CollectFateGoal.None;
+    }
+
+    private enum CollectFateGoal
+    {
+        None,
+        HandIn,
+        Pickup,
     }
 }
