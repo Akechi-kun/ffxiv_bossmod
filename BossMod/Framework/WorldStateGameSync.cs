@@ -212,6 +212,7 @@ sealed class WorldStateGameSync : IDisposable
         _processPacketOpenTreasureHook.Dispose();
         _processPacketFateTradeHook.Dispose();
         _processPacketFateInfoHook.Dispose();
+        _getActionInRangeOrLoSHook.Dispose();
         _subscriptions.Dispose();
         _netConfig.Dispose();
         _interceptor.Dispose();
