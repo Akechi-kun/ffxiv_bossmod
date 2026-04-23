@@ -46,12 +46,19 @@ public sealed class FateUtils(RotationModuleManager manager, Actor player) : Rot
         var goal = GetGoal(strategy);
         if (goal is CollectFateGoal.HandIn)
         {
-            Hints.InteractWithTarget = World.Actors.Find(World.Client.ActiveFate.ObjectiveNpc);
+            var target = World.Actors.Find(World.Client.ActiveFate.ObjectiveNpc);
+            Hints.InteractWithTarget = target;
+            // if the auto generated obstacle map is bad, it'll get stuck so force movement regardless
+            if (target != null && ShouldForceMovement(target))
+                Hints.ForcedMovement = Player.DirectionTo(target).ToVec3(Player.PosRot.Y);
             return;
         }
         else if (goal is CollectFateGoal.Pickup)
         {
-            Hints.InteractWithTarget = World.Actors.Where(a => a.FateID == World.Client.ActiveFate.ID && a.IsTargetable && a.Type == ActorType.EventObj).MinBy(Player.DistanceToHitbox);
+            var target = World.Actors.Where(a => a.FateID == World.Client.ActiveFate.ID && a.IsTargetable && a.Type == ActorType.EventObj).MinBy(Player.DistanceToHitbox);
+            Hints.InteractWithTarget = target;
+            if (target != null && ShouldForceMovement(target))
+                Hints.ForcedMovement = Player.DirectionTo(target).ToVec3(Player.PosRot.Y);
             return;
         }
 
@@ -98,6 +105,11 @@ public sealed class FateUtils(RotationModuleManager manager, Actor player) : Rot
         // pick up stuff
         return strategy.Option(Track.Collect).As<Flag>() == Flag.Enabled && !Player.InCombat ? CollectFateGoal.Pickup : CollectFateGoal.None;
     }
+
+    // no path = force movement anyway
+    private bool ShouldForceMovement(Actor target)
+        => Hints.PathfindMapObstacles.Bitmap != null
+            && (!Hints.PathfindMapBounds.Contains(target.Position - Hints.PathfindMapCenter) || !Hints.PathfindMapObstacles.HasObstacleMapLineOfSight(Hints.PathfindMapCenter, Player.Position, target.Position));
 
     private enum CollectFateGoal
     {
