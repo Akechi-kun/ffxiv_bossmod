@@ -94,6 +94,8 @@ sealed class WorldStateGameSync : IDisposable
     private unsafe delegate void ProcessPacketPlayActionTimelineSync(Network.ServerIPC.PlayActionTimelineSync* data);
     private readonly Hook<ProcessPacketPlayActionTimelineSync> _processPlayActionTimelineSyncHook;
 
+    private readonly Hook<ActionManager.Delegates.GetActionInRangeOrLoS> _getActionInRangeOrLoSHook;
+
     public unsafe WorldStateGameSync(WorldState ws, ActionManagerEx amex)
     {
         _ws = ws;
@@ -185,6 +187,10 @@ sealed class WorldStateGameSync : IDisposable
         _processPlayActionTimelineSyncHook = Service.Hook.HookFromSignature<ProcessPacketPlayActionTimelineSync>("48 8D 4F 10 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? B9 ?? ?? ?? ?? 45 33 C0 48 8B D7 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? B9 ?? ?? ?? ??", ProcessPlayActionTimelineSyncDetour);
         _processPlayActionTimelineSyncHook.Enable();
         Service.Log($"[WSG] ProcessPlayActionTimelineSync address = {_processPlayActionTimelineSyncHook.Address:X}");
+
+        _getActionInRangeOrLoSHook = Service.Hook.HookFromAddress<ActionManager.Delegates.GetActionInRangeOrLoS>((nint)ActionManager.MemberFunctionPointers.GetActionInRangeOrLoS, GetActionInRangeOrLoSDetour);
+        _getActionInRangeOrLoSHook.Enable();
+        Service.Log($"[WSG] GetActionInRangeOrLoS address = 0x{_getActionInRangeOrLoSHook.Address:X}");
     }
 
     public void Dispose()
@@ -206,6 +212,7 @@ sealed class WorldStateGameSync : IDisposable
         _processPacketOpenTreasureHook.Dispose();
         _processPacketFateTradeHook.Dispose();
         _processPacketFateInfoHook.Dispose();
+        _getActionInRangeOrLoSHook.Dispose();
         _subscriptions.Dispose();
         _netConfig.Dispose();
         _interceptor.Dispose();
@@ -1158,5 +1165,13 @@ sealed class WorldStateGameSync : IDisposable
 
         if (owner > 0)
             _actorOps.GetOrAdd(owner).Add(new ActorState.OpPlayActionTimelineSync(owner, actions));
+    }
+
+    private unsafe uint GetActionInRangeOrLoSDetour(uint actionId, GameObject* sourceObject, GameObject* targetObject)
+    {
+        var res = _getActionInRangeOrLoSHook.Original(actionId, sourceObject, targetObject);
+        if (res is 562 && sourceObject->EntityId == UIState.Instance()->PlayerState.EntityId)
+            _globalOps.Add(new ClientState.OpActionFailedLoS(actionId, SanitizedObjectID(targetObject->EntityId)));
+        return res;
     }
 }
