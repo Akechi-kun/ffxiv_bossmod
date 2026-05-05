@@ -24,102 +24,112 @@ public enum OID : uint
 
 public enum AID : uint
 {
-    _AutoAttack_ = 49937, // Boss->player, no cast, single-target
-    _Spell_Meteorain = 50049, // Boss->self, 5.0s cast, range 40 circle
-    _Ability_ = 49927, // Boss->location, no cast, single-target
-    _Weaponskill_NaughtGrows = 49975, // Boss->self, 7.0+1.0s cast, single-target
-    _Weaponskill_NaughtGrows1 = 49977, // _Gen_YawningVoid1->self, 8.0s cast, range 40 circle
-    _Weaponskill_ReturnToNothing = 49983, // _Gen_Void1->location, no cast, width 6 rect charge
-    _Weaponskill_NaughtWakes = 49973, // Boss->self, 2.0+1.0s cast, single-target
-    _Weaponskill_ = 49974, // _Gen_YawningVoid1->location, no cast, single-target
-    _Spell_Meltdown = 50040, // Boss->self, 4.0+1.0s cast, range 40 circle
-    _Spell_Meltdown1 = 50041, // Helper->location, 4.5s cast, range 5 circle
-    _Spell_Meltdown2 = 50042, // Helper->players, 5.5s cast, range 5 circle
-    _Weaponskill_AiryEmptiness = 50032, // Boss->self, 4.0+1.0s cast, single-target
-    _Weaponskill_AiryEmptiness1 = 50034, // Helper->self, no cast, range 60 ?-degree cone
-    _Weaponskill_NaughtGrows2 = 49978, // _Gen_YawningVoid1->self, 8.0s cast, range 40-60 donut
-    _Weaponskill_GreatReturnToNothing = 49984, // _Gen_Void->location, no cast, width 6 rect charge
-    _Weaponskill_GazeOfTheVoid = 50002, // Boss->self, 6.0+1.0s cast, single-target
-    _Weaponskill_GazeOfTheVoid1 = 50005, // Helper->self, 7.0s cast, range 40 ?-degree cone
-    _Weaponskill_GazeOfTheVoid2 = 50003, // Helper->self, 7.0s cast, single-target
-    _Weaponskill_ViolentBurst = 50007, // _Gen_Void3->self, no cast, range 6 circle
-    _Weaponskill_GazeOfTheVoid3 = 50004, // Helper->self, 7.0s cast, single-target
-    _Weaponskill_BigBurst = 50008, // _Gen_Void2->self, no cast, range 60 circle
-    _Weaponskill_BigBurst1 = 50009, // _Gen_Void3->self, no cast, range 60 circle
-    _Weaponskill_Burst = 50006, // _Gen_Void2->self, no cast, range 5 circle
-    _Weaponskill_Vacuum = 49994, // Boss->self, 2.0+1.0s cast, single-target
-    _Weaponskill_SilentTorrent = 49997, // _Gen_Void4->location, 3.5s cast, single-target
-    _Weaponskill_SilentTorrent1 = 49996, // _Gen_Void4->location, 3.5s cast, single-target
-    _Weaponskill_SilentTorrent2 = 49995, // _Gen_Void4->location, 3.5s cast, single-target
-    _Weaponskill_SilentTorrent5 = 49998, // Helper->self, 4.0s cast, range 17-19 20-degree donut sector
-    _Weaponskill_SilentTorrent4 = 49999, // Helper->self, 4.0s cast, range 17-19 40-degree donut sector
-    _Weaponskill_SilentTorrent3 = 50000, // Helper->self, 4.0s cast, range 17-19 60-degree donut sector
-    _Weaponskill_Vacuum1 = 50001, // _Gen_Void4->self, 1.5s cast, range 7 circle
-    _Weaponskill_DenseEmptiness = 50033, // Boss->self, 4.0+1.0s cast, single-target
-    _Weaponskill_DenseEmptiness1 = 50035, // Helper->self, no cast, range 60 100-degree cone
-    _Spell_DeepFreeze = 50043, // Boss->self, 5.0+1.0s cast, range 40 circle
-    _Spell_DeepFreeze1 = 50044, // Helper->players, 6.0s cast, range 40 circle
-    _Weaponskill_AllForNaught = 50010, // Boss->self, 5.0s cast, single-target
-    _Weaponskill_LoomingEmptiness = 50011, // _Gen_LoomingShadow->self, 5.0s cast, single-target
-    _Weaponskill_LoomingEmptiness1 = 49982, // Helper->self, 6.0s cast, range 100 circle
-    _Weaponskill_LoomingEmptiness2 = 49369, // Helper->self, 6.0s cast, range 8 circle
-    _Weaponskill_VoidalTurbulence = 50036, // _Gen_LoomingShadow->self, 6.0+1.0s cast, single-target
-    _Weaponskill_EmptyShadow = 50013, // Helper->self, 7.0s cast, range 6 circle
-    _Weaponskill_VoidalTurbulence1 = 50038, // Helper->self, no cast, range 60 60-degree cone
-    _Weaponskill_1 = 50012, // _Gen_SoothingShadow/_Gen_AggressiveShadow/_Gen_ProtectiveShadow->self, no cast, single-target
-    _Weaponskill_BigBurst2 = 50014, // Helper->self, no cast, range 60 circle
-    _AutoAttack_1 = 50753, // _Gen_SoothingShadow->player, no cast, single-target
-    _AutoAttack_2 = 50752, // _Gen_AggressiveShadow->player, no cast, single-target
-    _AutoAttack_3 = 50751, // _Gen_ProtectiveShadow->player, no cast, single-target
-    _AutoAttack_4 = 50016, // _Gen_LoomingShadow->player, no cast, single-target
-    _Weaponskill_2 = 50015, // Helper->player, no cast, single-target
-    _Weaponskill_3 = 49938, // _Gen_AggressiveShadow/_Gen_SoothingShadow/_Gen_ProtectiveShadow/_Gen_LoomingShadow->self, no cast, single-target
-    _Weaponskill_DemonEye = 50022, // _Gen_AggressiveShadow->self, 4.0+1.0s cast, single-target
-    _Weaponskill_DemonEye1 = 50023, // Helper->self, 5.0s cast, range 20 circle
-    _Weaponskill_CurseOfTheFlesh = 50024, // _Gen_SoothingShadow->self, 2.0+1.0s cast, single-target
-    _Weaponskill_CurseOfTheFlesh1 = 50025, // Helper->player, 3.0s cast, single-target
-    _Weaponskill_WeightOfNothing = 50021, // Helper->player, 5.0s cast, range 100 width 8 rect
-    _Weaponskill_WeightOfNothing1 = 50020, // _Gen_ProtectiveShadow->self, 4.0+1.0s cast, single-target
-    _Weaponskill_Nothingness = 50017, // _Gen_AggressiveShadow/_Gen_SoothingShadow/_Gen_ProtectiveShadow->self, 3.0s cast, range 100 width 4 rect
-    _Weaponskill_LightlessWorld = 50029, // Boss->self, 10.0s cast, single-target
-    _Weaponskill_LightlessWorld1 = 50030, // Helper->self, no cast, range 40 circle
-    _Weaponskill_LightlessWorld2 = 50031, // Helper->self, no cast, range 40 circle
-    _Weaponskill_Almagest = 49972, // Boss->self, 5.0s cast, range 40 circle
-    _Weaponskill_NaughtGrows3 = 49976, // Boss->self, 7.0+1.0s cast, single-target
-    _Weaponskill_NaughtGrows4 = 49979, // Helper->self, 8.0s cast, range 12 circle
-    _Weaponskill_PassageOfNaught = 49985, // _Gen_YawningVoid1->self, 7.0s cast, range 80 width 16 rect
-    _Weaponskill_PassageOfNaught1 = 49987, // Helper->self, 6.0s cast, range 80 width 16 rect
-    _Weaponskill_PassageOfNaught2 = 49986, // _Gen_YawningVoid->self, 6.0s cast, range 80 width 16 rect
-    _Spell_ShroudedHoly = 50045, // Boss->self, 5.0+1.0s cast, single-target
-    _Spell_ShroudedHoly1 = 50046, // Helper->players, 6.0s cast, range 6 circle
-    _Weaponskill_NaughtGrows5 = 49980, // Helper->self, 8.0s cast, range 6-40 donut
-    _Weaponskill_DimensionZero = 50047, // Boss->self, 5.0s cast, single-target
-    _Weaponskill_DimensionZero1 = 50048, // Boss->self, no cast, range 60 width 8 rect
-    _Weaponskill_NaughtHunts = 49992, // Boss->self, 6.0+1.0s cast, single-target
-    _Weaponskill_EndlessChase = 48475, // _Gen_Void5->self, 6.0s cast, range 6 circle
-    _Weaponskill_EndlessChase1 = 49993, // _Gen_Void5->location, no cast, range 6 circle
-    _Weaponskill_SelfDestruct = 50799, // _Gen_AggressiveShadow->self, 5.0s cast, range 60 circle, enrage
-    _Weaponskill_DrainTouch = 50018, // _Gen_ProtectiveShadow->self, 5.0s cast, single-target, enrage
-    _Weaponskill_DrainTouch1 = 50019, // Helper->player, no cast, single-target, deals ~500k and full heals shadow
-    _Weaponskill_Apeiron = 48478, // Helper->player, no cast, single-target, intermission enrage, hits all living players
+    AutoAttack = 49937, // Boss->player, no cast, single-target
+    Meteorain = 50049, // Boss->self, 5.0s cast, range 40 circle
+    BossJump = 49927, // Boss->location, no cast, single-target
+
+    NaughtGrowsCast1 = 49975, // Boss->self, 7.0+1.0s cast, single-target
+    NaughtGrowsCast2 = 49976, // Boss->self, 7.0+1.0s cast, single-target
+    NaughtGrowsCircleBig = 49977, // YawningVoid1->self, 8.0s cast, range 40 circle
+    NaughtGrowsDonutBig = 49978, // YawningVoid1->self, 8.0s cast, range 40-60 donut
+    NaughtGrowsCircleSmall = 49979, // Helper->self, 8.0s cast, range 12 circle
+    NaughtGrowsDonutSmall = 49980, // Helper->self, 8.0s cast, range 6-40 donut
+    ReturnToNothing = 49983, // VoidWildChargeSmall->location, no cast, width 6 rect charge
+    GreatReturnToNothing = 49984, // VoidWildChargeBig->location, no cast, width 6 rect charge
+
+    NaughtWakes = 49973, // Boss->self, 2.0+1.0s cast, single-target
+    YawningVoidTeleport = 49974, // YawningVoid1->location, no cast, single-target
+    MeltdownCast = 50040, // Boss->self, 4.0+1.0s cast, range 40 circle
+    MeltdownPuddle = 50041, // Helper->location, 4.5s cast, range 5 circle
+    MeltdownSpread = 50042, // Helper->players, 5.5s cast, range 5 circle
+
+    AiryEmptinessCast = 50032, // Boss->self, 4.0+1.0s cast, single-target
+    DenseEmptiness = 50033, // Boss->self, 4.0+1.0s cast, single-target
+    AiryEmptinessProtean = 50034, // Helper->self, no cast, range 60 60-degree cone
+    DenseEmptinessProtean = 50035, // Helper->self, no cast, range 60 100-degree cone
+
+    GazeOfTheVoidCast = 50002, // Boss->self, 6.0+1.0s cast, single-target
+    GazeOfTheVoidSpawn1 = 50003, // Helper->self, 7.0s cast, single-target
+    GazeOfTheVoidSpawn2 = 50004, // Helper->self, 7.0s cast, single-target
+    GazeOfTheVoid = 50005, // Helper->self, 7.0s cast, range 40 45-degree cone
+    Burst = 50006, // VoidGazeSmall->self, no cast, range 5 circle
+    ViolentBurst = 50007, // VoidGazeBig->self, no cast, range 6 circle
+
+    VacuumCast = 49994, // Boss->self, 2.0+1.0s cast, single-target
+    SilentTorrentAppear1 = 49995, // VoidVacuum->location, 3.5s cast, single-target
+    SilentTorrentAppear2 = 49996, // VoidVacuum->location, 3.5s cast, single-target
+    SilentTorrentAppear3 = 49997, // VoidVacuum->location, 3.5s cast, single-target
+    SilentTorrentSmall = 49998, // Helper->self, 4.0s cast, range 17-19 20-degree cone
+    SilentTorrentMedium = 49999, // Helper->self, 4.0s cast, range 17-19 40-degree cone
+    SilentTorrentLarge = 50000, // Helper->self, 4.0s cast, range 17-19 60-degree cone
+    Vacuum = 50001, // VoidVacuum->self, 1.5s cast, range 7 circle
+
+    DeepFreezeRaidwide = 50043, // Boss->self, 5.0+1.0s cast, range 40 circle
+    DeepFreezeFlare = 50044, // Helper->players, 6.0s cast, range 40 circle
+
+    AllForNaught = 50010, // Boss->self, 5.0s cast, single-target, intermission
+
+    ProtectiveAuto = 50751, // ProtectiveShadow->player, no cast, single-target
+    AggressiveAuto = 50752, // AggressiveShadow->player, no cast, single-target
+    SoothingAuto = 50753, // SoothingShadow->player, no cast, single-target
+    LoomingAuto = 50016, // LoomingShadow->player, no cast, single-target
+    TowerShadowUnk1 = 50012, // AggressiveShadow/ProtectiveShadow/SoothingShadow->self, no cast, single-target
+    TowerShadowUnk2 = 49938, // AggressiveShadow/SoothingShadow/ProtectiveShadow/LoomingShadow->self, no cast, single-target
+    LoomingEmptinessVisual = 50011, // LoomingShadow->self, 5.0s cast, single-target
+    LoomingEmptinessAOE = 49369, // Helper->self, 6.0s cast, range 8 circle
+    LoomingEmptinessKB = 49982, // Helper->self, 6.0s cast, range 100 circle
+    VoidalTurbulenceCast = 50036, // LoomingShadow->self, 6.0+1.0s cast, single-target
+    VoidalTurbulenceProtean = 50038, // Helper->self, no cast, range 60 60-degree cone
+    EmptyShadow = 50013, // Helper->self, 7.0s cast, range 6 circle, tower
+    DemonEyeCast = 50022, // AggressiveShadow->self, 4.0+1.0s cast, single-target
+    DemonEye = 50023, // Helper->self, 5.0s cast, range 20 circle
+    CurseOfTheFleshCast = 50024, // SoothingShadow->self, 2.0+1.0s cast, single-target
+    CurseOfTheFlesh = 50025, // Helper->player, 3.0s cast, single-target, applies cleansable Disease
+    WeightOfNothingCast = 50020, // ProtectiveShadow->self, 4.0+1.0s cast, single-target
+    WeightOfNothing = 50021, // Helper->player, 5.0s cast, range 100 width 8 rect, tankbuster
+    Nothingness = 50017, // ProtectiveShadow/AggressiveShadow/SoothingShadow->self, 3.0s cast, range 100 width 4 rect
+
+    DrainTouchCast = 50018, // ProtectiveShadow->self, 5.0s cast, single-target, tank add enrage
+    DrainTouch = 50019, // Helper->player, no cast, single-target, lifesteal
+    SelfDestruct = 50799, // AggressiveShadow/SoothingShadow->self, 5.0s cast, range 60 circle
+
+    LightlessWorldCast = 50029, // Boss->self, 10.0s cast, single-target
+    LightlessWorldInitial = 50030, // Helper->self, no cast, range 40 circle
+    LightlessWorldLast = 50031, // Helper->self, no cast, range 40 circle
+    Almagest = 49972, // Boss->self, 5.0s cast, range 40 circle
+
+    PassageOfNaught1 = 49985, // YawningVoid1->self, 7.0s cast, range 80 width 16 rect
+    PassageOfNaught2 = 49986, // YawningVoid2->self, 6.0s cast, range 80 width 16 rect
+    PassageOfNaught3 = 49987, // Helper->self, 6.0s cast, range 80 width 16 rect
+
+    ShroudedHolyCast = 50045, // Boss->self, 5.0+1.0s cast, single-target
+    ShroudedHoly = 50046, // Helper->players, 6.0s cast, range 6 circle
+
+    DimensionZeroCast = 50047, // Boss->self, 5.0s cast, single-target
+    DimensionZero = 50048, // Boss->self, no cast, range 60 width 8 rect
+
+    NaughtHunts = 49992, // Boss->self, 6.0+1.0s cast, single-target
+    EndlessChaseFirst = 48475, // VoidChase->self, 6.0s cast, range 6 circle
+    EndlessChaseRest = 49993, // VoidChase->location, no cast, range 6 circle
+
+    AlmagestEnrage = 50050, // Boss->self, 9.0s cast, range 40 circle
+    Unk = 50015, // Helper->player, no cast, single-target
+    BigBurst1 = 50008, // VoidGazeSmall->self, no cast, range 60 circle
+    BigBurst2 = 50009, // VoidGazeBig->self, no cast, range 60 circle
+    BigBurstIntermission = 50014, // Helper->self, no cast, range 60 circle, tower fail
+    Apeiron = 48478, // Helper->player, no cast, single-target, intermission enrage (if gauge fills)
 }
 
 public enum SID : uint
 {
-    _Gen_MagicVulnerabilityUp = 2941, // _Gen_Void1/Helper/_Gen_Void/_Gen_Void3/_Gen_Void2->player, extra=0x0
-    _Gen_ChainsOfCondemnation = 4562, // Boss->player, extra=0x0
-    _Gen_Weakness = 43, // none->player, extra=0x0
-    _Gen_Transcendent = 418, // none->player, extra=0x0
-    _Gen_VulnerabilityUp = 1789, // Helper/_Gen_YawningVoid1/_Gen_YawningVoid/_Gen_Void4/_Gen_Void5->player, extra=0x1/0x2/0x3/0x4/0x5/0x6/0x8
-    _Gen_ = 2234, // none->_Gen_Void2/_Gen_Void3, extra=0x58/0x4B
-    _Gen_BrinkOfDeath = 44, // none->player, extra=0x0
-    _Gen_DeepFreeze = 4150, // Boss->player, extra=0x0
-    _Gen_FreezingUp = 3523, // Boss->player, extra=0x0
-    _Gen_SustainedDamage = 4149, // _Gen_Void2->player, extra=0x1/0x2
-    _Gen_DirectionalDisregard = 3808, // none->Boss, extra=0x0
-    _Gen_1 = 2056, // none->_Gen_SoothingShadow/_Gen_ProtectiveShadow/_Gen_AggressiveShadow/_Gen_LoomingShadow, extra=0x46B
-    _Gen_Unbecoming = 4882, // none->player, extra=0x0
-    _Gen_DarkResistanceDownII = 3323, // Helper->player, extra=0x0
+    MagicVulnerabilityUp = 2941, // VoidWildChargeSmall/Helper/VoidWildChargeBig/VoidGazeSmall/VoidGazeBig->player, extra=0x0
+    DarkResistanceDownII = 3323, // Helper->player, extra=0x0
+    ChainsOfCondemnation = 4562, // Boss->player, extra=0x0
+    Unk1 = 2234, // none->VoidGazeSmall/VoidGazeBig, extra=0x58/0x4B
+    Unk2 = 2056, // none->AggressiveShadow/SoothingShadow/ProtectiveShadow/LoomingShadow, extra=0x46B
+    FreezingUp = 3523, // Boss->player, extra=0x0
+    DeepFreeze = 4150, // Boss->player, extra=0x0
+    Unbecoming = 4882, // none->player, extra=0x0, dot
     GauntletTaken1 = 5357, // none->player, extra=0x0
     GauntletTaken2 = 5358, // none->player, extra=0x0
     GauntletTaken3 = 5359, // none->player, extra=0x0
@@ -136,35 +146,36 @@ public enum SID : uint
     GauntletThrown6 = 5370, // none->AggressiveShadow, extra=0x0
     GauntletThrown7 = 5371, // none->AggressiveShadow, extra=0x0
     GauntletThrown8 = 5372, // none->AggressiveShadow, extra=0x0
-    _Gen_Petrification = 3007, // Helper->player, extra=0x0
-    _Gen_QuantumEntanglement = 4884, // none->player, extra=0x0
-    _Gen_QuantumNullification = 4883, // none->_Gen_SoothingShadow, extra=0x0
-    _Gen_Disease = 3943, // Helper->player, extra=0x32
-    _Gen_InEvent = 1268, // none->player, extra=0x0
+    Petrification = 3007, // Helper->player, extra=0x0, gaze failure
+    QuantumEntanglement = 4884, // none->player, extra=0x0, dot
+    QuantumNullification = 4883, // none->SoothingShadow, extra=0x0, dot
+    Disease = 3943, // Helper->player, extra=0x32
+    InEvent = 1268, // none->player, extra=0x0
+    SustainedDamage = 4149, // VoidGazeSmall->player, extra=0x1/0x2, from soak failure
 }
 
 public enum IconID : uint
 {
-    _Gen_Icon_z5fd_loc01_t0a1 = 701, // Boss->player, small ball
-    _Gen_Icon_z5fd_loc02_t0a1 = 702, // Boss->player, big ball
-    _Gen_Icon_m0742trg_b1t1 = 327, // player->self
-    _Gen_Icon_com_trg07_0a1 = 721, // player->self
-    _Gen_Icon_tank_laser_5sec_lockon_c0a1 = 471, // player->self
-    _Gen_Icon_com_share3_6s0p = 318, // player->self
-    _Gen_Icon_share_laser_5s_small_c0a1 = 719, // Boss->player
-    _Gen_Icon_com_trg06_0v = 172, // player->self
+    NaughtGrowsSmall = 701, // Boss->player, small ball
+    NaughtGrowsBig = 702, // Boss->player, big ball
+    Flare = 327, // player->self
+    MarkerGeneric1 = 172, // player->self
+    MarkerGeneric2 = 721, // player->self
+    LineBuster = 471, // player->self
+    Stack = 318, // player->self
+    LineStack = 719, // Boss->player
 }
 
 public enum TetherID : uint
 {
-    _Gen_Tether_chn_z5fd19_0a1 = 430, // player->Boss, just a line?
-    _Gen_Tether_chn_z5fd09_0a1 = 393, // _Gen_->Boss, circle, target -> source
-    _Gen_Tether_chn_z5fd11_0a1 = 395, // _Gen_->Boss, donut, target -> source
-    _Gen_Tether_chn_z5fd16_0a1 = 406, // _Gen_Void2/_Gen_Void3->Boss, purple clock (slow)
-    _Gen_Tether_chn_z5fd17_0a1 = 407, // _Gen_Void2/_Gen_Void3->Boss, yellow clock (fast)
-    _Gen_Tether_chn_tergetfix1f = 284, // _Gen_ProtectiveShadow/_Gen_AggressiveShadow/_Gen_SoothingShadow->player, another line
-    _Gen_Tether_chn_z5fd10_0a1 = 394, // _Gen_->Boss, circle, source -> target
-    _Gen_Tether_chn_z5fd12_0a1 = 396, // _Gen_->Boss, donut, source -> target
-    _Gen_Tether_chn_z5fd14_0a1 = 404, // _Gen_Void5->player, black line
-    _Gen_Tether_chn_z5fd15_0a1 = 405, // player->player, chaser pass
+    GrowsLine = 430, // player->Boss, line
+    CircleToSource = 393, // BossVoidTether->Boss, circle, target -> source
+    CircleFromSource = 394, // BossVoidTether->Boss, circle, source -> target
+    DonutToSource = 395, // BossVoidTether->Boss, donut, target -> source
+    DonutFromSource = 396, // BossVoidTether->Boss, donut, source -> target
+    VoidChasePlayer = 404, // VoidChase->player, black line
+    PlayerChasePlayer = 405, // player->player, chaser pass
+    ClockSlow = 406, // VoidGazeSmall/VoidGazeBig->Boss, slow clock
+    ClockFast = 407, // VoidGazeSmall/VoidGazeBig->Boss, fast clock
+    TowerLine = 284, // AggressiveShadow/ProtectiveShadow/SoothingShadow->player, line
 }
