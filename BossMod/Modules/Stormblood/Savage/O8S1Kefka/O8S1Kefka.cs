@@ -1,81 +1,125 @@
-﻿namespace BossMod.Stormblood.Savage.O8S1Kefka;
+﻿using FFXIVClientStructs.FFXIV.Client.Graphics.Scene;
+
+namespace BossMod.Stormblood.Savage.O8S1Kefka;
 
 #region Enums
 public enum OID : uint
 {
     Boss = 0x2150,
     Helper = 0x233C,
-    StrikingDummy = 0x385, // R1.500, x?
-    TinyMandragora = 0x76, // R0.300, x?
     GravenImage = 0x18D6, // R0.500, x?, mixed types
-    Kefka1 = 0x2151, // R3.500, x?
+    Kefka = 0x2151, // R3.500, x?
+    TheMadHead = 0x2152, // R1.200, x?
+    Statue = 0x1EA791,
+    StatueRight = 0x1EA791,
+    StatueLeft = 0x1EA791,
+    StatueHead = 0x1EA791
 }
-
 public enum AID : uint
 {
     AutoAttack = 10434, // 2150->player, no cast, single-target
     ManaCharge = 10449, // 2150->self, 2.0s cast, single-target
-    FlagrantFire = 10446, // 2150->self, 4.2s cast, single-target
-    FlagrantFire1 = 10448, // 18D6->player, no cast, range 6 circle
-    Hyperdrive = 10472, // 2150->player, 4.0s cast, range 5 circle
+    FlagrantFireCast = 10446, // 2150->self, 4.2s cast, single-target
+    FlagrantFire1 = 10448, // 18D6->players, no cast, range 6 circle
+    Hyperdrive = 10472, // 2150->players, 4.0s cast, range 5 circle
     ManaRelease = 10450, // 2150->self, 4.0s cast, single-target
-    FlagrantFire2 = 11059, // 18D6->player, no cast, range 6 circle
-    ThrummingThunder = 10444, // 18D6->self, 5.0s cast, range 40+R width 10 rect
-    ThrummingThunder1 = 10443, // 18D6->self, 5.0s cast, range 40+R width 10 rect
-    ThrummingThunder2 = 10442, // 2150->self, 5.0s cast, single-target
+    FlagrantFire2 = 11059, // 18D6->players, no cast, range 6 circle
+    ThrummingThunder = 10445, // 18D6->self, 5.0s cast, range 40+R width 10 rect
+    ThrummingThunder1 = 10442, // 2150->self, 5.0s cast, single-target
     UltimaUpsurge = 10471, // 2150->self, 4.0s cast, range 100 circle
     GravenImage = 10455, // 2150->self, 5.0s cast, single-target
     InexorableWill = 10458, // 18D6->location, 3.0s cast, range 6 circle
     WaveCannon = 10460, // 18D6->self, no cast, range 100+R width 6 rect
-    // = 11060, // 2150->self, 3.0s cast, single-target
     PulseWave = 10461, // 18D6->player, 5.0s cast, single-target
-    IndomitableWill = 10457, // 18D6->player, 5.0s cast, range 6 circle
+    IndomitableWillCast = 10457, // 18D6->players, 5.0s cast, range 6 circle
     TimelyTeleport = 10452, // 18D6->self, 4.0s cast, range 6 circle
     TimelyTeleport1 = 10451, // 2150->self, 4.0s cast, single-target
     RevoltingRuin = 10453, // 2150->self, no cast, range 100+R ?-degree cone
     LightOfJudgment = 10456, // 2150->location, 6.0s cast, range 100 circle
-    BlizzardBlitz = 10441, // 18D6->self, 5.0s cast, range ?-40 donut
-    BlizzardBlitz1 = 10439, // 2150->self, 5.0s cast, single-target
+    ThrummingThunder2 = 10444, // 18D6->self, 5.0s cast, range 40+R width 10 rect
+    ThrummingThunder3 = 10443, // 18D6->self, 5.0s cast, range 40+R width 10 rect
+    BlizzardBlitz = 10435, // 18D6->self, 5.0s cast, range 10 circle
+    BlizzardBlitz1 = 10436, // 18D6->self, 5.0s cast, range ?-40 donut
+    BlizzardBlitz2 = 10439, // 2150->self, 5.0s cast, single-target
     Shockwave = 10459, // 18D6->self, 10.0s cast, range 100+R width 40 rect
-    ThrummingThunder3 = 11056, // 18D6->self, 7.0s cast, range 40+R width 10 rect
-    ThrummingThunder4 = 11055, // 18D6->self, 7.0s cast, range 40+R width 10 rect
-    BlizzardBlitz2 = 11054, // 18D6->self, 7.0s cast, range ?-40 donut
-    Vitrophyre = 10466, // 18D6->player, no cast, range 5 circle
+    ThrummingThunder4 = 11056, // 18D6->self, 7.0s cast, range 40+R width 10 rect
+    BlizzardBlitz3 = 11050, // 18D6->self, 7.0s cast, range ?-40 donut
+    ThrummingThunder5 = 11055, // 18D6->self, 7.0s cast, range 40+R width 10 rect
+    BlizzardBlitz4 = 11049, // 18D6->self, 7.0s cast, range 10 circle
+    Gravitas = 10464, // 18D6->players, no cast, range 5 circle
+    GravitationalExplosion = 10465, // 18D6->self, no cast, range 100 circle
+    Vitrophyre = 10466, // 18D6->players, no cast, range 5 circle
     GravitationalWave = 10462, // 18D6->self, 5.0s cast, range 100+R ?-degree cone
-    //1 = 11061, // 2150->self, no cast, single-target
     AeroAssault = 10454, // 2150->self, 5.0s cast, range 100 circle
-    FlagrantFire3 = 10447, // 18D6->player, no cast, range 5 circle
-    FlagrantFire4 = 11058, // 18D6->player, no cast, range 5 circle
-    IndolentWill = 10468, // 18D6->self, 5.0s cast, range 100 circle
-    IdyllicWill = 10470, // 18D6->player, 5.0s cast, single-target
-    ThrummingThunder5 = 10445, // 18D6->self, 5.0s cast, range 40+R width 10 rect
-    BlizzardBlitz3 = 10440, // 18D6->self, 5.0s cast, range 10 circle
+    IntemperateWill = 10463, // 18D6->self, 5.0s cast, range 100+R ?-degree cone
     AveMaria = 10467, // 18D6->self, 5.0s cast, range 100 circle
-    ThrummingThunder6 = 11057, // 18D6->self, 7.0s cast, range 40+R width 10 rect
-    BlizzardBlitz4 = 11053, // 18D6->self, 7.0s cast, range 10 circle
+    IndulgentWill = 10469, // 18D6->player, 5.0s cast, single-target
+    IdyllicWill = 10470, // 18D6->player, 5.0s cast, single-target
+    IndolentWill = 10468, // 18D6->self, 5.0s cast, range 100 circle
+    BlizzardBlitz5 = 10437, // 18D6->self, 5.0s cast, range ?-40 donut
+    BlizzardBlitz6 = 10438, // 18D6->self, 5.0s cast, range 10 circle
+    BlizzardBlitz7 = 11052, // 18D6->self, 7.0s cast, range 10 circle
+    BlizzardBlitz8 = 11051, // 18D6->self, 7.0s cast, range ?-40 donut
     LightOfJudgment1 = 10833, // 2150->location, 4.0s cast, range 100 circle
+    FlagrantFire3 = 10447, // 18D6->players, no cast, range 5 circle
+    FlagrantFire4 = 11058, // 18D6->players, no cast, range 5 circle
+    ThrummingThunder6 = 11057, // 18D6->self, 7.0s cast, range 40+R width 10 rect
+    BlizzardBlitz9 = 10440, // 18D6->self, 5.0s cast, range 10 circle
+    BlizzardBlitz10 = 11053, // 18D6->self, 7.0s cast, range 10 circle
+    BlizzardBlitz11 = 10441, // 18D6->self, 5.0s cast, range ?-40 donut
+    BlizzardBlitz12 = 11054, // 18D6->self, 7.0s cast, range ?-40 donut
+    HolyAscent = 10890, // 2150->self, 4.0s cast, range 100 circle
+    AutoAttack1 = 10476, // 2151->player, no cast, single-target
+    HeartlessAngel = 10490, // 2151->self, 4.0s cast, range 100 circle
+    Ultima = 10513, // 2151->self, 4.0s cast, range 100 circle
+    Hyperdrive1 = 10514, // 2151->player, 4.0s cast, range 5 circle
+    Celestriad = 10503, // 2151->self, 5.0s cast, single-target
+    FireIII = 10508, // 18D6->players, 5.0s cast, range 6 circle
+    BlizzardIII = 10504, // 18D6->self, 5.0s cast, range 10 circle
+    ThunderIII = 10506, // 18D6->self, 7.0s cast, range 40+R width 10 rect
+    BlizzardIII1 = 10505, // 18D6->self, 8.0s cast, range 10-40 donut
+    FireIII1 = 10507, // 18D6->players, no cast, range 5 circle
+    Forsaken = 10473, // 2151->self, 5.0s cast, range 100 circle
+    HeartlessArchangel = 10491, // 2151->self, 4.0s cast, range 100 circle
+    ThePathOfLight = 10474, // 18D6->self, no cast, range 4 circle
+    TheRiverOfLight = 10475, // 18D6->self, no cast, range 100 circle
+    Explosion = 10492, // 2152->self, no cast, range 5 circle
+    BigExplosion = 10493, // 2152->self, no cast, range 60 circle
+    WingsOfDestruction = 10496, // 2151->self, 4.0s cast, single-target
+    WingsOfDestruction1 = 10497, // 18D6->players, no cast, range 7 circle
 }
 public enum SID : uint
 {
     ManaCharge = 1482, // Boss->GravenImage/Boss, extra=0x0
-    JestersAntics = 1486, // none->GravenImage/Boss, extra=0x0
+    JestersTruths = 1487, // none->GravenImage/Boss, extra=0x0
     FireCharged = 1483, // Boss->GravenImage/Boss, extra=0x0
     MagicVulnerabilityUp = 1138, // GravenImage->player, extra=0x0
     VulnerabilityUp = 444, // GravenImage->player, extra=0x0
+    JestersAntics = 1486, // none->GravenImage/Boss, extra=0x0
     ThunderCharged = 1485, // Boss->GravenImage/Boss, extra=0x0
-    JestersTruths = 1487, // none->GravenImage/Boss, extra=0x0
     BlizzardCharged = 1484, // Boss->GravenImage/Boss, extra=0x0
+    DamageDown = 1016, // GravenImage/Boss->player, extra=0x1/0x3/0x2
+    Weakness = 43, // none->player, extra=0x0
+    Transcendent = 418, // none->player, extra=0x0
+    Bleeding = 642, // none->player, extra=0x0
+    BrinkOfDeath = 44, // none->player, extra=0x0
+    HealingMagicDown = 697, // GravenImage/Boss->player, extra=0x0
+    Confused = 1283, // GravenImage->player, extra=0x0
+    DamageUp = 1572, // GravenImage->player, extra=0x0
+    Heavy = 240, // GravenImage->player, extra=0x32
     Sleep = 1510, // GravenImage->player, extra=0x0
+    Stun = 149, // Boss->player, extra=0x0
+    DownForTheCount = 783, // none->player, extra=0xEC7
 }
 public enum IconID : uint
 {
-    Spread = 127, // player->self
-    PartnerStack = 93, // player->self
-    PartyStack = 128, // player->self
+    FireStack = 128, // during Flagrant Fire (fake = spread)
+    FireSpread = 127, // during Flagrant Fire (fake = stack)
+    PartnerStack = 93, // during GI1
 }
 public enum TetherID : uint
 {
-    WaveCannonTether = 45, // GravenImage->player
+    YellowTether = 45, // GravenImage->player
 }
 #endregion
 
@@ -441,16 +485,8 @@ class GI1PairStacks(BossModule module) : Components.UniformStackSpread(module, s
 */
 
 class UltimaUpsurge(BossModule module) : Components.RaidwideCast(module, AID.UltimaUpsurge);
-class LightOfJudgement(BossModule module) : Components.RaidwideCast(module, AID.LightOfJudgment, "Heavy raidwide — heavy mitigation!");
-class Hyperdrive(BossModule module) : Components.BaitAwayCast(module, AID.Hyperdrive, new AOEShapeCircle(6f), centerAtTarget: true)
-{
-    public override void AddHints(int slot, Actor actor, TextHints hints)
-    {
-        base.AddHints(slot, actor, hints);
-        if (ActiveBaits.Any(b => b.Target == actor))
-            hints.Add("Tankbuster on you!");
-    }
-}
+class LightOfJudgement(BossModule module) : Components.RaidwideCast(module, AID.LightOfJudgment);
+class Hyperdrive(BossModule module) : Components.BaitAwayCast(module, AID.Hyperdrive, new AOEShapeCircle(5f), centerAtTarget: true);
 class BlizzardBlitz(BossModule module) : Components.StandardAOEs(module, AID.BlizzardBlitz3, new AOEShapeCircle(10f))
 {
     private bool _inverted;
@@ -487,116 +523,6 @@ class BlizzardBlitz(BossModule module) : Components.StandardAOEs(module, AID.Bli
                 : "Blizzard Blitz — move out!");
     }
 }
-class FlagrantFire(BossModule module) : Components.GenericStackSpread(module)
-{
-    private enum Pattern
-    {
-        None,
-        Stack,
-        Spread
-    }
-
-    private Pattern _storedPattern;
-    private bool _inverted;
-    private bool _charged;
-    public override void OnStatusGain(Actor actor, ActorStatus status)
-    {
-        if (actor != Module.PrimaryActor)
-            return;
-
-        switch ((SID)status.ID)
-        {
-            case SID.JestersTruths:
-                _inverted = false;
-                break;
-            case SID.JestersAntics:
-                _inverted = true;
-                break;
-            case SID.FireCharged:
-                _charged = true;
-                break;
-        }
-    }
-
-    public override void OnEventIcon(Actor actor, uint iconID, ulong targetID)
-    {
-        switch ((IconID)iconID)
-        {
-            case IconID.PartyStack:
-                {
-                    if (_inverted)
-                    {
-                        Spreads.Add(new(actor, 6f, WorldState.FutureTime(5)));
-                        _storedPattern = Pattern.Spread;
-                    }
-                    else
-                    {
-                        Stacks.Add(new(actor, 10f, minSize: 8, activation: WorldState.FutureTime(5)));
-                        _storedPattern = Pattern.Stack;
-                    }
-                    break;
-                }
-
-            case IconID.Spread:
-                {
-                    if (_inverted)
-                    {
-                        Stacks.Add(new(actor, 10f, minSize: 8, activation: WorldState.FutureTime(5)));
-                        _storedPattern = Pattern.Stack;
-                    }
-                    else
-                    {
-                        Spreads.Add(new(actor, 6f, WorldState.FutureTime(5)));
-                        _storedPattern = Pattern.Spread;
-                    }
-                    break;
-                }
-        }
-    }
-    public override void OnEventCast(Actor caster, ActorCastEvent spell)
-    {
-        switch ((AID)spell.Action.ID)
-        {
-            case AID.ManaRelease:
-                {
-                    if (!_charged)
-                        break;
-
-                    _charged = false;
-
-                    // replay stored pattern
-                    if (_storedPattern == Pattern.Stack)
-                    {
-                        // convert to stack again
-                        if (Stacks.Count > 0)
-                            Stacks.AddRange(Stacks);
-                    }
-                    else if (_storedPattern == Pattern.Spread)
-                    {
-                        if (Spreads.Count > 0)
-                            Spreads.AddRange(Spreads);
-                    }
-
-                    break;
-                }
-
-            case AID.FlagrantFire1:
-            case AID.FlagrantFire2:
-            case AID.FlagrantFire3:
-            case AID.FlagrantFire4:
-                Stacks.Clear();
-                Spreads.Clear();
-                break;
-        }
-    }
-    public override void AddGlobalHints(GlobalHints hints)
-    {
-        if (Stacks.Count > 0)
-            hints.Add(_inverted ? "FAKE: Spread!" : "Stack!");
-        else if (Spreads.Count > 0)
-            hints.Add(_inverted ? "FAKE: Stack!" : "Spread!");
-    }
-}
 class ThrummingThunder(BossModule module) : Components.StandardAOEs(module, AID.ThrummingThunder, new AOEShapeRect(40.5f, 5f))
 {
     private bool _inverted;
@@ -604,51 +530,56 @@ class ThrummingThunder(BossModule module) : Components.StandardAOEs(module, AID.
     public override IEnumerable<AOEInstance> ActiveAOEs(int slot, Actor actor)
     {
         foreach (var aoe in base.ActiveAOEs(slot, actor))
-            yield return _inverted
-                ? aoe with { Inverted = true, Color = ArenaColor.SafeFromAOE }
-                : aoe;
+            yield return _inverted ? aoe with { Inverted = true, Color = ArenaColor.Danger } : aoe;
     }
 
     public override void OnStatusGain(Actor actor, ActorStatus status)
     {
-        if (actor != Module.PrimaryActor)
-            return;
-
         switch ((SID)status.ID)
         {
             case SID.JestersTruths:
-                _inverted = true;
+                _inverted = false;
                 break;
 
             case SID.JestersAntics:
-                _inverted = false;
+                _inverted = true;
                 break;
         }
     }
 }
-class InexorableWill(BossModule module) : Components.StandardAOEs(module, AID.InexorableWill, 6f);
+class GI1BaitAOEs(BossModule module) : Components.StandardAOEs(module, AID.InexorableWill, 6f);
+class GI1PartnerStacks(BossModule module) : Components.Stack(module, AID.IndomitableWillCast, 6f);
 
-class IndomitableWill(BossModule module)
-    : Components.GenericBaitAway(module, AID.IndomitableWill)
+class GI1WaveCannons(BossModule module) : Components.GenericBaitAway(module)
 {
     private static readonly AOEShapeRect Shape = new(100.5f, 3f);
 
     public override void OnCastStarted(Actor caster, ActorCastInfo spell)
     {
-        if ((AID)spell.Action.ID != AID.IndomitableWill)
+        if ((AID)spell.Action.ID != AID.IndomitableWillCast)
             return;
 
-        var target = WorldState.Actors.Find(spell.TargetID);
-        if (target == null)
+        var statue = Module.Enemies(OID.StatueRight).FirstOrDefault(e => e.ID);
+        if (statue == null)
             return;
 
-        CurrentBaits.Add(new(caster, target, Shape, Module.CastFinishAt(spell)));
+        foreach (var p in Raid.WithoutSlot().Where(p => p.Role is Role.Melee or Role.Ranged))
+            CurrentBaits.Add(new(
+                statue,
+                p,
+                Shape,
+                Module.CastFinishAt(spell)
+            ));
     }
 
-    public override void OnCastFinished(Actor caster, ActorCastInfo spell)
+    public override void OnEventCast(Actor caster, ActorCastEvent spell)
     {
-        if ((AID)spell.Action.ID == AID.IndomitableWill)
-            CurrentBaits.RemoveAll(b => b.Source == caster);
+        if ((AID)spell.Action.ID != AID.IndomitableWillCast)
+            return;
+
+        var statue = Module.Enemies(OID.StatueRight).FirstOrDefault();
+        if (statue != null)
+            CurrentBaits.RemoveAll(b => b.Source == statue);
     }
 }
 class O8S1KefkaStates : StateMachineBuilder
@@ -662,8 +593,8 @@ class O8S1KefkaStates : StateMachineBuilder
         .ActivateOnEnter<BlizzardBlitz>()
         .ActivateOnEnter<FlagrantFire>()
         .ActivateOnEnter<ThrummingThunder>()
-        .ActivateOnEnter<InexorableWill>()
-        .ActivateOnEnter<IndomitableWill>()
+        .ActivateOnEnter<GI1BaitAOEs>()
+        .ActivateOnEnter<GI1WaveCannons>()
         ;
     }
 }
