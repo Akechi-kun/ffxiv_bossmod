@@ -1,4 +1,4 @@
-﻿namespace BossMod;
+namespace BossMod;
 
 // information relevant for AI decision making process for a specific player
 public sealed class AIHints
@@ -153,6 +153,7 @@ public sealed class AIHints
     public bool WantJump;
     public bool WantDismount;
     public FateSync WantFateSync;
+    public bool ShouldLeaveDuty;
 
     // clear all stored data
     public void Clear()
@@ -183,6 +184,7 @@ public sealed class AIHints
         WantJump = false;
         WantDismount = false;
         WantFateSync = FateSync.None;
+        ShouldLeaveDuty = false;
     }
 
     public void PrioritizeTargetsByOID(uint oid, int priority = 0)
@@ -224,6 +226,16 @@ public sealed class AIHints
     {
         if (ImminentSpecialMode == default || ImminentSpecialMode.activation > activation)
             ImminentSpecialMode = (mode, activation);
+    }
+
+    public void AddForbiddenDirections(ArcList list, DateTime activation)
+    {
+        foreach (var (from, to) in list.Forbidden.Segments)
+        {
+            var center = (to + from) * 0.5f;
+            var width = (to - from) * 0.5f;
+            ForbiddenDirections.Add((center.Radians(), width.Radians(), activation));
+        }
     }
 
     // normalize all entries after gathering data: sort by priority / activation timestamp

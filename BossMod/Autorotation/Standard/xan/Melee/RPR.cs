@@ -251,8 +251,7 @@ public sealed class RPR(RotationModuleManager manager, Actor player) : Attackxan
 
         if (!Player.InCombat)
         {
-            if (!Soulsow)
-                PushGCD(AID.Soulsow, Player, GCDPriority.Soulsow);
+            Sow(strategy);
 
             // if we exit combat while casting, cancel it so we get instant cast instead
             if (Player.CastInfo?.Action.ID == (uint)AID.Soulsow)
@@ -399,7 +398,7 @@ public sealed class RPR(RotationModuleManager manager, Actor player) : Attackxan
 
     private void Sow(in Strategy strategy)
     {
-        if (!Soulsow && strategy.Soulsow.IsEnabled())
+        if (!Soulsow && !SoulReaver && (strategy.Soulsow.IsEnabled() || !Player.InCombat))
             PushGCD(AID.Soulsow, Player, GCDPriority.Soulsow);
     }
 
@@ -428,7 +427,7 @@ public sealed class RPR(RotationModuleManager manager, Actor player) : Attackxan
             return true;
 
         // use early for double enshroud, so we have room for 2 communio + 1 perfectio
-        if (CanWeave(AID.ArcaneCircle, 2, extraFixedDelay: 1.5f) && strategy.Buffs != OffensiveStrategy.Delay)
+        if (CanWeave(AID.ArcaneCircle, 1, extraFixedDelay: 1.5f) && strategy.Buffs != OffensiveStrategy.Delay)
             return true;
 
         // TODO tweak deadline, i need a simulator or something

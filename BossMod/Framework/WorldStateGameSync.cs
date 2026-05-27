@@ -1,4 +1,5 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+﻿using BossMod.Services;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -19,7 +20,7 @@ using System.Text;
 namespace BossMod;
 
 // utility that updates a world state to correspond to game state
-sealed class WorldStateGameSync : IDisposable
+sealed class WorldStateGameSync : IWorldStateGameSync
 {
     private const int ObjectTableSize = 819; // should match CS; note that different ranges are used for different purposes - consider splitting?..
     private const uint InvalidEntityId = 0xE0000000;
@@ -88,14 +89,13 @@ sealed class WorldStateGameSync : IDisposable
 
     private readonly unsafe delegate* unmanaged<ContainerInterface*, float> _calculateMoveSpeedMulti;
 
-    private unsafe delegate void ApplyKnockbackDelegate(Character* thisPtr, float a2, float a3, float a4, byte a5, int a6);
-    private readonly Hook<ApplyKnockbackDelegate> _applyKnockbackHook;
-
-    private unsafe delegate void InventoryAckDelegate(uint a1, void* a2);
+    private unsafe delegate void InventoryAckDelegate(InventoryManager* mgr, uint a1, void* a2);
     private readonly Hook<InventoryAckDelegate> _inventoryAckHook;
 
     private unsafe delegate void ProcessPacketPlayActionTimelineSync(Network.ServerIPC.PlayActionTimelineSync* data);
     private readonly Hook<ProcessPacketPlayActionTimelineSync> _processPlayActionTimelineSyncHook;
+
+    private readonly Hook<ActionManager.Delegates.GetActionInRangeOrLoS> _getActionInRangeOrLoSHook;
 
     public unsafe WorldStateGameSync(WorldState ws, ActionManagerEx amex)
     {
@@ -181,27 +181,23 @@ sealed class WorldStateGameSync : IDisposable
         _processLegacyMapEffectHook.Enable();
         Service.Log($"[WSG] LegacyMapEffect address = {_processLegacyMapEffectHook.Address:X}");
 
-        _applyKnockbackHook = Service.Hook.HookFromSignature<ApplyKnockbackDelegate>("E8 ?? ?? ?? ?? 48 8D 0D ?? ?? ?? ?? E8 ?? ?? ?? ?? FF C6", ApplyKnockbackDetour);
-        //if (Service.IsDev)
-        //{
-        //    _applyKnockbackHook.Enable();
-        //    Service.Log($"[WSG] ApplyKnockback address = {_applyKnockbackHook.Address:X}");
-        //}
-
-        _inventoryAckHook = Service.Hook.HookFromSignature<InventoryAckDelegate>("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 48 8D 57 10 41 8B CE E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 48 8B D7", InventoryAckDetour);
+        _inventoryAckHook = Service.Hook.HookFromSignature<InventoryAckDelegate>("48 89 5C 24 ?? 57 48 83 EC 30 48 8B 05 ?? ?? ?? ?? 48 8B D9 41 0F B6 50 ??", InventoryAckDetour);
         _inventoryAckHook.Enable();
         Service.Log($"[WSG] InventoryAck address = {_inventoryAckHook.Address:X}");
 
-        _processPlayActionTimelineSyncHook = Service.Hook.HookFromSignature<ProcessPacketPlayActionTimelineSync>("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? B9 ?? ?? ?? ?? 48 8B D7 45 33 C0 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? B9 ?? ?? ?? ??", ProcessPlayActionTimelineSyncDetour);
+        _processPlayActionTimelineSyncHook = Service.Hook.HookFromSignature<ProcessPacketPlayActionTimelineSync>("48 8B D1 48 8D 0D ?? ?? ?? ?? E9 ?? ?? ?? ?? CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC 40 53 56", ProcessPlayActionTimelineSyncDetour);
         _processPlayActionTimelineSyncHook.Enable();
         Service.Log($"[WSG] ProcessPlayActionTimelineSync address = {_processPlayActionTimelineSyncHook.Address:X}");
+
+        _getActionInRangeOrLoSHook = Service.Hook.HookFromAddress<ActionManager.Delegates.GetActionInRangeOrLoS>((nint)ActionManager.MemberFunctionPointers.GetActionInRangeOrLoS, GetActionInRangeOrLoSDetour);
+        _getActionInRangeOrLoSHook.Enable();
+        Service.Log($"[WSG] GetActionInRangeOrLoS address = 0x{_getActionInRangeOrLoSHook.Address:X}");
     }
 
     public void Dispose()
     {
         _processPlayActionTimelineSyncHook.Dispose();
         _inventoryAckHook.Dispose();
-        _applyKnockbackHook.Dispose();
         _processLegacyMapEffectHook.Dispose();
         _processMapEffect1Hook.Dispose();
         _processMapEffect2Hook.Dispose();
@@ -217,6 +213,7 @@ sealed class WorldStateGameSync : IDisposable
         _processPacketOpenTreasureHook.Dispose();
         _processPacketFateTradeHook.Dispose();
         _processPacketFateInfoHook.Dispose();
+        _getActionInRangeOrLoSHook.Dispose();
         _subscriptions.Dispose();
         _netConfig.Dispose();
         _interceptor.Dispose();
@@ -241,7 +238,7 @@ sealed class WorldStateGameSync : IDisposable
         ));
         if (_ws.CurrentZone != Service.ClientState.TerritoryType || _ws.CurrentCFCID != GameMain.Instance()->CurrentContentFinderConditionId)
         {
-            _ws.Execute(new WorldState.OpZoneChange(Service.ClientState.TerritoryType, GameMain.Instance()->CurrentContentFinderConditionId));
+            _ws.Execute(new WorldState.OpZoneChange((ushort)Service.ClientState.TerritoryType, GameMain.Instance()->CurrentContentFinderConditionId));
         }
         var proxy = fwk->NetworkModuleProxy->ReceiverCallback;
         var scramble = Network.IDScramble.Get();
@@ -290,6 +287,11 @@ sealed class WorldStateGameSync : IDisposable
     private unsafe void UpdateActors()
     {
         var mgr = GameObjectManager.Instance();
+
+        // as of 7.5, actors can now have their SpawnIndex reassigned between frames without being destroyed/reused instanceid
+        // so we have to process deletion events first, then creation events; otherwise if an actor is moved to an earlier SpawnIndex, we get data corruption
+        // i.e. two copies of the same actor at different indices, then subsequent iterations attempt to delete both actors, throwing an exception on the second attempt
+        // TODO: deduplicate code, i really hate touching this function
         for (int i = 0; i < _actorsByIndex.Length; ++i)
         {
             var actor = _actorsByIndex[i];
@@ -312,14 +314,20 @@ sealed class WorldStateGameSync : IDisposable
                 RemoveActor(actor);
                 actor = null;
             }
+        }
 
-            if (obj != null)
-            {
-                if (actor != existing)
-                    Service.Log($"[WorldState] Actor position mismatch for #{i} {actor}");
+        for (int i = 0; i < _actorsByIndex.Length; ++i)
+        {
+            var actor = _actorsByIndex[i];
+            var obj = mgr->Objects.IndexSorted[i].Value;
 
-                UpdateActor(obj, i, actor);
-            }
+            if (obj == null || obj->EntityId == InvalidEntityId || (obj->EntityId & 0xFF000000) == 0xFF000000)
+                continue;
+
+            if (actor != _ws.Actors.Find(obj->EntityId))
+                Service.Log($"[WorldState] Actor position mismatch for #{i} {actor}");
+
+            UpdateActor(obj, i, actor);
         }
 
         foreach (var (id, ops) in _actorOps)
@@ -775,7 +783,7 @@ sealed class WorldStateGameSync : IDisposable
             _ws.Execute(new ClientState.OpActivePetChange(pet));
 
         var chocoinfo = uiState->Buddy.CompanionInfo;
-        var chocobo = new ClientState.Companion(chocoinfo.Companion->EntityId, chocoinfo.ActiveCommand, chocoinfo.TimeLeft);
+        var chocobo = new ClientState.Companion(chocoinfo.Companion->EntityId, chocoinfo.ActiveCommand, chocoinfo.TimeLeft, PlayerState.Instance()->IsPlayerStateFlagSet(PlayerStateFlag.IsBuddyInStable));
         if (_ws.Client.ActiveCompanion != chocobo)
             _ws.Execute(new ClientState.OpActiveCompanionChange(chocobo));
 
@@ -1137,25 +1145,16 @@ sealed class WorldStateGameSync : IDisposable
         }
     }
 
-    private unsafe void ApplyKnockbackDetour(Character* thisPtr, float a2, float a3, float a4, byte a5, int a6)
-    {
-        _applyKnockbackHook.Original(thisPtr, a2, a3, a4, a5, a6);
-        if (Service.IsDev)
-            _globalOps.Add(new WorldState.OpUserMarker($"Knockback applied to player with a2={a2:f3}, a3={a3:f3}, a4={a4:f3}, a5={a5:X2}, a6={a6:X8}"));
-    }
-
     private unsafe byte ProcessLegacyMapEffectDetour(EventFramework* fwk, EventId eventId, byte seq, byte unk, void* data, ulong length)
     {
         var res = _processLegacyMapEffectHook.Original(fwk, eventId, seq, unk, data, length);
-
         _globalOps.Add(new WorldState.OpLegacyMapEffect(seq, unk, new Span<byte>(data, (int)length).ToArray()));
-
         return res;
     }
 
-    private unsafe void InventoryAckDetour(uint a1, void* a2)
+    private unsafe void InventoryAckDetour(InventoryManager* mgr, uint a1, void* a2)
     {
-        _inventoryAckHook.Original(a1, a2);
+        _inventoryAckHook.Original(mgr, a1, a2);
         _needInventoryUpdate = true;
     }
 
@@ -1178,5 +1177,13 @@ sealed class WorldStateGameSync : IDisposable
 
         if (owner > 0)
             _actorOps.GetOrAdd(owner).Add(new ActorState.OpPlayActionTimelineSync(owner, actions));
+    }
+
+    private unsafe uint GetActionInRangeOrLoSDetour(uint actionId, GameObject* sourceObject, GameObject* targetObject)
+    {
+        var res = _getActionInRangeOrLoSHook.Original(actionId, sourceObject, targetObject);
+        if (res is 562 && sourceObject->EntityId == UIState.Instance()->PlayerState.EntityId)
+            _globalOps.Add(new ClientState.OpActionFailedLoS(actionId, SanitizedObjectID(targetObject->EntityId)));
+        return res;
     }
 }
