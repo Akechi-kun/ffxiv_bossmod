@@ -51,7 +51,7 @@ public abstract partial class AutoClear : ZoneModule
     protected readonly List<(Actor Source, float Inner, float Outer, Angle HalfAngle)> Donuts = [];
     protected readonly List<(Actor Source, float Radius)> Circles = [];
     protected readonly List<(Actor Source, float Radius)> KnockbackZones = [];
-    protected readonly List<(Actor Source, AOEShape Zone, int Counter)> Voidzones = [];
+    protected readonly List<(Actor Source, AOEShape Zone, DateTime Activation, int Counter)> Voidzones = [];
     private readonly List<Gaze> Gazes = [];
     protected readonly List<Actor> Interrupts = [];
     protected readonly List<Actor> Stuns = [];
@@ -68,7 +68,6 @@ public abstract partial class AutoClear : ZoneModule
 
     private readonly Dictionary<ulong, PomanderID> _chestContentsGold = [];
     private readonly Dictionary<ulong, int> _chestContentsSilver = [];
-    private readonly HashSet<ulong> _openedChests = [];
     private readonly HashSet<ulong> _fakeExits = [];
     private PomanderID? _lastChestContentsGold;
     private bool _lastChestMagicite;
@@ -111,7 +110,6 @@ public abstract partial class AutoClear : ZoneModule
                 if (!op.IsAlly && op.IsDead)
                     Kills++;
             }),
-            ws.Actors.EventOpenTreasure.Subscribe(OnOpenTreasure),
             ws.Actors.EventObjectAnimation.Subscribe(OnEObjAnim),
             ws.DeepDungeon.MapDataChanged.Subscribe(op =>
             {
@@ -216,8 +214,6 @@ public abstract partial class AutoClear : ZoneModule
         }
     }
 
-    private void OnOpenTreasure(Actor chest) => _openedChests.Add(chest.InstanceID);
-
     private void OnEObjAnim(Actor actor, ushort p1, ushort p2)
     {
         // fake beacon deactivation; accompanied by system log #9217 but it does not indicate a specific actor
@@ -246,7 +242,6 @@ public abstract partial class AutoClear : ZoneModule
         _chestContentsGold.Clear();
         _chestContentsSilver.Clear();
         _trapsHidden = true;
-        _openedChests.Clear();
         _fakeExits.Clear();
         OnChangeFloors();
         BetweenFloors = true;
@@ -255,7 +250,7 @@ public abstract partial class AutoClear : ZoneModule
     protected void AddGaze(Actor Source, AOEShape Shape) => Gazes.Add(new(Source, Shape));
     protected void AddGaze(Actor Source, float Radius) => AddGaze(Source, new AOEShapeCircle(Radius));
     protected void AddDonut(Actor Source, float Inner, float Outer, Angle? HalfAngle = null) => Donuts.Add((Source, Inner, Outer, HalfAngle ?? 180.Degrees()));
-    protected void AddVoidzone(Actor Source, AOEShape Shape, int Counter = 0) => Voidzones.Add((Source, Shape, Counter));
+    protected void AddVoidzone(Actor Source, AOEShape Shape, DateTime Activation = default, int Counter = 0) => Voidzones.Add((Source, Shape, Activation, Counter));
 
     protected void AddLOS(Actor Source, float Range)
     {
@@ -361,9 +356,12 @@ public abstract partial class AutoClear : ZoneModule
 
         DrawAOEs(playerSlot, player, hints);
 
-        var canNavigate = _config.MaxPull == 0 ? !player.InCombat : hints.PotentialTargets.Count(t => t.Actor.AggroPlayer && !t.Actor.IsDeadOrDestroyed) <= _config.MaxPull;
+        var numAggro = hints.PotentialTargets.Count(t => t.Actor.AggroPlayer && !t.Actor.IsDeadOrDestroyed);
 
         (PlayerRoomBox, PlayerRoom) = FindClosestRoom(player.Position);
+
+        // allow navigating when at max pull, i.e. so we can walk our dog to the nearest chest
+        var canNavigate = numAggro <= _config.MaxPull;
 
         if (canNavigate)
             HandleFloorPathfind(player, hints);
@@ -400,7 +398,7 @@ public abstract partial class AutoClear : ZoneModule
                 // TODO use magicite/demiclone to prevent overcap
                 continue;
 
-            if (_openedChests.Contains(a.InstanceID) || _fakeExits.Contains(a.InstanceID))
+            if (a.IsOpenTreasure || _fakeExits.Contains(a.InstanceID))
                 continue;
 
             var oid = (OID)a.OID;
@@ -492,7 +490,7 @@ public abstract partial class AutoClear : ZoneModule
         if (!IsPlayerTransformed(player) && canNavigate && _config.AutoMoveTreasure && hoardLight is Actor h && Palace.GetPomanderState(PomanderID.Intuition).Active)
             hints.GoalZones.Add(hints.GoalSingleTarget(h.Position, 2, 10));
 
-        var shouldTargetMobs = _config.AutoClear switch
+        var canTarget = _config.AutoClear switch
         {
             AutoDDConfig.ClearBehavior.Passage => !Palace.PassageActive,
             AutoDDConfig.ClearBehavior.Leveling => player.Level < LevelCap || !Palace.PassageActive,
@@ -511,7 +509,7 @@ public abstract partial class AutoClear : ZoneModule
                 pp.Priority = 0;
 
             // if player does not have a target, prioritize everything so that AI picks one - skip dangerous enemies
-            else if (shouldTargetMobs && !pp.Actor.Statuses.Any(s => IsDangerousOutOfCombatStatus(s.ID)))
+            else if (canTarget && numAggro < _config.MaxPull && !pp.Actor.Statuses.Any(s => IsDangerousOutOfCombatStatus(s.ID)))
             {
                 if (IsInThisRoomOrAdjacent(pp.Actor))
                     pp.Priority = 0;
@@ -587,7 +585,7 @@ public abstract partial class AutoClear : ZoneModule
 
         IterAndExpire(Voidzones, d => d.Source.IsDeadOrDestroyed, d =>
         {
-            hints.AddForbiddenZone(d.Zone, d.Source.Position, d.Source.Rotation);
+            hints.AddForbiddenZone(d.Zone, d.Source.Position, d.Source.Rotation, d.Activation);
         });
 
         IterAndExpire(KnockbackZones, d => d.Source.CastInfo == null, kb =>

@@ -18,7 +18,19 @@ public sealed class ActorState : IEnumerable<Actor>
     public abstract record class Operation(ulong InstanceID) : WorldState.Operation
     {
         protected abstract void ExecActor(WorldState ws, Actor actor);
-        protected override void Exec(WorldState ws) => ExecActor(ws, ws.Actors._actors[InstanceID]);
+        protected override void Exec(WorldState ws)
+        {
+            Actor actor;
+            try
+            {
+                actor = ws.Actors._actors[InstanceID];
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new InvalidOperationException($"Unable to process operation {GetType()}; actor 0x{InstanceID:X} has disappeared from worldstate!");
+            }
+            ExecActor(ws, actor);
+        }
     }
 
     public IEnumerable<Operation> CompareToInitial()
@@ -30,6 +42,8 @@ public sealed class ActorState : IEnumerable<Actor>
                 yield return new OpDead(act.InstanceID, true);
             if (act.InCombat)
                 yield return new OpCombat(act.InstanceID, true);
+            if (act.IsOpenTreasure)
+                yield return new OpEventOpenTreasure(act.InstanceID);
             if (act.ModelState != default)
                 yield return new OpModelState(act.InstanceID, act.ModelState);
             if (act.EventState != 0)
@@ -566,7 +580,11 @@ public sealed class ActorState : IEnumerable<Actor>
     public Event<Actor> EventOpenTreasure = new();
     public sealed record class OpEventOpenTreasure(ulong InstanceID) : Operation(InstanceID)
     {
-        protected override void ExecActor(WorldState ws, Actor actor) => ws.Actors.EventOpenTreasure.Fire(actor);
+        protected override void ExecActor(WorldState ws, Actor actor)
+        {
+            actor.IsOpenTreasure = true;
+            ws.Actors.EventOpenTreasure.Fire(actor);
+        }
         public override void Write(ReplayRecorder.Output output) => output.EmitFourCC("OPNT"u8).EmitActor(InstanceID);
     }
 }

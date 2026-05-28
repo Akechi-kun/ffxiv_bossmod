@@ -1,4 +1,5 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+﻿using BossMod.Services;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Hooking;
 using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -19,7 +20,7 @@ using System.Text;
 namespace BossMod;
 
 // utility that updates a world state to correspond to game state
-sealed class WorldStateGameSync : IDisposable
+sealed class WorldStateGameSync : IWorldStateGameSync
 {
     private const int ObjectTableSize = 819; // should match CS; note that different ranges are used for different purposes - consider splitting?..
     private const uint InvalidEntityId = 0xE0000000;
@@ -74,9 +75,6 @@ sealed class WorldStateGameSync : IDisposable
     private unsafe delegate void ProcessPacketRSVDataDelegate(byte* packet);
     private readonly Hook<ProcessPacketRSVDataDelegate> _processPacketRSVDataHook;
 
-    private unsafe delegate void ProcessPacketOpenTreasureDelegate(uint actorID, byte* packet);
-    private readonly Hook<ProcessPacketOpenTreasureDelegate> _processPacketOpenTreasureHook;
-
     private unsafe delegate void* ProcessSystemLogMessageDelegate(uint entityId, uint logMessageId, int* args, byte argCount);
     private readonly Hook<ProcessSystemLogMessageDelegate> _processSystemLogMessageHook;
 
@@ -93,6 +91,8 @@ sealed class WorldStateGameSync : IDisposable
 
     private unsafe delegate void ProcessPacketPlayActionTimelineSync(Network.ServerIPC.PlayActionTimelineSync* data);
     private readonly Hook<ProcessPacketPlayActionTimelineSync> _processPlayActionTimelineSyncHook;
+
+    private readonly Hook<ActionManager.Delegates.GetActionInRangeOrLoS> _getActionInRangeOrLoSHook;
 
     public unsafe WorldStateGameSync(WorldState ws, ActionManagerEx amex)
     {
@@ -159,10 +159,6 @@ sealed class WorldStateGameSync : IDisposable
         _processSystemLogMessageHook.Enable();
         Service.Log($"[WSG] ProcessSystemLogMessage address = 0x{_processSystemLogMessageHook.Address:X}");
 
-        _processPacketOpenTreasureHook = Service.Hook.HookFromSignature<ProcessPacketOpenTreasureDelegate>("40 53 48 83 EC 20 48 8B DA 48 8D 0D ?? ?? ?? ?? 8B 52 10 E8 ?? ?? ?? ?? 48 85 C0 74 1B", ProcessPacketOpenTreasureDetour);
-        _processPacketOpenTreasureHook.Enable();
-        Service.Log($"[WSG] ProcessPacketOpenTreasure address = 0x{_processPacketOpenTreasureHook.Address:X}");
-
         _processPacketFateInfoHook = Service.Hook.HookFromSignature<ProcessPacketFateInfoDelegate>("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 0F B7 4F 10 48 8D 57 12 41 B8", ProcessPacketFateInfoDetour);
         _processPacketFateInfoHook.Enable();
         Service.Log($"[WSG] ProcessPacketFateInfo address = 0x{_processPacketFateInfoHook.Address:X}");
@@ -182,9 +178,13 @@ sealed class WorldStateGameSync : IDisposable
         _inventoryAckHook.Enable();
         Service.Log($"[WSG] InventoryAck address = {_inventoryAckHook.Address:X}");
 
-        _processPlayActionTimelineSyncHook = Service.Hook.HookFromSignature<ProcessPacketPlayActionTimelineSync>("E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? B9 ?? ?? ?? ?? 48 8B D7 45 33 C0 E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? B9 ?? ?? ?? ??", ProcessPlayActionTimelineSyncDetour);
+        _processPlayActionTimelineSyncHook = Service.Hook.HookFromSignature<ProcessPacketPlayActionTimelineSync>("48 8B D1 48 8D 0D ?? ?? ?? ?? E9 ?? ?? ?? ?? CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC CC 40 53 56", ProcessPlayActionTimelineSyncDetour);
         _processPlayActionTimelineSyncHook.Enable();
         Service.Log($"[WSG] ProcessPlayActionTimelineSync address = {_processPlayActionTimelineSyncHook.Address:X}");
+
+        _getActionInRangeOrLoSHook = Service.Hook.HookFromAddress<ActionManager.Delegates.GetActionInRangeOrLoS>((nint)ActionManager.MemberFunctionPointers.GetActionInRangeOrLoS, GetActionInRangeOrLoSDetour);
+        _getActionInRangeOrLoSHook.Enable();
+        Service.Log($"[WSG] GetActionInRangeOrLoS address = 0x{_getActionInRangeOrLoSHook.Address:X}");
     }
 
     public void Dispose()
@@ -203,9 +203,9 @@ sealed class WorldStateGameSync : IDisposable
         _processMapEffectHook.Dispose();
         _processPacketRSVDataHook.Dispose();
         _processSystemLogMessageHook.Dispose();
-        _processPacketOpenTreasureHook.Dispose();
         _processPacketFateTradeHook.Dispose();
         _processPacketFateInfoHook.Dispose();
+        _getActionInRangeOrLoSHook.Dispose();
         _subscriptions.Dispose();
         _netConfig.Dispose();
         _interceptor.Dispose();
@@ -230,7 +230,7 @@ sealed class WorldStateGameSync : IDisposable
         ));
         if (_ws.CurrentZone != Service.ClientState.TerritoryType || _ws.CurrentCFCID != GameMain.Instance()->CurrentContentFinderConditionId)
         {
-            _ws.Execute(new WorldState.OpZoneChange(Service.ClientState.TerritoryType, GameMain.Instance()->CurrentContentFinderConditionId));
+            _ws.Execute(new WorldState.OpZoneChange((ushort)Service.ClientState.TerritoryType, GameMain.Instance()->CurrentContentFinderConditionId));
         }
         var proxy = fwk->NetworkModuleProxy->ReceiverCallback;
         var scramble = Network.IDScramble.Get();
@@ -279,6 +279,11 @@ sealed class WorldStateGameSync : IDisposable
     private unsafe void UpdateActors()
     {
         var mgr = GameObjectManager.Instance();
+
+        // as of 7.5, actors can now have their SpawnIndex reassigned between frames without being destroyed/reused instanceid
+        // so we have to process deletion events first, then creation events; otherwise if an actor is moved to an earlier SpawnIndex, we get data corruption
+        // i.e. two copies of the same actor at different indices, then subsequent iterations attempt to delete both actors, throwing an exception on the second attempt
+        // TODO: deduplicate code, i really hate touching this function
         for (int i = 0; i < _actorsByIndex.Length; ++i)
         {
             var actor = _actorsByIndex[i];
@@ -301,14 +306,20 @@ sealed class WorldStateGameSync : IDisposable
                 RemoveActor(actor);
                 actor = null;
             }
+        }
 
-            if (obj != null)
-            {
-                if (actor != existing)
-                    Service.Log($"[WorldState] Actor position mismatch for #{i} {actor}");
+        for (int i = 0; i < _actorsByIndex.Length; ++i)
+        {
+            var actor = _actorsByIndex[i];
+            var obj = mgr->Objects.IndexSorted[i].Value;
 
-                UpdateActor(obj, i, actor);
-            }
+            if (obj == null || obj->EntityId == InvalidEntityId || (obj->EntityId & 0xFF000000) == 0xFF000000)
+                continue;
+
+            if (actor != _ws.Actors.Find(obj->EntityId))
+                Service.Log($"[WorldState] Actor position mismatch for #{i} {actor}");
+
+            UpdateActor(obj, i, actor);
         }
 
         foreach (var (id, ops) in _actorOps)
@@ -352,6 +363,7 @@ sealed class WorldStateGameSync : IDisposable
         var mountId = chr != null ? chr->Mount.MountId : 0u;
         var forayInfoPtr = chr != null ? chr->GetForayInfo() : null;
         var forayInfo = forayInfoPtr == null ? default : new ActorForayInfo(forayInfoPtr->Level, forayInfoPtr->Element);
+        var isOpenTreasure = obj->ObjectKind == ObjectKind.Treasure && ((Treasure*)obj)->Flags.HasFlag(Treasure.TreasureFlags.Opened);
 
         if (act == null)
         {
@@ -398,6 +410,8 @@ sealed class WorldStateGameSync : IDisposable
             _ws.Execute(new ActorState.OpMount(act.InstanceID, mountId));
         if (act.ForayInfo != forayInfo)
             _ws.Execute(new ActorState.OpForayInfo(act.InstanceID, forayInfo));
+        if (!act.IsOpenTreasure && isOpenTreasure)
+            _ws.Execute(new ActorState.OpEventOpenTreasure(act.InstanceID));
 
         DispatchActorEvents(act.InstanceID);
 
@@ -764,7 +778,7 @@ sealed class WorldStateGameSync : IDisposable
             _ws.Execute(new ClientState.OpActivePetChange(pet));
 
         var chocoinfo = uiState->Buddy.CompanionInfo;
-        var chocobo = new ClientState.Companion(chocoinfo.Companion->EntityId, chocoinfo.ActiveCommand, chocoinfo.TimeLeft);
+        var chocobo = new ClientState.Companion(chocoinfo.Companion->EntityId, chocoinfo.ActiveCommand, chocoinfo.TimeLeft, PlayerState.Instance()->IsPlayerStateFlagSet(PlayerStateFlag.IsBuddyInStable));
         if (_ws.Client.ActiveCompanion != chocobo)
             _ws.Execute(new ClientState.OpActiveCompanionChange(chocobo));
 
@@ -1070,13 +1084,6 @@ sealed class WorldStateGameSync : IDisposable
         _globalOps.Add(new WorldState.OpRSVData(MemoryHelper.ReadStringNullTerminated((nint)(packet + 4)), MemoryHelper.ReadString((nint)(packet + 0x34), *(int*)packet)));
     }
 
-    private unsafe void ProcessPacketOpenTreasureDetour(uint playerID, byte* packet)
-    {
-        _processPacketOpenTreasureHook.Original(playerID, packet);
-        var actorID = *(uint*)(packet + 16);
-        _actorOps.GetOrAdd(actorID).Add(new ActorState.OpEventOpenTreasure(actorID));
-    }
-
     private unsafe void* ProcessSystemLogMessageDetour(uint entityId, uint messageId, int* args, byte argCount)
     {
         var res = _processSystemLogMessageHook.Original(entityId, messageId, args, argCount);
@@ -1158,5 +1165,13 @@ sealed class WorldStateGameSync : IDisposable
 
         if (owner > 0)
             _actorOps.GetOrAdd(owner).Add(new ActorState.OpPlayActionTimelineSync(owner, actions));
+    }
+
+    private unsafe uint GetActionInRangeOrLoSDetour(uint actionId, GameObject* sourceObject, GameObject* targetObject)
+    {
+        var res = _getActionInRangeOrLoSHook.Original(actionId, sourceObject, targetObject);
+        if (res is 562 && sourceObject->EntityId == UIState.Instance()->PlayerState.EntityId)
+            _globalOps.Add(new ClientState.OpActionFailedLoS(actionId, SanitizedObjectID(targetObject->EntityId)));
+        return res;
     }
 }
