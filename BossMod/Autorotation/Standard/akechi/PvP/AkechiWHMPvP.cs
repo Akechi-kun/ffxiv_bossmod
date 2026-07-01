@@ -77,14 +77,6 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
     }
 
     public bool IsReady(AID aid) => Cooldown(aid) <= 0.2f;
-    public float DebuffsLeft(Actor? target) => Utils.MaxAll(
-        StatusDetails(target, ClassShared.SID.StunPvP, Player.InstanceID, 5).Left,
-        StatusDetails(target, ClassShared.SID.HeavyPvP, Player.InstanceID, 5).Left,
-        StatusDetails(target, ClassShared.SID.BindPvP, Player.InstanceID, 5).Left,
-        StatusDetails(target, ClassShared.SID.SilencePvP, Player.InstanceID, 5).Left,
-        StatusDetails(target, ClassShared.SID.DeepFreezePvP, Player.InstanceID, 5).Left,
-        StatusDetails(target, SID.MiracleOfNaturePvP, Player.InstanceID, 5).Left);
-
     public override void Execution(StrategyValues strategy, Enemy? primaryTarget)
     {
         var (BestLineTargets, NumLineTargets) = GetBestTarget(primaryTarget, 40, LineTargetCheck(40));
@@ -126,7 +118,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
             var bestSStarget = auto ? BestSeraphStrikeTarget?.Actor : mainTarget;
             var (roleCondition, roleAction, roleTarget) = strategy.Option(Track.RoleActions).As<RoleActionStrategy>() switch
             {
-                RoleActionStrategy.Haelan => (HasStatus(SID.HaelanEquippedPvP) && MP >= 2500 && PlayerHPP < 60, AID.HaelanPvP, Player),
+                RoleActionStrategy.Haelan => (HasStatus(SID.HaelanEquippedPvP) && MP >= 2500 && Player.PendingHPRatio < 0.6f, AID.HaelanPvP, Player),
                 RoleActionStrategy.Stoneskin2 => (HasStatus(SID.StoneskinEquippedPvP) && IsReady(AID.StoneskinIIPvP) && EnemiesTargetingSelf(2), AID.StoneskinIIPvP, Player),
                 RoleActionStrategy.Diabrosis => (HasStatus(SID.DiabrosisEquippedPvP) && IsReady(AID.DiabrosisPvP), AID.DiabrosisPvP, bestSStarget),
                 _ => (false, AID.None, null)
@@ -141,15 +133,16 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
                 StatusDetails(Player, ClassShared.SID.SilencePvP, Player.InstanceID, 5).Left,
                 StatusDetails(Player, ClassShared.SID.DeepFreezePvP, Player.InstanceID, 5).Left,
                 StatusDetails(Player, SID.MiracleOfNaturePvP, Player.InstanceID, 5).Left);
+
             if (IsReady(AID.AquaveilPvP) && strategy.Option(Track.Aquaveil).As<AquaveilStrategy>() switch
             {
-                AquaveilStrategy.Auto => PlayerHPP is < 100 and not 0 && EnemiesTargetingSelf(2),
+                AquaveilStrategy.Auto => Player.PendingHPRatio < 1.0f && EnemiesTargetingSelf(2),
                 AquaveilStrategy.Two => EnemiesTargetingSelf(2),
                 AquaveilStrategy.Three => EnemiesTargetingSelf(3),
                 AquaveilStrategy.Four => EnemiesTargetingSelf(4),
-                AquaveilStrategy.LessThanFull => PlayerHPP is < 100 and not 0,
-                AquaveilStrategy.LessThan75 => PlayerHPP is < 75 and not 0,
-                AquaveilStrategy.LessThan50 => PlayerHPP is < 50 and not 0,
+                AquaveilStrategy.LessThanFull => Player.PendingHPRatio < 1.0f,
+                AquaveilStrategy.LessThan75 => Player.PendingHPRatio < 0.75f,
+                AquaveilStrategy.LessThan50 => Player.PendingHPRatio < 0.5f,
                 AquaveilStrategy.DebuffOnly => debuffsUp > 0,
                 _ => false
             })
@@ -164,11 +157,11 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
             };
             if ((Cooldown(AID.CureIIPvP) < 12.6f || HasStatus(SID.CureIIIReadyPvP)) && strategy.Option(Track.Cure).As<CureStrategy>() switch
             {
-                CureStrategy.Eighty => HPP(healtarget) is < 80 and not 0,
-                CureStrategy.Seventy => HPP(healtarget) is < 70 and not 0,
-                CureStrategy.Sixty => HPP(healtarget) is < 60 and not 0,
-                CureStrategy.Fifty => HPP(healtarget) is < 50 and not 0,
-                CureStrategy.Fourty => HPP(healtarget) is < 40 and not 0,
+                CureStrategy.Eighty => healtarget?.PendingHPRatio < 0.8f && healtarget.HPMP.CurHP != healtarget.HPMP.MaxHP,
+                CureStrategy.Seventy => healtarget?.PendingHPRatio < 0.7f && healtarget.HPMP.CurHP != healtarget.HPMP.MaxHP,
+                CureStrategy.Sixty => healtarget?.PendingHPRatio < 0.6f && healtarget.HPMP.CurHP != healtarget.HPMP.MaxHP,
+                CureStrategy.Fifty => healtarget?.PendingHPRatio < 0.5f && healtarget.HPMP.CurHP != healtarget.HPMP.MaxHP,
+                CureStrategy.Fourty => healtarget?.PendingHPRatio < 0.4f && healtarget.HPMP.CurHP != healtarget.HPMP.MaxHP,
                 _ => false
             })
                 QueueGCD(HasStatus(SID.CureIIIReadyPvP) ? AID.CureIIIPvP : AID.CureIIPvP, healtarget, GCDPriority.VeryHigh);

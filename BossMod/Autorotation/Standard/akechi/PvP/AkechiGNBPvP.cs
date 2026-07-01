@@ -128,16 +128,16 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
 
         if (ActionReady(AID.HeartOfCorundumPvP) && strategy.Option(Track.Corundum).As<CorundumStrategy>() switch
         {
-            CorundumStrategy.Auto => (PlayerHPP is <= 80 and not 0 && EnemiesTargetingSelf(2)) || PlayerHPP is < 50 and not 0,
-            CorundumStrategy.Two => PlayerHPP is < 100 and not 0 && EnemiesTargetingSelf(2),
-            CorundumStrategy.Three => PlayerHPP is < 100 and not 0 && EnemiesTargetingSelf(3),
-            CorundumStrategy.Four => PlayerHPP is < 100 and not 0 && EnemiesTargetingSelf(4),
-            CorundumStrategy.Eighty => PlayerHPP is <= 80 and not 0,
-            CorundumStrategy.Seventy => PlayerHPP is <= 70 and not 0,
-            CorundumStrategy.Sixty => PlayerHPP is <= 60 and not 0,
-            CorundumStrategy.Fifty => PlayerHPP is <= 50 and not 0,
-            CorundumStrategy.Fourty => PlayerHPP is <= 40 and not 0,
-            CorundumStrategy.Thirty => PlayerHPP is <= 30 and not 0,
+            CorundumStrategy.Auto => (Player.PendingHPRatio is <= 0.8f and not 0.0f && EnemiesTargetingSelf(2)) || Player.PendingHPRatio is < 0.5f and not 0.0f,
+            CorundumStrategy.Two => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(2),
+            CorundumStrategy.Three => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(3),
+            CorundumStrategy.Four => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(4),
+            CorundumStrategy.Eighty => Player.PendingHPRatio is <= 0.8f and not 0.0f,
+            CorundumStrategy.Seventy => Player.PendingHPRatio is <= 0.7f and not 0.0f,
+            CorundumStrategy.Sixty => Player.PendingHPRatio is <= 0.6f and not 0.0f,
+            CorundumStrategy.Fifty => Player.PendingHPRatio is <= 0.5f and not 0.0f,
+            CorundumStrategy.Fourty => Player.PendingHPRatio is <= 0.4f and not 0.0f,
+            CorundumStrategy.Thirty => Player.PendingHPRatio is <= 0.3f and not 0.0f,
             _ => false
         })
             QueueGCD(AID.HeartOfCorundumPvP, Player, GCDPriority.Max);
@@ -145,7 +145,7 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
         var (roleCondition, roleAction, roleTarget) = strategy.Option(Track.RoleActions).As<RoleActionStrategy>() switch
         {
             RoleActionStrategy.Rampage => (HasStatus(SID.RampageEquippedPvP) && ActionReady(AID.RampagePvP) && Hints.PriorityTargets.Any(h => h.Actor.IsDeadOrDestroyed && !h.Actor.IsFriendlyNPC && !h.Actor.IsAlly && h.Actor.DistanceToHitbox(Player) <= 10) && In10y(mainTarget), AID.RampagePvP, Player),
-            RoleActionStrategy.Rampart => (HasStatus(SID.RampartEquippedPvP) && ActionReady(AID.RampartPvP) && ((PlayerHPP is < 100 and not 0 && EnemiesTargetingSelf(2)) || PlayerHPP is < 50 and not 0), AID.RampartPvP, Player),
+            RoleActionStrategy.Rampart => (HasStatus(SID.RampartEquippedPvP) && ActionReady(AID.RampartPvP) && ((Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(2)) || Player.PendingHPRatio is < 0.5f and not 0.0f), AID.RampartPvP, Player),
             RoleActionStrategy.FullSwing => (HasStatus(SID.FullSwingEquippedPvP) && ActionReady(AID.FullSwingPvP) && In5y(mainTarget), AID.FullSwingPvP, mainTarget),
             _ => (false, AID.None, null)
         };
@@ -183,9 +183,9 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
             if (ActionReady(AID.BlastingZonePvP) && strategy.Option(Track.Zone).As<ZoneStrategy>() switch
             {
                 ZoneStrategy.Buff => hasNM,
-                ZoneStrategy.HalfHPP => HPP(mainTarget) < 50,
-                ZoneStrategy.BuffOrHalfHPP => hasNM || HPP(mainTarget) < 50,
-                ZoneStrategy.BuffAndHalfHPP => hasNM && HPP(mainTarget) < 50,
+                ZoneStrategy.HalfHPP => mainTarget?.PendingHPRatio < 0.5f,
+                ZoneStrategy.BuffOrHalfHPP => hasNM || mainTarget?.PendingHPRatio < 0.5f,
+                ZoneStrategy.BuffAndHalfHPP => hasNM && mainTarget?.PendingHPRatio < 0.5f,
                 ZoneStrategy.ASAP => true,
                 _ => false
             })

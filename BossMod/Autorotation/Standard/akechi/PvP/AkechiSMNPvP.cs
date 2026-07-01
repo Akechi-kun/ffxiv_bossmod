@@ -13,6 +13,7 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
     public enum AegisStrategy { Auto, Two, Three, Four, LessThanFull, LessThan75, LessThan50, Forbid }
     public enum Ruin4Strategy { Early, Late, Forbid }
     public enum CycloneStrategy { Five, Ten, Fifteen, Twenty, Allow, Forbid }
+    public enum BusterStrategy { Allow, HighestHPP, LowestHPP, Forbid }
     public enum CommonStrategy { Allow, Forbid }
 
     public static RotationModuleDefinition Definition()
@@ -67,9 +68,11 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
             .AddOption(CycloneStrategy.Forbid, "Do not use Crimson Cyclone")
             .AddAssociatedActions(AID.CrimsonCyclonePvP);
 
-        res.Define(Track.MountainBuster).As<CommonStrategy>("Mountain Buster", "", 300)
-            .AddOption(CommonStrategy.Allow, "Use Mountain Buster when available")
-            .AddOption(CommonStrategy.Forbid, "Do not use Mountain Buster")
+        res.Define(Track.MountainBuster).As<BusterStrategy>("Mountain Buster", "", 300)
+            .AddOption(BusterStrategy.Allow, "Use Mountain Buster on the best suitable target nearby when available")
+            .AddOption(BusterStrategy.HighestHPP, "Use Mountain Buster on the highest HP% target nearby when available")
+            .AddOption(BusterStrategy.LowestHPP, "Use Mountain Buster on the lowest HP% target nearby when available")
+            .AddOption(BusterStrategy.Forbid, "Do not use Mountain Buster")
             .AddAssociatedActions(AID.MountainBusterPvP);
 
         res.Define(Track.Slipstream).As<CommonStrategy>("Slipstream", "", 300)
@@ -111,7 +114,7 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
         {
             if (World.Party.LimitBreakLevel >= 1)
             {
-                var crystal = World.Actors.FirstOrDefault(x => x.OID == 0x3886); //crystal
+                var crystal = World.Actors.FirstOrDefault(x => x.OID == 0x3886);
                 var summon = strategy.Option(Track.LimitBreak).As<LBStrategy>() switch
                 {
                     LBStrategy.Bahamut => AID.SummonBahamutPvP,
@@ -174,8 +177,16 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
             if (HasStatus(SID.CrimsonStrikeReadyPvP))
                 QueueGCD(AID.CrimsonStrikePvP, mainTarget, Status(SID.FurtherRuinPvP) <= 3f ? GCDPriority.High + 1 : GCDPriority.AboveAverage);
 
-            if (IsReady(AID.MountainBusterPvP) && DistanceFrom(mainTarget, 8f) && strategy.Option(Track.MountainBuster).As<CommonStrategy>() == CommonStrategy.Allow)
-                QueueGCD(AID.MountainBusterPvP, auto ? BestConeTarget?.Actor : mainTarget, GCDPriority.Average);
+            var mbStrat = strategy.Option(Track.MountainBuster).As<BusterStrategy>();
+            var busterTarget = mbStrat switch
+            {
+                BusterStrategy.Allow => BestConeTarget?.Actor,
+                BusterStrategy.HighestHPP => Hints.PotentialTargets.Where(x => Player.DistanceToHitbox(x.Actor) <= 8f && HasLOS(x.Actor)).MaxBy(x => x.Actor.PendingHPRatio)?.Actor,
+                BusterStrategy.LowestHPP => mainTarget,
+                _ => null
+            };
+            if (IsReady(AID.MountainBusterPvP) && DistanceFrom(busterTarget, 8f) && strategy.Option(Track.MountainBuster).As<BusterStrategy>() != BusterStrategy.Forbid)
+                QueueGCD(AID.MountainBusterPvP, busterTarget, GCDPriority.Average);
 
             if (IsReady(AID.SlipstreamPvP) && !IsMoving && strategy.Option(Track.Slipstream).As<CommonStrategy>() == CommonStrategy.Allow)
                 QueueGCD(AID.SlipstreamPvP, BestSlipstreamTarget?.Actor, GCDPriority.BelowAverage);
@@ -188,13 +199,13 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
 
             if (IsReady(AID.RadiantAegisPvP) && strategy.Option(Track.RadiantAegis).As<AegisStrategy>() switch
             {
-                AegisStrategy.Auto => (PlayerHPP is < 75 and not 0 && EnemiesTargetingSelf(2)) || PlayerHPP is < 33 and not 0,
-                AegisStrategy.Two => EnemiesTargetingSelf(2) && PlayerHPP is < 100 and not 0,
-                AegisStrategy.Three => EnemiesTargetingSelf(3) && PlayerHPP is < 100 and not 0,
-                AegisStrategy.Four => EnemiesTargetingSelf(4) && PlayerHPP is < 100 and not 0,
-                AegisStrategy.LessThanFull => PlayerHPP is < 100 and not 0,
-                AegisStrategy.LessThan75 => PlayerHPP is < 75 and not 0,
-                AegisStrategy.LessThan50 => PlayerHPP is < 50 and not 0,
+                AegisStrategy.Auto => (Player.PendingHPRatio is < 0.75f and not 0.0f && EnemiesTargetingSelf(2)) || Player.PendingHPRatio is < 0.33f and not 0.0f,
+                AegisStrategy.Two => EnemiesTargetingSelf(2) && Player.PendingHPRatio is < 1.0f and not 0.0f,
+                AegisStrategy.Three => EnemiesTargetingSelf(3) && Player.PendingHPRatio is < 1.0f and not 0.0f,
+                AegisStrategy.Four => EnemiesTargetingSelf(4) && Player.PendingHPRatio is < 1.0f and not 0.0f,
+                AegisStrategy.LessThanFull => Player.PendingHPRatio is < 1.0f and not 0.0f,
+                AegisStrategy.LessThan75 => Player.PendingHPRatio is < 0.75f and not 0.0f,
+                AegisStrategy.LessThan50 => Player.PendingHPRatio is < 0.5f and not 0.0f,
                 _ => false
             })
                 QueueGCD(AID.RadiantAegisPvP, mainTarget, GCDPriority.Max);

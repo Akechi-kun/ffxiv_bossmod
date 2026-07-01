@@ -96,6 +96,7 @@ public sealed class AkechiMCHPvP(RotationModuleManager manager, Actor player) : 
         var mainTarget = primaryTarget?.Actor;
         var auto = strategy.Option(Track.Targeting).As<TargetingStrategy>() == TargetingStrategy.Auto;
         var BestToolTarget = auto ? (HasStatus(SID.ChainSawPrimed) ? BestLineTarget : HasStatus(SID.Bioblaster) ? BestConeTarget : primaryTarget) : primaryTarget;
+        var bestMarksmanTarget = Hints.PotentialTargets.FirstOrDefault(x => !x.Actor.IsDeadOrDestroyed)?.Actor;
 
         if (auto)
         {
@@ -116,10 +117,10 @@ public sealed class AkechiMCHPvP(RotationModuleManager manager, Actor player) : 
                 strategy.Option(Track.LimitBreak).As<LBStrategy>() switch
                 {
                     LBStrategy.ASAP => true,
-                    LBStrategy.LessThan70 => HPP(mainTarget) <= 70,
-                    LBStrategy.LessThan60 => HPP(mainTarget) <= 60,
-                    LBStrategy.LessThan50 => HPP(mainTarget) <= 50,
-                    LBStrategy.LessThan40 => HPP(mainTarget) <= 40,
+                    LBStrategy.LessThan70 => mainTarget?.PendingHPRatio < 0.7f,
+                    LBStrategy.LessThan60 => mainTarget?.PendingHPRatio < 0.6f,
+                    LBStrategy.LessThan50 => mainTarget?.PendingHPRatio < 0.5f,
+                    LBStrategy.LessThan40 => mainTarget?.PendingHPRatio < 0.4f,
                     LBStrategy.Forbid => false,
                     _ => false
                 })
@@ -140,9 +141,8 @@ public sealed class AkechiMCHPvP(RotationModuleManager manager, Actor player) : 
                     {
                         RoleActionStrategy.Dervish => (HasStatus(SID.DervishEquippedPvP) && IsReady(AID.DervishPvP), AID.DervishPvP, Player),
                         RoleActionStrategy.Bravery => (HasStatus(SID.BraveryEquippedPvP) && IsReady(AID.BraveryPvP), AID.BraveryPvP, Player),
-                        RoleActionStrategy.EagleEyeShot => (HasStatus(SID.EagleEyeShotEquippedPvP) && IsReady(AID.EagleEyeShotPvP), AID.EagleEyeShotPvP, mainTarget),
+                        RoleActionStrategy.EagleEyeShot => (HasStatus(SID.EagleEyeShotEquippedPvP) && IsReady(AID.EagleEyeShotPvP), AID.EagleEyeShotPvP, bestMarksmanTarget),
                         _ => (false, AID.None, null)
-
                     };
                     if (roleCondition)
                         QueueGCD(roleAction, roleTarget, GCDPriority.VeryHigh + 1);
