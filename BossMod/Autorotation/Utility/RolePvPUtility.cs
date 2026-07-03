@@ -57,8 +57,7 @@ public sealed class RolePvPUtility(RotationModuleManager manager, Actor player) 
     }
 
     public bool IsReady(ClassShared.AID aid) => World.Client.Cooldowns[ActionDefinitions.Instance.Spell(aid)!.MainCooldownGroup].Remaining <= 0.2f;
-    public bool EnemiesTargetingSelf(int numEnemies) => Service.ObjectTable.Count(o => o.IsTargetable && !o.IsDead && o.TargetObjectId == Player.InstanceID) >= numEnemies;
-    public float PlayerHPP => (float)Player.HPMP.CurHP / Player.HPMP.MaxHP * 100;
+    public int EnemiesTargetingPlayer => Hints.PotentialTargets.Count(x => !x.Actor.IsDeadOrDestroyed && x.Actor.TargetID == Player.InstanceID);
     public float DebuffsLeft(Actor? target) => Utils.MaxAll(
         StatusDetails(target, ClassShared.SID.StunPvP, Player.InstanceID, 5).Left,
         StatusDetails(target, ClassShared.SID.HeavyPvP, Player.InstanceID, 5).Left,
@@ -95,22 +94,22 @@ public sealed class RolePvPUtility(RotationModuleManager manager, Actor player) 
 
         if (Player.HPMP.CurMP >= 2500 && strategy.Option(Track.Recuperate).As<ThresholdStrategy>() switch
         {
-            ThresholdStrategy.Seventy => PlayerHPP is < 70 and not 0,
-            ThresholdStrategy.Fifty => PlayerHPP is < 50 and not 0,
-            ThresholdStrategy.Thirty => PlayerHPP is < 30 and not 0,
+            ThresholdStrategy.Seventy => Player.PendingHPRatio is < 0.7f and not 0.0f,
+            ThresholdStrategy.Fifty => Player.PendingHPRatio is < 0.5f and not 0.0f,
+            ThresholdStrategy.Thirty => Player.PendingHPRatio is < 0.3f and not 0.0f,
             _ => false
         })
             Hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.RecuperatePvP), Player, (int)ActionQueue.Priority.VeryHigh);
 
         if (IsReady(ClassShared.AID.GuardPvP) && strategy.Option(Track.Guard).As<GuardStrategy>() switch
         {
-            GuardStrategy.Auto => (PlayerHPP is < 75 and not 0 && EnemiesTargetingSelf(2)) || PlayerHPP is < 33 and not 0,
-            GuardStrategy.Two => EnemiesTargetingSelf(2) && PlayerHPP is < 100 and not 0,
-            GuardStrategy.Three => EnemiesTargetingSelf(3) && PlayerHPP is < 100 and not 0,
-            GuardStrategy.Four => EnemiesTargetingSelf(4) && PlayerHPP is < 100 and not 0,
-            GuardStrategy.Seventy => PlayerHPP is < 70 and not 0,
-            GuardStrategy.Fifty => PlayerHPP is < 50 and not 0,
-            GuardStrategy.Thirty => PlayerHPP is < 30 and not 0,
+            GuardStrategy.Auto => (Player.PendingHPRatio is < 0.75f and not 0.0f && EnemiesTargetingPlayer >= 2) || Player.PendingHPRatio is < 0.33f and not 0.0f,
+            GuardStrategy.Two => EnemiesTargetingPlayer >= 2 && Player.PendingHPRatio is < 1.0f and not 0.0f,
+            GuardStrategy.Three => EnemiesTargetingPlayer >= 3 && Player.PendingHPRatio is < 1.0f and not 0.0f,
+            GuardStrategy.Four => EnemiesTargetingPlayer >= 4 && Player.PendingHPRatio is < 1.0f and not 0.0f,
+            GuardStrategy.Seventy => Player.PendingHPRatio is < 0.7f and not 0.0f,
+            GuardStrategy.Fifty => Player.PendingHPRatio is < 0.5f and not 0.0f,
+            GuardStrategy.Thirty => Player.PendingHPRatio is < 0.3f and not 0.0f,
             _ => false
         })
             Hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.GuardPvP), Player, (int)ActionQueue.Priority.VeryHigh + 1);

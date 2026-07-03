@@ -199,10 +199,10 @@ public sealed class AkechiSMNPvP(RotationModuleManager manager, Actor player) : 
 
             if (IsReady(AID.RadiantAegisPvP) && strategy.Option(Track.RadiantAegis).As<AegisStrategy>() switch
             {
-                AegisStrategy.Auto => (Player.PendingHPRatio is < 0.75f and not 0.0f && EnemiesTargetingSelf(2)) || Player.PendingHPRatio is < 0.33f and not 0.0f,
-                AegisStrategy.Two => EnemiesTargetingSelf(2) && Player.PendingHPRatio is < 1.0f and not 0.0f,
-                AegisStrategy.Three => EnemiesTargetingSelf(3) && Player.PendingHPRatio is < 1.0f and not 0.0f,
-                AegisStrategy.Four => EnemiesTargetingSelf(4) && Player.PendingHPRatio is < 1.0f and not 0.0f,
+                AegisStrategy.Auto => (Player.PendingHPRatio is < 0.75f and not 0.0f && EnemiesTargetingPlayer >= 2) || Player.PendingHPRatio is < 0.33f and not 0.0f,
+                AegisStrategy.Two => EnemiesTargetingPlayer >= 2 && Player.PendingHPRatio is < 1.0f and not 0.0f,
+                AegisStrategy.Three => EnemiesTargetingPlayer >= 3 && Player.PendingHPRatio is < 1.0f and not 0.0f,
+                AegisStrategy.Four => EnemiesTargetingPlayer >= 4 && Player.PendingHPRatio is < 1.0f and not 0.0f,
                 AegisStrategy.LessThanFull => Player.PendingHPRatio is < 1.0f and not 0.0f,
                 AegisStrategy.LessThan75 => Player.PendingHPRatio is < 0.75f and not 0.0f,
                 AegisStrategy.LessThan50 => Player.PendingHPRatio is < 0.5f and not 0.0f,

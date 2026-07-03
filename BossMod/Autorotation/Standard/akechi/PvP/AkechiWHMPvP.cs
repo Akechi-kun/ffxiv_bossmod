@@ -119,7 +119,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
             var (roleCondition, roleAction, roleTarget) = strategy.Option(Track.RoleActions).As<RoleActionStrategy>() switch
             {
                 RoleActionStrategy.Haelan => (HasStatus(SID.HaelanEquippedPvP) && MP >= 2500 && Player.PendingHPRatio < 0.6f, AID.HaelanPvP, Player),
-                RoleActionStrategy.Stoneskin2 => (HasStatus(SID.StoneskinEquippedPvP) && IsReady(AID.StoneskinIIPvP) && EnemiesTargetingSelf(2), AID.StoneskinIIPvP, Player),
+                RoleActionStrategy.Stoneskin2 => (HasStatus(SID.StoneskinEquippedPvP) && IsReady(AID.StoneskinIIPvP) && EnemiesTargetingPlayer >= 2, AID.StoneskinIIPvP, Player),
                 RoleActionStrategy.Diabrosis => (HasStatus(SID.DiabrosisEquippedPvP) && IsReady(AID.DiabrosisPvP), AID.DiabrosisPvP, bestSStarget),
                 _ => (false, AID.None, null)
             };
@@ -136,10 +136,10 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
 
             if (IsReady(AID.AquaveilPvP) && strategy.Option(Track.Aquaveil).As<AquaveilStrategy>() switch
             {
-                AquaveilStrategy.Auto => Player.PendingHPRatio < 1.0f && EnemiesTargetingSelf(2),
-                AquaveilStrategy.Two => EnemiesTargetingSelf(2),
-                AquaveilStrategy.Three => EnemiesTargetingSelf(3),
-                AquaveilStrategy.Four => EnemiesTargetingSelf(4),
+                AquaveilStrategy.Auto => Player.PendingHPRatio < 1.0f && EnemiesTargetingPlayer >= 2,
+                AquaveilStrategy.Two => EnemiesTargetingPlayer >= 2,
+                AquaveilStrategy.Three => EnemiesTargetingPlayer >= 3,
+                AquaveilStrategy.Four => EnemiesTargetingPlayer >= 4,
                 AquaveilStrategy.LessThanFull => Player.PendingHPRatio < 1.0f,
                 AquaveilStrategy.LessThan75 => Player.PendingHPRatio < 0.75f,
                 AquaveilStrategy.LessThan50 => Player.PendingHPRatio < 0.5f,

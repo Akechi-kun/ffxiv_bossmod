@@ -128,10 +128,10 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
 
         if (ActionReady(AID.HeartOfCorundumPvP) && strategy.Option(Track.Corundum).As<CorundumStrategy>() switch
         {
-            CorundumStrategy.Auto => (Player.PendingHPRatio is <= 0.8f and not 0.0f && EnemiesTargetingSelf(2)) || Player.PendingHPRatio is < 0.5f and not 0.0f,
-            CorundumStrategy.Two => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(2),
-            CorundumStrategy.Three => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(3),
-            CorundumStrategy.Four => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(4),
+            CorundumStrategy.Auto => (Player.PendingHPRatio is <= 0.8f and not 0.0f && EnemiesTargetingPlayer >= 2) || Player.PendingHPRatio is < 0.5f and not 0.0f,
+            CorundumStrategy.Two => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingPlayer >= 2,
+            CorundumStrategy.Three => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingPlayer >= 3,
+            CorundumStrategy.Four => Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingPlayer >= 4,
             CorundumStrategy.Eighty => Player.PendingHPRatio is <= 0.8f and not 0.0f,
             CorundumStrategy.Seventy => Player.PendingHPRatio is <= 0.7f and not 0.0f,
             CorundumStrategy.Sixty => Player.PendingHPRatio is <= 0.6f and not 0.0f,
@@ -145,7 +145,7 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
         var (roleCondition, roleAction, roleTarget) = strategy.Option(Track.RoleActions).As<RoleActionStrategy>() switch
         {
             RoleActionStrategy.Rampage => (HasStatus(SID.RampageEquippedPvP) && ActionReady(AID.RampagePvP) && Hints.PriorityTargets.Any(h => h.Actor.IsDeadOrDestroyed && !h.Actor.IsFriendlyNPC && !h.Actor.IsAlly && h.Actor.DistanceToHitbox(Player) <= 10) && In10y(mainTarget), AID.RampagePvP, Player),
-            RoleActionStrategy.Rampart => (HasStatus(SID.RampartEquippedPvP) && ActionReady(AID.RampartPvP) && ((Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingSelf(2)) || Player.PendingHPRatio is < 0.5f and not 0.0f), AID.RampartPvP, Player),
+            RoleActionStrategy.Rampart => (HasStatus(SID.RampartEquippedPvP) && ActionReady(AID.RampartPvP) && ((Player.PendingHPRatio is < 1.0f and not 0.0f && EnemiesTargetingPlayer >= 2) || Player.PendingHPRatio is < 0.5f and not 0.0f), AID.RampartPvP, Player),
             RoleActionStrategy.FullSwing => (HasStatus(SID.FullSwingEquippedPvP) && ActionReady(AID.FullSwingPvP) && In5y(mainTarget), AID.FullSwingPvP, mainTarget),
             _ => (false, AID.None, null)
         };

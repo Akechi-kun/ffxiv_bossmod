@@ -277,7 +277,8 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
         var flags = stackalloc int[] { 0x4000, 0, 0x4000, 0 };
         return !Framework.Instance()->BGCollisionModule->RaycastMaterialFilter(&hit, &sourcePos, &direction, distance, 1, flags);
     }
-    public bool EnemiesTargetingSelf(int numEnemies) => Hints.PotentialTargets.Count(x => !x.Actor.IsDeadOrDestroyed && x.Actor.TargetID == Player.InstanceID) >= numEnemies;
+    public int EnemiesTargetingPlayer => Hints.PotentialTargets.Count(x => !x.Actor.IsDeadOrDestroyed && x.Actor.TargetID == Player.InstanceID);
+    public int EnemiesTargetingObject(Actor? obj) => Hints.PotentialTargets.Count(x => !x.Actor.IsDeadOrDestroyed && x.Actor.TargetID == obj?.InstanceID);
     protected void GetPvPTarget(float range)
     {
         Enemy? RetrieveTarget(Func<Enemy, bool> conditions) => Hints.PriorityTargets
@@ -292,9 +293,12 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
                 or 0xC19 or 0x47BD) //interceptor drones
                 return true;
 
-            //enemy players currently targeting allegan tomeliths
-            uint[] alleganTomeliths = [0x1E9961, 0x1E9962, 0x1E9963, 0x1E9964, 0x1E9965, 0x1E9966, 0x1E9967, 0x1E9968, 0x1E995A, 0x1E995B, 0x1E995C, 0x1E995D, 0x1E995E, 0x1E995F];
-            return actor.NameID == 0 && !actor.IsDeadOrDestroyed && !actor.IsStrikingDummy && World.Actors.Find(actor.TargetID) is { } target && alleganTomeliths.Contains(target.OID);
+            //enemy players currently targeting allegan tomeliths - stop them asap
+            return EnemiesTargetingObject(World.Actors.FirstOrDefault(x => x.OID is
+                0x1E9961 or 0x1E9962 or 0x1E9963 or 0x1E9964 or
+                0x1E9965 or 0x1E9966 or 0x1E9967 or 0x1E9968 or
+                0x1E995A or 0x1E995B or 0x1E995C or 0x1E995D or
+                0x1E995E or 0x1E995F)) > 0;
         }
 
         //max priority - zone specific stuff for FLs, RWs, etc
