@@ -305,14 +305,15 @@ public sealed class AkechiPLD(RotationModuleManager manager, Actor player) : Ake
         var hcMinimum = dmhTarget != null && !dmacHold && DMstatus > GCD && Unlocked(AID.HolyCircle) && MP >= 1000 && In5y(dmhTarget);
         var dmhFirst = (fofStrat != BuffsStrategy.Delay && FOFstatus is > 0 and <= 2.5f && SUPstatus <= GCD && SEPstatus <= GCD) || DMstatus is > 0 and <= 2.5f;
         var bestHoly = useAOE ? BestHolyCircle : AID.HolySpirit;
+        var bestPrio = dmhFirst ? GCDPriority.Average + 1 : GCDPriority.Average - 1;
         var (dmhCondition, dmhAction, dmhPrio) = dmhStrat switch
         {
-            HolyStrategy.Automatic => (hsMinimum, bestHoly, dmhFirst ? GCDPriority.Average + 1 : GCDPriority.Average - 1),
+            HolyStrategy.Automatic => (hsMinimum, bestHoly, bestPrio),
             HolyStrategy.Early => (hsMinimum, bestHoly, GCDPriority.Average + 1),
             HolyStrategy.Late => (hsMinimum, bestHoly, GCDPriority.Average - 1),
             HolyStrategy.VeryLate => (hsMinimum && (LastComboAction is AID.RiotBlade || DMstatus is > 0 and <= 3), bestHoly, GCDPriority.Average + 1),
-            HolyStrategy.OnlySpirit => (hsMinimum, AID.HolySpirit, GCDPriority.Average - 1),
-            HolyStrategy.OnlyCircle => (hcMinimum, AID.HolyCircle, GCDPriority.Average - 1),
+            HolyStrategy.OnlySpirit => (hsMinimum, AID.HolySpirit, bestPrio),
+            HolyStrategy.OnlyCircle => (hcMinimum, AID.HolyCircle, bestPrio),
             HolyStrategy.ForceSpirit => (hsMinimum, AID.HolySpirit, GCDPriority.Low + 2),
             HolyStrategy.ForceCircle => (hcMinimum, AID.HolyCircle, GCDPriority.Low + 2),
             _ => (false, AID.None, GCDPriority.None)
