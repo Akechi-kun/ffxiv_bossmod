@@ -219,13 +219,13 @@ public sealed class AkechiPLD(RotationModuleManager manager, Actor player) : Ake
 
                 var cos = strategy.Option(Track.CircleOfScorn);
                 var cosStrat = cos.As<OGCDStrategy>();
-                if (ShouldUseOGCD(cosStrat, mainTarget, ActionReady(AID.CircleOfScorn), In5y(mainTarget) && FOFcd is < 57.55f and > 12))
+                if (ShouldUseOGCD(cosStrat, mainTarget, ActionReady(AID.CircleOfScorn), In5y(mainTarget) && FOFcd > 12.5f))
                     QueueOGCD(AID.CircleOfScorn, Player, OGCDPrio(cosStrat, OGCDPriority.Average + 1));
 
                 var sw = strategy.Option(Track.SpiritsWithin);
                 var swStrat = sw.As<OGCDStrategy>();
-                var swTarget = SingleTargetChoice(mainTarget, sw);
-                if (ShouldUseOGCD(swStrat, swTarget, ActionReady(BestSpirits), In3y(swTarget) && FOFcd is < 57.55f and > 12))
+                var swTarget = Unlocked(AID.Expiacion) ? AOETargetChoice(mainTarget, GetBestTarget(primaryTarget, 3, IsSplashTarget).Best?.Actor, sw, strategy) : SingleTargetChoice(mainTarget, sw);
+                if (ShouldUseOGCD(swStrat, swTarget, ActionReady(BestSpirits), In3y(swTarget) && FOFcd > 12.5f))
                     QueueOGCD(BestSpirits, swTarget, OGCDPrio(swStrat, OGCDPriority.Average));
 
                 var dash = strategy.Option(Track.Dash);
