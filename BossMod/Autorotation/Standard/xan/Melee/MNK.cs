@@ -304,16 +304,6 @@ public sealed class MNK(RotationModuleManager manager, Actor player) : Attackxan
         PerfectBalance = 2004
     }
 
-    private float GetApplicationDelay(AID action) => action switch
-    {
-        AID.SixSidedStar => 0.62f,
-        AID.DragonKick => 1.29f,
-        AID.ForbiddenChakra => 1.48f,
-        AID.Demolish => 1.60f,
-        // add more if needed
-        _ => 0
-    };
-
     public override string DescribeState() => $"F={BuffedGCDsLeft}, PB={PBGCDsLeft}";
 
     public override void Exec(in Strategy strategy, Enemy? primaryTarget)
@@ -400,7 +390,7 @@ public sealed class MNK(RotationModuleManager manager, Actor player) : Attackxan
             {
                 Form.Coeurl => AID.Rockbreaker,
                 Form.Raptor => AID.FourPointFury,
-                _ => AID.ArmOfTheDestroyer
+                _ => Unlocked(AID.ShadowOfTheDestroyer) ? AID.ShadowOfTheDestroyer : AID.ArmOfTheDestroyer
             };
             PushGCD(aoeAction, Player, GCDPriority.AOE);
         }
@@ -411,19 +401,19 @@ public sealed class MNK(RotationModuleManager manager, Actor player) : Attackxan
         {
             case Form.Coeurl:
                 PushGCD(AID.Demolish, primaryTarget, GCDPriority.BasicSaver);
-                PushGCD(AID.SnapPunch, primaryTarget, prioBuffed(CoeurlStacks), useOnDyingTarget: false);
+                PushGCD(Unlocked(AID.PouncingCoeurl) ? AID.PouncingCoeurl : AID.SnapPunch, primaryTarget, prioBuffed(CoeurlStacks), useOnDyingTarget: false);
                 break;
             case Form.Raptor:
                 PushGCD(AID.TwinSnakes, primaryTarget, GCDPriority.BasicSaver);
-                PushGCD(AID.TrueStrike, primaryTarget, prioBuffed(RaptorStacks), useOnDyingTarget: false);
+                PushGCD(Unlocked(AID.RisingRaptor) ? AID.RisingRaptor : AID.TrueStrike, primaryTarget, prioBuffed(RaptorStacks), useOnDyingTarget: false);
                 break;
             case Form.OpoOpo:
                 PushGCD(AID.DragonKick, primaryTarget, GCDPriority.BasicSaver);
-                PushGCD(AID.Bootshine, primaryTarget, prioBuffed(OpoStacks), useOnDyingTarget: false);
+                PushGCD(Unlocked(AID.LeapingOpo) ? AID.LeapingOpo : AID.Bootshine, primaryTarget, prioBuffed(OpoStacks), useOnDyingTarget: false);
                 break;
             default:
                 PushGCD(AID.DragonKick, primaryTarget, GCDPriority.BasicSaver);
-                PushGCD(AID.Bootshine, primaryTarget, FormShiftLeft > GCD ? prioBuffed(OpoStacks) : GCDPriority.Basic, useOnDyingTarget: false);
+                PushGCD(Unlocked(AID.LeapingOpo) ? AID.LeapingOpo : AID.Bootshine, primaryTarget, FormShiftLeft > GCD ? prioBuffed(OpoStacks) : GCDPriority.Basic, useOnDyingTarget: false);
                 break;
         }
 
@@ -433,7 +423,15 @@ public sealed class MNK(RotationModuleManager manager, Actor player) : Attackxan
                 PushGCD(AID.SixSidedStar, primaryTarget, GCDPriority.SSS);
                 break;
             case OffensiveStrategy.Automatic:
-                if (EffectiveDowntimeIn > 0 && !CanFitGCD(EffectiveDowntimeIn, 1))
+                var shouldUse = EffectiveDowntimeIn > 0 && !CanFitGCD(EffectiveDowntimeIn, 1);
+
+                if (Hints.ImminentSpecialMode.mode == SpecialMode.Pyretic)
+                {
+                    var pyreticDeadline = (float)Math.Max(0, (Hints.ImminentSpecialMode.activation - World.CurrentTime).TotalSeconds);
+                    shouldUse |= pyreticDeadline > 0 && !CanFitGCD(pyreticDeadline, 1);
+                }
+
+                if (shouldUse)
                     PushGCD(AID.SixSidedStar, primaryTarget, GCDPriority.SSS, useOnDyingTarget: false);
                 break;
         }
