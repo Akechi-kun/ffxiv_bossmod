@@ -6,13 +6,13 @@ namespace BossMod.Autorotation.akechi;
 public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : AkechiTools<AID, TraitID>(manager, player)
 {
     public enum Track { Targeting, RoleActions, LimitBreak, Cure, CureTarget, Aquaveil, SeraphStrike, MiracleOfNature, AfflatusMisery }
-    public enum TargetingStrategy { Auto, Manual }
+    public enum TargetingStrategy { Auto, FocusTargetsTarget, Manual }
     public enum RoleActionStrategy { Forbid, Haelan, Stoneskin2, Diabrosis }
     public enum LBStrategy { Any, Two, Three, Forbid }
     public enum CureStrategy { Eighty, Seventy, Sixty, Fifty, Fourty, Forbid }
     public enum CureTargetStrategy { Self, Party, SelfOrParty }
     public enum AquaveilStrategy { Auto, Two, Three, Four, LessThanFull, LessThan75, LessThan50, DebuffOnly, Forbid }
-    public enum SeraphStrategy { Twenty, Fifteen, Ten, Five, Forbid }
+    public enum SeraphStrategy { Five, Ten, Fifteen, Twenty, Forbid }
     public enum CommonStrategy { Allow, Forbid }
 
     public static RotationModuleDefinition Definition()
@@ -20,6 +20,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
         var res = new RotationModuleDefinition("Akechi WHM (PvP)", "PvP Rotation Module", "PvP", "Akechi", RotationModuleQuality.Basic, BitMask.Build((int)Class.WHM), 100, 30);
         res.Define(Track.Targeting).As<TargetingStrategy>("Targeting", "", 300)
             .AddOption(TargetingStrategy.Auto, "Automatically select best target")
+            .AddOption(TargetingStrategy.FocusTargetsTarget, "Automatically target your current Focus Target's target - if no Focus Target or if Focus Target is hostile, then automatically select best target")
             .AddOption(TargetingStrategy.Manual, "Manually select target");
 
         res.Define(Track.RoleActions).As<RoleActionStrategy>("Role Actions", "", 300)
@@ -59,10 +60,10 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
             .AddOption(AquaveilStrategy.Forbid, "Do not use Aquaveil");
 
         res.Define(Track.SeraphStrike).As<SeraphStrategy>("Seraph Strike", "", 300)
-            .AddOption(SeraphStrategy.Twenty, "Use Seraph Strike when target is within 20 yalms")
-            .AddOption(SeraphStrategy.Fifteen, "Use Seraph Strike when target is within 15 yalms")
-            .AddOption(SeraphStrategy.Ten, "Use Seraph Strike when target is within 10 yalms")
             .AddOption(SeraphStrategy.Five, "Use Seraph Strike when target is within 5 yalms")
+            .AddOption(SeraphStrategy.Ten, "Use Seraph Strike when target is within 10 yalms")
+            .AddOption(SeraphStrategy.Fifteen, "Use Seraph Strike when target is within 15 yalms")
+            .AddOption(SeraphStrategy.Twenty, "Use Seraph Strike when target is within 20 yalms")
             .AddOption(SeraphStrategy.Forbid, "Do not use Seraph Strike");
 
         res.Define(Track.MiracleOfNature).As<CommonStrategy>("Miracle of Nature", "", 300)
@@ -79,48 +80,45 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
     public bool IsReady(AID aid) => Cooldown(aid) <= 0.2f;
     public override void Execution(StrategyValues strategy, Enemy? primaryTarget)
     {
-        var (BestLineTargets, NumLineTargets) = GetBestTarget(primaryTarget, 40, LineTargetCheck(40));
-        var (BestSplashTargets, NumSplashTargets) = GetBestTarget(primaryTarget, 25, IsSplashTarget);
-        var (BestSeraphStrikeTargets, NumSeraphStrikeTargets) = GetBestTarget(primaryTarget, 25, Is10ySplashTarget);
-        var BestLineTarget = NumLineTargets > 1 ? BestLineTargets : primaryTarget;
-        var BestSplashTarget = NumSplashTargets > 1 ? BestSplashTargets : primaryTarget;
-        var BestSeraphStrikeTarget = NumSeraphStrikeTargets > 1 ? BestSeraphStrikeTargets : primaryTarget;
-        var mainTarget = primaryTarget?.Actor;
-        var auto = strategy.Option(Track.Targeting).As<TargetingStrategy>() == TargetingStrategy.Auto;
-
         if (Player.IsDeadOrDestroyed || Player.MountId != 0 || Player.FindStatus(ClassShared.SID.GuardPvP) != null)
             return;
 
+        var strat = strategy.Option(Track.Targeting).As<TargetingStrategy>();
+        var auto = strat == TargetingStrategy.Auto;
+        var focus = strat == TargetingStrategy.FocusTargetsTarget;
+        var mainTarget = primaryTarget?.Actor;
+        var (lineTarget, lineTargets) = GetBestTarget(primaryTarget, 40, LineTargetCheck(40));
+        Actor? Retarget(Actor? newTarget) => auto ? newTarget : mainTarget;
+        var bestLineTarget = Retarget(lineTarget?.Actor);
+        var bestSplashTarget = Retarget(GetBestTarget(primaryTarget, 25, IsSplashTarget).Best?.Actor);
+        var bestSeraphStrikeTarget = Retarget(GetBestTarget(primaryTarget, 25, Is10ySplashTarget).Best?.Actor);
+
         if (auto)
         {
-            GetPvPTarget(25);
+            GetPvPTarget(25, false);
+        }
+        if (focus)
+        {
+            GetPvPTarget(25, true);
         }
 
         if (HasLOS(mainTarget))
         {
             var lb = strategy.Option(Track.LimitBreak).As<LBStrategy>();
-            var bestLBtarget = lb switch
-            {
-                LBStrategy.Any => NumLineTargets >= 1 ? BestLineTargets : primaryTarget,
-                LBStrategy.Two => NumLineTargets >= 2 ? BestLineTargets : primaryTarget,
-                LBStrategy.Three => NumLineTargets >= 3 ? BestLineTargets : primaryTarget,
-                _ => primaryTarget
-            };
             if (World.Party.LimitBreakLevel >= 1 && lb switch
             {
-                LBStrategy.Any => NumLineTargets >= 1,
-                LBStrategy.Two => NumLineTargets >= 2,
-                LBStrategy.Three => NumLineTargets >= 3,
+                LBStrategy.Any => lineTargets > 0,
+                LBStrategy.Two => lineTargets > 1,
+                LBStrategy.Three => lineTargets > 2,
                 _ => false
             })
-                QueueGCD(AID.AfflatusPurgationPvP, auto ? bestLBtarget?.Actor : mainTarget, GCDPriority.Max);
+                QueueGCD(AID.AfflatusPurgationPvP, bestLineTarget, GCDPriority.Max);
 
-            var bestSStarget = auto ? BestSeraphStrikeTarget?.Actor : mainTarget;
             var (roleCondition, roleAction, roleTarget) = strategy.Option(Track.RoleActions).As<RoleActionStrategy>() switch
             {
                 RoleActionStrategy.Haelan => (HasStatus(SID.HaelanEquippedPvP) && MP >= 2500 && Player.PendingHPRatio < 0.6f, AID.HaelanPvP, Player),
                 RoleActionStrategy.Stoneskin2 => (HasStatus(SID.StoneskinEquippedPvP) && IsReady(AID.StoneskinIIPvP) && EnemiesTargetingPlayer >= 2, AID.StoneskinIIPvP, Player),
-                RoleActionStrategy.Diabrosis => (HasStatus(SID.DiabrosisEquippedPvP) && IsReady(AID.DiabrosisPvP), AID.DiabrosisPvP, bestSStarget),
+                RoleActionStrategy.Diabrosis => (HasStatus(SID.DiabrosisEquippedPvP) && IsReady(AID.DiabrosisPvP), AID.DiabrosisPvP, bestSeraphStrikeTarget),
                 _ => (false, AID.None, null)
             };
             if (roleCondition)
@@ -143,7 +141,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
                 AquaveilStrategy.LessThanFull => Player.PendingHPRatio < 1.0f,
                 AquaveilStrategy.LessThan75 => Player.PendingHPRatio < 0.75f,
                 AquaveilStrategy.LessThan50 => Player.PendingHPRatio < 0.5f,
-                AquaveilStrategy.DebuffOnly => debuffsUp > 0,
+                AquaveilStrategy.DebuffOnly => debuffsUp > 0.5f,
                 _ => false
             })
                 QueueGCD(AID.AquaveilPvP, Player, GCDPriority.VeryHigh + 1);
@@ -151,8 +149,8 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
             var healtarget = strategy.Option(Track.CureTarget).As<CureTargetStrategy>() switch
             {
                 CureTargetStrategy.Self => Player,
-                CureTargetStrategy.Party => auto ? World.Party.WithoutSlot(excludeNPCs: true).Exclude(Player).Where(a => a.HPMP.CurHP != a.HPMP.MaxHP).OrderBy(a => (float)a.HPMP.CurHP / a.HPMP.MaxHP).FirstOrDefault() : mainTarget ?? Player,
-                CureTargetStrategy.SelfOrParty => auto ? World.Party.WithoutSlot(excludeNPCs: true).Where(a => a.HPMP.CurHP != a.HPMP.MaxHP).OrderBy(a => (float)a.HPMP.CurHP / a.HPMP.MaxHP).FirstOrDefault() : mainTarget ?? Player,
+                CureTargetStrategy.Party => auto ? World.Party.WithoutSlot(excludeNPCs: true).Exclude(Player).Where(a => a.HPMP.CurHP != a.HPMP.MaxHP).OrderBy(a => a.PendingHPRatio).FirstOrDefault() : mainTarget,
+                CureTargetStrategy.SelfOrParty => auto ? World.Party.WithoutSlot(excludeNPCs: true).Where(a => a.HPMP.CurHP != a.HPMP.MaxHP).OrderBy(a => a.PendingHPRatio).FirstOrDefault() : mainTarget ?? Player,
                 _ => null
             };
             if ((Cooldown(AID.CureIIPvP) < 12.6f || HasStatus(SID.CureIIIReadyPvP)) && strategy.Option(Track.Cure).As<CureStrategy>() switch
@@ -167,7 +165,7 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
                 QueueGCD(HasStatus(SID.CureIIIReadyPvP) ? AID.CureIIIPvP : AID.CureIIPvP, healtarget, GCDPriority.VeryHigh);
 
             if (IsReady(AID.AfflatusMiseryPvP) && strategy.Option(Track.AfflatusMisery).As<CommonStrategy>() == CommonStrategy.Allow)
-                QueueGCD(AID.AfflatusMiseryPvP, auto ? BestSplashTarget?.Actor : mainTarget, GCDPriority.Average);
+                QueueGCD(AID.AfflatusMiseryPvP, bestSplashTarget, GCDPriority.Average);
 
             if (IsReady(AID.MiracleOfNaturePvP) &&
                 mainTarget!.NameID == 0 && //doesn't work on NPCs or striking dummies
@@ -184,15 +182,15 @@ public sealed class AkechiWHMPvP(RotationModuleManager manager, Actor player) : 
 
             if (IsReady(AID.SeraphStrikePvP) && strategy.Option(Track.SeraphStrike).As<SeraphStrategy>() switch
             {
-                SeraphStrategy.Twenty => In20y(bestSStarget),
-                SeraphStrategy.Fifteen => In15y(bestSStarget),
-                SeraphStrategy.Ten => In10y(bestSStarget),
-                SeraphStrategy.Five => In5y(bestSStarget),
+                SeraphStrategy.Five => In5y(bestSeraphStrikeTarget),
+                SeraphStrategy.Ten => In10y(bestSeraphStrikeTarget),
+                SeraphStrategy.Fifteen => In15y(bestSeraphStrikeTarget),
+                SeraphStrategy.Twenty => In20y(bestSeraphStrikeTarget),
                 _ => false
             })
-                QueueGCD(AID.SeraphStrikePvP, bestSStarget, GCDPriority.Average);
+                QueueGCD(AID.SeraphStrikePvP, bestSeraphStrikeTarget, GCDPriority.Average);
 
-            QueueGCD(HasStatus(SID.SacredSightPvP) ? AID.GlareIVPvP : AID.GlareIIIPvP, auto && HasStatus(SID.SacredSightPvP) ? BestSplashTarget?.Actor : mainTarget, GCDPriority.Low);
+            QueueGCD(HasStatus(SID.SacredSightPvP) ? AID.GlareIVPvP : AID.GlareIIIPvP, HasStatus(SID.SacredSightPvP) ? bestSplashTarget : mainTarget, GCDPriority.Low);
         }
     }
 }

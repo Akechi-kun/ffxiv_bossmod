@@ -280,9 +280,9 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
     }
     public int EnemiesTargetingPlayer => Hints.PotentialTargets.Count(x => !x.Actor.IsDeadOrDestroyed && x.Actor.TargetID == Player.InstanceID);
     public int EnemiesTargetingObject(Actor? obj) => Hints.PotentialTargets.Count(x => !x.Actor.IsDeadOrDestroyed && x.Actor.TargetID == obj?.InstanceID);
-    protected void GetPvPTarget(float range)
+    protected void GetPvPTarget(float range, bool wantDuosTarget = false)
     {
-        Enemy? RetrieveTarget(Func<Enemy, bool> conditions) => Hints.PriorityTargets
+        Enemy? RetrieveTarget(Func<Enemy, bool> conditions) => Hints.PotentialTargets
             .Where(x => conditions(x) && HasLOS(x.Actor) && Player.DistanceToHitbox(x.Actor) <= range)
             .OrderBy(x => x.Actor.PendingHPRatio).FirstOrDefault();
 
@@ -295,11 +295,12 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
                 return true;
 
             //enemy players currently targeting allegan tomeliths - stop them asap
-            return EnemiesTargetingObject(World.Actors.FirstOrDefault(x => x.OID is
+            var tomeliths = World.Actors.FirstOrDefault(x => x.OID is
                 0x1E9961 or 0x1E9962 or 0x1E9963 or 0x1E9964 or
                 0x1E9965 or 0x1E9966 or 0x1E9967 or 0x1E9968 or
                 0x1E995A or 0x1E995B or 0x1E995C or 0x1E995D or
-                0x1E995E or 0x1E995F)) > 0;
+                0x1E995E or 0x1E995F);
+            return tomeliths != null && EnemiesTargetingObject(tomeliths) > 0;
         }
 
         //max priority - zone specific stuff for FLs, RWs, etc
@@ -322,9 +323,15 @@ public abstract class AkechiTools<AID, TraitID>(RotationModuleManager manager, A
             ? Hints.PriorityTargets.FirstOrDefault(x => HasLOS(x.Actor) && Player.DistanceToHitbox(x.Actor) <= range && x.Actor.FindStatus(MCH.SID.WildfireTargetPvP) != null) : null;
         var bigIce = Hints.PriorityTargets.FirstOrDefault(x => HasLOS(x.Actor) && Player.DistanceToHitbox(x.Actor) <= range && x.Actor.OID == 0x15E7);
 
-        Hints.ForcedTarget = (max ?? wfTarget ?? high ?? bigIce ?? avg ?? low)?.Actor;
-    }
+        //Focus Target's target - if any enemies are targeting our focus target, prioritize them if the option is enabled; useful in duo-queue scenarios
+        var focusTarget = Service.TargetManager.FocusTarget;
+        var focusTargetsTarget = RetrieveTarget(x => focusTarget?.TargetObjectId == x.Actor.InstanceID);
 
+        var bestTarget = max ?? wfTarget ?? high ?? bigIce ?? avg ?? low;
+        Hints.ForcedTarget =
+            wantDuosTarget ? (focusTargetsTarget ?? bestTarget)?.Actor
+            : bestTarget?.Actor;
+    }
     #endregion
 
     #endregion

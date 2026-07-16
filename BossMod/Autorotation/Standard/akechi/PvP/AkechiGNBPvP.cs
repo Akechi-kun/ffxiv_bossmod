@@ -7,7 +7,7 @@ namespace BossMod.Autorotation.akechi;
 public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : AkechiTools<AID, TraitID>(manager, player)
 {
     public enum Track { Targeting, RoleActions, LimitBreak, TerminalTrigger, Corundum, RoughDivide, Zone, GnashingFang, FatedCircle }
-    public enum TargetingStrategy { Auto, Manual }
+    public enum TargetingStrategy { Auto, FocusTargetsTarget, Manual }
     public enum RoleActionStrategy { Forbid, Rampage, Rampart, FullSwing }
     public enum LBStrategy { Allow, Forbid }
     public enum TriggerStrategy { Five, Four, Three, Two, One, Forbid }
@@ -21,6 +21,7 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
         var res = new RotationModuleDefinition("Akechi GNB (PvP)", "PvP Rotation Module", "PvP", "Akechi", RotationModuleQuality.Basic, BitMask.Build((int)Class.GNB), 100, 30);
         res.Define(Track.Targeting).As<TargetingStrategy>("Targeting", "", 300)
             .AddOption(TargetingStrategy.Auto, "Automatically select best target")
+            .AddOption(TargetingStrategy.FocusTargetsTarget, "Automatically target your current Focus Target's target - if no Focus Target or if Focus Target is hostile, then automatically select best target")
             .AddOption(TargetingStrategy.Manual, "Manually select target");
 
         res.Define(Track.RoleActions).As<RoleActionStrategy>("Role Actions", "", 300)
@@ -87,17 +88,6 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
         return res;
     }
 
-    private OGCDPriority ContinuationPrio
-    {
-        get
-        {
-            if (GCD < 0.5f)
-                return OGCDPriority.SlightlyHigh + 2000;
-            var i = Math.Max(0, (int)((SkSGCDLength - GCD) / 0.5f));
-            var a = i * 300;
-            return OGCDPriority.Low + a; //every 0.5s = +300 prio
-        }
-    }
     private void ExecuteCommons(AID action, StrategyValues.OptionRef track, Actor? primaryTarget)
     {
         if (ActionReady(action) && track.As<CommonStrategy>() switch
@@ -111,19 +101,26 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
 
     public override void Execution(StrategyValues strategy, Enemy? primaryTarget)
     {
+        if (Player.IsDeadOrDestroyed || Player.MountId != 0 || Player.FindStatus(ClassShared.SID.GuardPvP) != null)
+            return;
+
+        var strat = strategy.Option(Track.Targeting).As<TargetingStrategy>();
+        var auto = strat == TargetingStrategy.Auto;
+        var focus = strat == TargetingStrategy.FocusTargetsTarget;
+        var mainTarget = primaryTarget?.Actor;
         var gauge = World.Client.GetGauge<GunbreakerGauge>();
         var GunStep = gauge.AmmoComboStep;
         var hasNM = HasStatus(SID.NoMercyPvP);
         var targetsOk = Hints.NumPriorityTargetsInAOECircle(Player.Position, 6) > 0;
-        var mainTarget = primaryTarget?.Actor;
         var rangeOk = Player.DistanceToHitbox(mainTarget) <= 5.99f;
 
-        if (Player.IsDeadOrDestroyed || Player.MountId != 0 || Player.FindStatus(ClassShared.SID.GuardPvP) != null)
-            return;
-
-        if (strategy.Option(Track.Targeting).As<TargetingStrategy>() == TargetingStrategy.Auto)
+        if (auto)
         {
-            GetPvPTarget(5);
+            GetPvPTarget(5, false);
+        }
+        if (focus)
+        {
+            GetPvPTarget(5, true);
         }
 
         if (ActionReady(AID.HeartOfCorundumPvP) && strategy.Option(Track.Corundum).As<CorundumStrategy>() switch
@@ -217,7 +214,7 @@ public sealed class AkechiGNBPvP(RotationModuleManager manager, Actor player) : 
             })
             {
                 if (HasStatus(status))
-                    QueueOGCD(action, mainTarget, ContinuationPrio);
+                    QueueOGCD(action, mainTarget, ChangePriority(highPrio: (int)OGCDPriority.High, convert: true));
             }
         }
     }
