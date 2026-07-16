@@ -310,7 +310,7 @@ public sealed class AkechiPLD(RotationModuleManager manager, Actor player) : Ake
             HolyStrategy.Automatic => (hsMinimum, bestHoly, dmhFirst ? GCDPriority.Average + 1 : GCDPriority.Average - 1),
             HolyStrategy.Early => (hsMinimum, bestHoly, GCDPriority.Average + 1),
             HolyStrategy.Late => (hsMinimum, bestHoly, GCDPriority.Average - 1),
-            HolyStrategy.VeryLate => (hsMinimum && (LastComboAction is AID.RiotBlade || DMstatus is > 0 and < 3), bestHoly, GCDPriority.Average + 1),
+            HolyStrategy.VeryLate => (hsMinimum && (LastComboAction is AID.RiotBlade || DMstatus is > 0 and <= 3), bestHoly, GCDPriority.Average + 1),
             HolyStrategy.OnlySpirit => (hsMinimum, AID.HolySpirit, GCDPriority.Average - 1),
             HolyStrategy.OnlyCircle => (hcMinimum, AID.HolyCircle, GCDPriority.Average - 1),
             HolyStrategy.ForceSpirit => (hsMinimum, AID.HolySpirit, GCDPriority.Low + 2),
@@ -326,7 +326,7 @@ public sealed class AkechiPLD(RotationModuleManager manager, Actor player) : Ake
         var away = wantAOE ? !In5y(rTarget) : !In3y(rTarget);
         var (rCondition, rAction, rPriority) = rStrat switch
         {
-            RangedStrategy.Automatic => (rTarget != null && away, IsMoving || (Unlocked(AID.HolySpirit) && MP < 1000) || !Unlocked(AID.HolySpirit) ? AID.ShieldLob : AID.HolySpirit, GCDPriority.Low + 1),
+            RangedStrategy.Automatic => (rTarget != null && away, (IsMoving && DMstatus <= GCD) || (Unlocked(AID.HolySpirit) && MP < 1000) || !Unlocked(AID.HolySpirit) ? AID.ShieldLob : AID.HolySpirit, GCDPriority.Low + 1),
             RangedStrategy.OpenerRangedCast => (IsFirstGCD && away && !IsMoving, hsReady ? AID.HolySpirit : AID.ShieldLob, GCDPriority.Low + 1),
             RangedStrategy.OpenerCast => (IsFirstGCD && !IsMoving, hsReady ? AID.HolySpirit : AID.ShieldLob, GCDPriority.Low + 1),
             RangedStrategy.RangedCast => (away, hsReady ? AID.HolySpirit : AID.ShieldLob, GCDPriority.Low + 1),
