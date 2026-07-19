@@ -9,6 +9,7 @@ class UMADStates : StateMachineBuilder
         _module = (UMAD)module;
 
         SimplePhase(0, P1, "P1")
+            .ActivateOnEnter<P1DoubleTroubleStay>()
             .Raw.Update = () => !Module.PrimaryActor.IsTargetable;
         SimplePhase(1, P2, "P2")
             .SetHint(StateMachine.PhaseHint.StartWithDowntime)
@@ -745,6 +746,9 @@ class UMADStates : StateMachineBuilder
         Condition(id + 0x101, 3.3f, () => Module.FindComponent<P4DeathWaveBolt>()!.NumCasts > 0 && Module.FindComponent<P4DeathBomb>()!.PlayerStates.All(s => s.Requirement == default), "Stack/spread/bombs 1")
             .DeactivateOnExit<P4DeathWaveBolt>()
             .DeactivateOnExit<P4DeathBomb>();
+
+        // mana charge
+        ActorCastEnd(id + 0x102, _module.KefkaP4, 0.2f, true);
 
         ActorCastStart(id + 0x110, _module.KefkaP4, AID.ThrummingThunderIIIP4, 3, true)
             .ActivateOnEnter<P1ThrummingThunderIII>()
