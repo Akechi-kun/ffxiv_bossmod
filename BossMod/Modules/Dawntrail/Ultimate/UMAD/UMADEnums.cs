@@ -25,6 +25,10 @@ public enum OID : uint
 
     KefkaP5 = 0x4C37, // R8.010, x0 (spawn during fight)
 
+    FireTower = 0x1EC03E,
+    IceTower = 0x1EC03F,
+    LightningTower = 0x1EC040,
+
     Helper = 0x233C, // R0.500, x37, Helper type
 }
 
@@ -138,7 +142,7 @@ public enum AID : uint
     SlapHappyBig = 47848, // Helper->self, no cast, range 13 circle
     SlapHappySmall = 47849, // Helper->self, 1.5s cast, range 6 circle
     SlapHappyShockingImpact = 47850, // Helper->self, no cast, range 100 60-degree cone, party stack
-    SlapHappyShockwave = 47851, // Helper->self, no cast, range 100 45?-degree cone, role spread, TODO verify angle
+    SlapHappyShockwave = 47851, // Helper->self, no cast, range 100 60-degree cone, role spread
     BlackHole = 47867, // ExdeathP3->self, 3.0s cast, single-target
     Nothingness = 47868, // BlackHoleP3->self, no cast, range 125 width 6 rect
     DamningEdict = 47873, // ChaosP3->self, 5.0s cast, range 60 width 80 rect
