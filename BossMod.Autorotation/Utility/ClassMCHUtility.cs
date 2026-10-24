@@ -9,15 +9,15 @@ public sealed class ClassMCHUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: MCH", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "Aimsucks", RotationModuleQuality.Excellent, BitMask.Build((int)Class.MCH), 100);
+        var res = new RotationModuleDefinition("Utility: MCH", UtilityDescription, UtilityCategory, "Aimsucks", RotationModuleQuality.Ok, BitMask.Build((int)Class.MCH), 100);
         DefineShared(res, IDLimitBreak3);
 
         res.Define(Track.Tactician).As<TactOption>("Tactician", "Tact", 400)
-            .AddOption(TactOption.None, "Do not use automatically")
-            .AddOption(TactOption.Use87, "Use Tactician (120s CD), regardless if equivalent ranged buff is already active", 120, 15, ActionTargets.Self, 56, 87)
-            .AddOption(TactOption.Use87IfNotActive, "Use Tactician (120s CD), unless equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 56, 87)
-            .AddOption(TactOption.Use88, "Use Tactician (90s CD), regardless if equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 88)
-            .AddOption(TactOption.Use88IfNotActive, "Use Tactician (90s CD), unless equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 88)
+            .AddOption(TactOption.None, NoUse)
+            .AddOption(TactOption.Use87, "Use Tactician (120s cooldown), even if another ranged mitigation is active", 120, 15, ActionTargets.Self, 56, 87)
+            .AddOption(TactOption.Use87IfNotActive, "Use Tactician (120s cooldown), unless another ranged mitigation is active", 120, 15, ActionTargets.Self, 56, 87)
+            .AddOption(TactOption.Use88, "Use Tactician (90s cooldown), even if another ranged mitigation is active", 90, 15, ActionTargets.Self, 88)
+            .AddOption(TactOption.Use88IfNotActive, "Use Tactician (90s cooldown), unless another ranged mitigation is active", 90, 15, ActionTargets.Self, 88)
             .AddAssociatedActions(MCH.AID.Tactician);
 
         DefineSimpleConfig(res, Track.Dismantle, "Dismantle", "Dism", 500, MCH.AID.Dismantle, 10);
@@ -28,18 +28,19 @@ public sealed class ClassMCHUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.Dismantle), MCH.AID.Dismantle, ResolveTarget(strategy.Option(Track.Dismantle).Value) ?? primaryTarget);
+        ExecuteSimple(strategy.Option(Track.Dismantle), MCH.AID.Dismantle, primaryTarget);
+        ExecuteTactician(strategy.Option(Track.Tactician));
+    }
 
-        // TODO: for 'if-not-active' strategy, add configurable min-time-left
-        // TODO: combine 87/88 options
-        var tact = strategy.Option(Track.Tactician);
-        var wantTact = tact.As<TactOption>() switch
+    private void ExecuteTactician(in StrategyValues.OptionRef tact)
+    {
+        var condition = tact.As<TactOption>() switch
         {
             TactOption.Use87 or TactOption.Use88 => true,
-            TactOption.Use87IfNotActive or TactOption.Use88IfNotActive => Player.FindStatus(BRD.SID.Troubadour) == null && Player.FindStatus(MCH.SID.Tactician) == null && Player.FindStatus(DNC.SID.ShieldSamba) == null,
+            TactOption.Use87IfNotActive or TactOption.Use88IfNotActive => !HasRangedMitigation,
             _ => false
         };
-        if (wantTact)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(MCH.AID.Tactician), Player, tact.Priority(), tact.Value.ExpireIn);
+        if (condition)
+            ExecuteAction(tact, MCH.AID.Tactician, Player);
     }
 }

@@ -3,20 +3,22 @@
 public sealed class ClassBLMUtility(RotationModuleManager manager, Actor player) : RoleCasterUtility(manager, player)
 {
     public enum Track { Manaward = SharedTrack.Count, AetherialManipulation }
-    public enum DashStrategy { None, Force }
+    public enum DashStrategy { None, Force, Five, Ten }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(BLM.AID.Meteor);
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: BLM", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.BLM), 100);
+        var res = new RotationModuleDefinition("Utility: BLM", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.BLM), 100);
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.Manaward, "Manaward", "", 600, BLM.AID.Manaward, 20);
 
         res.Define(Track.AetherialManipulation).As<DashStrategy>("Dash", "", 20)
-            .AddOption(DashStrategy.None, "No use.")
-            .AddOption(DashStrategy.Force, "Use ASAP", 10, 0, ActionTargets.Party, 50)
+            .AddOption(DashStrategy.None, NoUse)
+            .AddOption(DashStrategy.Force, "Dash to the selected party member (or your current ally target if no member selected)", 10, 0, ActionTargets.Party, 50)
+            .AddOption(DashStrategy.Five, "Dash to the party member when 5y or more away", 10, 0, ActionTargets.Party, 50)
+            .AddOption(DashStrategy.Ten, "Dash to the party member when 10y or more away", 10, 0, ActionTargets.Party, 50)
             .AddAssociatedActions(BLM.AID.AetherialManipulation);
 
         return res;
@@ -26,19 +28,19 @@ public sealed class ClassBLMUtility(RotationModuleManager manager, Actor player)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
         ExecuteSimple(strategy.Option(Track.Manaward), BLM.AID.Manaward, Player);
+        ExecuteManipulation(strategy.Option(Track.AetherialManipulation), primaryTarget);
+    }
 
-        var dash = strategy.Option(Track.AetherialManipulation);
-        var dashStrategy = strategy.Option(Track.AetherialManipulation).As<DashStrategy>();
-        var dashTarget = ResolveTarget(dash.Value); //Smart-Targeting: Target needs to be set in autorotation or CDPlanner to prevent unexpected behavior
-        var distance = Player.DistanceToHitbox(dashTarget);
-        var cd = World.Client.Cooldowns[ActionDefinitions.Instance.Spell(BLM.AID.AetherialManipulation)!.MainCooldownGroup].Remaining;
-        var shouldDash = dashStrategy switch
+    private void ExecuteManipulation(in StrategyValues.OptionRef dash, Actor? primaryTarget)
+    {
+        var option = dash.As<DashStrategy>();
+        var minDistance = option switch
         {
-            DashStrategy.None => false,
-            DashStrategy.Force => distance <= 25 && cd < 0.6f,
-            _ => false,
+            DashStrategy.Five => 5,
+            DashStrategy.Ten => 10,
+            _ => 0
         };
-        if (shouldDash)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(BLM.AID.AetherialManipulation), dashTarget, dash.Priority(), dash.Value.ExpireIn);
+        if (option != DashStrategy.None)
+            ExecuteDash(dash, BLM.AID.AetherialManipulation, primaryTarget is { IsAlly: true } ? primaryTarget : null, minDistance);
     }
 }

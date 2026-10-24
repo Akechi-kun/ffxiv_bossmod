@@ -1,6 +1,5 @@
 ﻿namespace BossMod.Autorotation;
 
-// base class that simplifies implementation of tank utility modules, contains shared track definitions
 public abstract class RoleTankUtility(RotationModuleManager manager, Actor player) : GenericUtility(manager, player)
 {
     public enum SharedTrack { Sprint, LB, Rampart, LowBlow, Provoke, Interject, Reprisal, Shirk, ArmsLength, Stance, Count }
@@ -20,21 +19,19 @@ public abstract class RoleTankUtility(RotationModuleManager manager, Actor playe
         DefineSimpleConfig(def, SharedTrack.Provoke, "Provoke", "", 200, ClassShared.AID.Provoke);
         DefineSimpleConfig(def, SharedTrack.Interject, "Interject", "Interrupt", -50, ClassShared.AID.Interject);
 
-        // TODO: combine standard/ex options
-        // TODO: add 'if-not-active' strategy with configurable min-time-left
         def.Define(SharedTrack.Reprisal).As<ReprisalOption>("Reprisal", "", 250)
-            .AddOption(ReprisalOption.None, "Do not use automatically")
+            .AddOption(ReprisalOption.None, NoUse)
             .AddOption(ReprisalOption.Use, "Use Reprisal (10s)", 60, 10, ActionTargets.Self, 22, 97)
             .AddOption(ReprisalOption.UseEx, "Use Reprisal (15s)", 60, 15, ActionTargets.Self, 98)
             .AddAssociatedActions(ClassShared.AID.Reprisal);
 
         DefineSimpleConfig(def, SharedTrack.Shirk, "Shirk", "", 150, ClassShared.AID.Shirk);
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "ArmsL", 300, ClassShared.AID.ArmsLength, 6); // note: secondary effect 15s
+        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsL", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
 
         def.Define(SharedTrack.Stance).As<StanceOption>("Stance", "", 5)
             .AddOption(StanceOption.None, "Do not touch stance")
-            .AddOption(StanceOption.Apply, "Use stance if not already active", 2)
-            .AddOption(StanceOption.Remove, "Remove stance if active", 1)
+            .AddOption(StanceOption.Apply, "Turn stance on if it is off", 2)
+            .AddOption(StanceOption.Remove, "Turn stance off if it is on", 1)
             .AddAssociatedAction(stanceApply)
             .AddAssociatedAction(stanceRemove);
     }
@@ -46,28 +43,24 @@ public abstract class RoleTankUtility(RotationModuleManager manager, Actor playe
         ExecuteSimple(strategy.Option(SharedTrack.LowBlow), ClassShared.AID.LowBlow, primaryTarget);
         ExecuteSimple(strategy.Option(SharedTrack.Provoke), ClassShared.AID.Provoke, primaryTarget);
         ExecuteSimple(strategy.Option(SharedTrack.Interject), ClassShared.AID.Interject, primaryTarget);
-        ExecuteSimple(strategy.Option(SharedTrack.Shirk), ClassShared.AID.Shirk, CoTank());
+        ExecuteSimple(strategy.Option(SharedTrack.Shirk), ClassShared.AID.Shirk, PartnerTarget(primaryTarget));
         ExecuteSimple(strategy.Option(SharedTrack.ArmsLength), ClassShared.AID.ArmsLength, Player);
-
-        var stance = strategy.Option(SharedTrack.Stance);
-        var stanceOption = stance.As<StanceOption>();
-        if (stanceOption != StanceOption.None)
-        {
-            var haveStance = Player.FindStatus(stanceStatus) != null;
-            var wantStance = stanceOption == StanceOption.Apply;
-            if (haveStance != wantStance)
-                Hints.ActionsToExecute.Push(wantStance ? stanceApply : stanceRemove, Player, stance.Priority(), stance.Value.ExpireIn);
-        }
-
-        var reprisal = strategy.Option(SharedTrack.Reprisal);
-        if (reprisal.As<ReprisalOption>() != ReprisalOption.None)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Reprisal), Player, reprisal.Priority(), reprisal.Value.ExpireIn);
-
-        var lb = strategy.Option(SharedTrack.LB);
-        var lbLevel = LBLevelToExecute(lb.As<LBOption>());
-        if (lbLevel > 0)
-            Hints.ActionsToExecute.Push(lbLevel == 3 ? lb3 : ActionID.MakeSpell(lbLevel == 2 ? ClassShared.AID.Stronghold : ClassShared.AID.ShieldWall), Player, lb.Priority(), lb.Value.ExpireIn);
+        ExecuteStance(strategy.Option(SharedTrack.Stance), stanceApply, stanceRemove, stanceStatus);
+        ExecuteReprisal(strategy.Option(SharedTrack.Reprisal));
+        ExecuteLimitBreak(strategy.Option(SharedTrack.LB), ClassShared.AID.ShieldWall, ClassShared.AID.Stronghold, lb3, Player);
     }
 
-    protected Actor? CoTank() => World.Party.WithoutSlot().FirstOrDefault(a => a != Player && a.Role == Role.Tank);
+    private void ExecuteStance(in StrategyValues.OptionRef stance, ActionID stanceApply, ActionID stanceRemove, uint stanceStatus)
+    {
+        var option = stance.As<StanceOption>();
+        var wantStance = option == StanceOption.Apply;
+        var haveStance = Player.FindStatus(stanceStatus) != null;
+        if (option != StanceOption.None && haveStance != wantStance)
+            Hints.ActionsToExecute.Push(wantStance ? stanceApply : stanceRemove, Player, stance.Priority(), stance.Value.ExpireIn);
+    }
+    private void ExecuteReprisal(in StrategyValues.OptionRef reprisal)
+    {
+        if (reprisal.As<ReprisalOption>() != ReprisalOption.None)
+            Hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Reprisal), Player, reprisal.Priority(), reprisal.Value.ExpireIn);
+    }
 }

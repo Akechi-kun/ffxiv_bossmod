@@ -12,13 +12,13 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: WAR", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "veyn", RotationModuleQuality.Good, BitMask.Build((int)Class.WAR), 100);
+        var res = new RotationModuleDefinition("Utility: WAR", UtilityDescription, UtilityCategory, "veyn", RotationModuleQuality.Ok, BitMask.Build((int)Class.WAR), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
         DefineSimpleConfig(res, Track.Thrill, "ThrillOfBattle", "Thrill", 450, WAR.AID.ThrillOfBattle, 10);
 
         res.Define(Track.Vengeance).As<VengOption>("Vengeance", "Veng", 550)
-            .AddOption(VengOption.None, "Do not use automatically")
+            .AddOption(VengOption.None, NoUse)
             .AddOption(VengOption.Vengeance, "Use Vengeance", 120, 15, ActionTargets.Self, 38, 91)
             .AddOption(VengOption.Damnation, "Use Damnation", 120, 15, ActionTargets.Self, 92)
             .AddAssociatedActions(WAR.AID.Vengeance, WAR.AID.Damnation);
@@ -26,14 +26,14 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
         DefineSimpleConfig(res, Track.Holmgang, "Holmgang", "", 400, WAR.AID.Holmgang, 10);
 
         res.Define(Track.Bloodwhetting).As<BWOption>("BW", uiPriority: 350)
-            .AddOption(BWOption.None, "Do not use automatically")
-            .AddOption(BWOption.Bloodwhetting, "Use Bloodwhetting", 25, 4, ActionTargets.Self, 82) // note: secondary effect duration 8
+            .AddOption(BWOption.None, NoUse)
+            .AddOption(BWOption.Bloodwhetting, "Use Bloodwhetting", 25, 4, ActionTargets.Self, 82)
             .AddOption(BWOption.RawIntuition, "Use Raw Intuition", 25, 6, ActionTargets.Self, 56, 81)
-            .AddOption(BWOption.NascentFlash, "Use Nascent Flash", 25, 4, ActionTargets.Party, 76) // note: secondary effect duration 8
+            .AddOption(BWOption.NascentFlash, "Use Nascent Flash on a party member (co-tank by default)", 25, 4, ActionTargets.Party, 76)
             .AddAssociatedActions(WAR.AID.Bloodwhetting, WAR.AID.RawIntuition, WAR.AID.NascentFlash);
 
-        DefineSimpleConfig(res, Track.Equilibrium, "Equilibrium", "Equi", 320, WAR.AID.Equilibrium); // note: secondary effect (hot) duration 6
-        DefineSimpleConfig(res, Track.ShakeItOff, "ShakeItOff", "SIO", 220, WAR.AID.ShakeItOff, 30); // note: secondary effect duration 15
+        DefineSimpleConfig(res, Track.Equilibrium, "Equilibrium", "Equi", 320, WAR.AID.Equilibrium, 15);
+        DefineSimpleConfig(res, Track.ShakeItOff, "ShakeItOff", "SIO", 220, WAR.AID.ShakeItOff, 30);
 
         return res;
     }
@@ -45,26 +45,31 @@ public sealed class ClassWARUtility(RotationModuleManager manager, Actor player)
         ExecuteSimple(strategy.Option(Track.Holmgang), WAR.AID.Holmgang, Player);
         ExecuteSimple(strategy.Option(Track.Equilibrium), WAR.AID.Equilibrium, Player);
         ExecuteSimple(strategy.Option(Track.ShakeItOff), WAR.AID.ShakeItOff, Player);
+        ExecuteVengeance(strategy.Option(Track.Vengeance));
+        ExecuteBloodwhetting(strategy.Option(Track.Bloodwhetting), primaryTarget);
+    }
 
-        var veng = strategy.Option(Track.Vengeance);
-        var vengAction = veng.As<VengOption>() switch
+    private void ExecuteVengeance(in StrategyValues.OptionRef veng)
+    {
+        var action = veng.As<VengOption>() switch
         {
             VengOption.Vengeance => WAR.AID.Vengeance,
             VengOption.Damnation => WAR.AID.Damnation,
             _ => default
         };
-        if (vengAction != default)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(vengAction), Player, veng.Priority(), veng.Value.ExpireIn);
-
-        var bw = strategy.Option(Track.Bloodwhetting);
-        var bwAction = bw.As<BWOption>() switch
+        if (action != default)
+            ExecuteAction(veng, action, Player);
+    }
+    private void ExecuteBloodwhetting(in StrategyValues.OptionRef bw, Actor? primaryTarget)
+    {
+        var action = bw.As<BWOption>() switch
         {
             BWOption.Bloodwhetting => WAR.AID.Bloodwhetting,
             BWOption.RawIntuition => WAR.AID.RawIntuition,
             BWOption.NascentFlash => WAR.AID.NascentFlash,
             _ => default
         };
-        if (bwAction != default)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(bwAction), bwAction == WAR.AID.NascentFlash ? ResolveTarget(bw.Value) ?? CoTank() : Player, bw.Priority(), bw.Value.ExpireIn);
+        if (action != default)
+            ExecuteAction(bw, action, action == WAR.AID.NascentFlash ? PartnerTarget(primaryTarget) : Player);
     }
 }

@@ -2,49 +2,48 @@
 
 public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player) : RoleTankUtility(manager, player)
 {
-    public enum Track { Sheltron = SharedTrack.Count, Sentinel, Cover, Bulwark, DivineVeil, PassageOfArms, HallowedGround, ShieldBash } //What we're tracking
-    public enum ShelOption { None, Sheltron, HolySheltron, Intervention } //Sheltron Options
-    public enum SentOption { None, Sentinel, Guardian } //Sentinel enhancement
+    public enum Track { Sheltron = SharedTrack.Count, Sentinel, Cover, Bulwark, DivineVeil, PassageOfArms, HallowedGround, ShieldBash, Clemency }
+    public enum ShelOption { None, Sheltron, HolySheltron, Intervention }
+    public enum SentOption { None, Sentinel, Guardian }
     public enum ArmsDirection { None, CharacterForward, CharacterBackward, CameraForward, CameraBackward }
 
-    public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(PLD.AID.LastBastion); //LB
-    public static readonly ActionID IDStanceApply = ActionID.MakeSpell(PLD.AID.IronWill); //StanceOn
-    public static readonly ActionID IDStanceRemove = ActionID.MakeSpell(PLD.AID.ReleaseIronWill); //StanceOff
+    public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(PLD.AID.LastBastion);
+    public static readonly ActionID IDStanceApply = ActionID.MakeSpell(PLD.AID.IronWill);
+    public static readonly ActionID IDStanceRemove = ActionID.MakeSpell(PLD.AID.ReleaseIronWill);
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: PLD", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "veyn, Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.PLD), 100);
-
+        var res = new RotationModuleDefinition("Utility: PLD", UtilityDescription, UtilityCategory, "veyn, Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.PLD), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
-        res.Define(Track.Sheltron).As<ShelOption>("Sheltron", "Shel", 350) //Sheltron definitions
-            .AddOption(ShelOption.None, "Do not use automatically")
-            .AddOption(ShelOption.Sheltron, "Use Sheltron", 0, 4, ActionTargets.Self, 35, 81) //5s CD, 6s duration, -50 OathGauge cost
-            .AddOption(ShelOption.HolySheltron, "Use Holy Sheltron", 0, 4, ActionTargets.Self, 82) //5s CD, 8s duration (similar to GNB/WAR we only really care about the first 4s of the mit), -50 OathGauge cost
-            .AddOption(ShelOption.Intervention, "Use Intervention", 0, 4, ActionTargets.Party, 62) //10s CD, 8s duration (similar to GNB/WAR we only really care about the first 4s of the buddy mit), -50 OathGauge cost
+        res.Define(Track.Sheltron).As<ShelOption>("Sheltron", "Shel", 350)
+            .AddOption(ShelOption.None, NoUse)
+            .AddOption(ShelOption.Sheltron, "Use Sheltron", 5, 4, ActionTargets.Self, 35, 81)
+            .AddOption(ShelOption.HolySheltron, "Use Holy Sheltron", 5, 4, ActionTargets.Self, 82)
+            .AddOption(ShelOption.Intervention, "Use Intervention on a party member (co-tank by default)", 10, 4, ActionTargets.Party, 62)
             .AddAssociatedActions(PLD.AID.Sheltron, PLD.AID.HolySheltron, PLD.AID.Intervention);
 
-        res.Define(Track.Sentinel).As<SentOption>("Sentinel", "Sent", 550) //Sentinel definition for CD plans
-            .AddOption(SentOption.None, "Do not use automatically")
-            .AddOption(SentOption.Sentinel, "Use Sentinel", 120, 15, ActionTargets.Self, 38, 91) //120s CD, 15s duration
-            .AddOption(SentOption.Guardian, "Use Guardian", 120, 15, ActionTargets.Self, 92) //120s CD, 15s duration
+        res.Define(Track.Sentinel).As<SentOption>("Sentinel", "Sent", 550)
+            .AddOption(SentOption.None, NoUse)
+            .AddOption(SentOption.Sentinel, "Use Sentinel", 120, 15, ActionTargets.Self, 38, 91)
+            .AddOption(SentOption.Guardian, "Use Guardian", 120, 15, ActionTargets.Self, 92)
             .AddAssociatedActions(PLD.AID.Sentinel, PLD.AID.Guardian);
 
-        DefineSimpleConfig(res, Track.Cover, "Cover", "", 320, PLD.AID.Cover, 12); //120s CD, 12s duration, -50 OathGauge cost
-        DefineSimpleConfig(res, Track.Bulwark, "Bulwark", "Bul", 450, PLD.AID.Bulwark, 10); //90s CD, 15s duration
-        DefineSimpleConfig(res, Track.DivineVeil, "DivineVeil", "Veil", 220, PLD.AID.DivineVeil, 30); //90s CD, 30s duration
+        DefineSimpleConfig(res, Track.Cover, "Cover", "", 320, PLD.AID.Cover, 12);
+        DefineSimpleConfig(res, Track.Bulwark, "Bulwark", "Bul", 450, PLD.AID.Bulwark, 10);
+        DefineSimpleConfig(res, Track.DivineVeil, "DivineVeil", "Veil", 220, PLD.AID.DivineVeil, 30);
 
-        res.Define(Track.PassageOfArms).As<ArmsDirection>("PassageOfArms", "PoA", 400) //PassageOfArms definition for CD plans
-            .AddOption(ArmsDirection.None, "Do not use automatically")
-            .AddOption(ArmsDirection.CharacterForward, "Faces the Forward direction relative to the Character", 120, 18, ActionTargets.Self, 70)
-            .AddOption(ArmsDirection.CharacterBackward, "Faces the Backward direction relative to the Character", 120, 18, ActionTargets.Self, 70)
-            .AddOption(ArmsDirection.CameraForward, "Faces the Forward direction relative to the Camera", 120, 18, ActionTargets.Self, 70)
-            .AddOption(ArmsDirection.CameraBackward, "Faces the Backward direction relative to the Camera", 120, 18, ActionTargets.Self, 70)
+        res.Define(Track.PassageOfArms).As<ArmsDirection>("PassageOfArms", "PoA", 400)
+            .AddOption(ArmsDirection.None, NoUse)
+            .AddOption(ArmsDirection.CharacterForward, "Face forward relative to the character", 120, 18, ActionTargets.Self, 70)
+            .AddOption(ArmsDirection.CharacterBackward, "Face backward relative to the character", 120, 18, ActionTargets.Self, 70)
+            .AddOption(ArmsDirection.CameraForward, "Face forward relative to the camera", 120, 18, ActionTargets.Self, 70)
+            .AddOption(ArmsDirection.CameraBackward, "Face backward relative to the camera", 120, 18, ActionTargets.Self, 70)
             .AddAssociatedActions(PLD.AID.PassageOfArms);
 
-        DefineSimpleConfig(res, Track.HallowedGround, "HallowedGround", "Inv", 400, PLD.AID.HallowedGround, 10); //420s CD, 10s duration
-
-        DefineSimpleConfig(res, Track.ShieldBash, "ShieldBash", "ShieldBash", 340, PLD.AID.ShieldBash, 6);
+        DefineSimpleConfig(res, Track.HallowedGround, "HallowedGround", "Inv", 400, PLD.AID.HallowedGround, 10);
+        DefineSimpleConfig(res, Track.ShieldBash, "ShieldBash", "ShieldBash", 340, PLD.AID.ShieldBash, 6, ActionQueue.Priority.VeryHigh);
+        DefineSimpleConfig(res, Track.Clemency, "Clemency", "", 110, PLD.AID.Clemency, 0, ActionQueue.Priority.VeryHigh);
 
         return res;
     }
@@ -52,51 +51,57 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, IDStanceApply, IDStanceRemove, (uint)PLD.SID.IronWill, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.Cover), PLD.AID.Cover, primaryTarget ?? Player); //Cover execution
-        ExecuteSimple(strategy.Option(Track.Bulwark), PLD.AID.Bulwark, Player); //Bulwark execution
-        ExecuteSimple(strategy.Option(Track.DivineVeil), PLD.AID.DivineVeil, Player); //DivineVeil execution
-        ExecuteSimple(strategy.Option(Track.HallowedGround), PLD.AID.HallowedGround, Player); //HallowedGround execution
+        ExecuteSimple(strategy.Option(Track.Cover), PLD.AID.Cover, PartnerTarget(primaryTarget));
+        ExecuteSimple(strategy.Option(Track.Bulwark), PLD.AID.Bulwark, Player);
+        ExecuteSimple(strategy.Option(Track.DivineVeil), PLD.AID.DivineVeil, Player);
+        ExecuteSimple(strategy.Option(Track.HallowedGround), PLD.AID.HallowedGround, Player);
+        ExecuteSimple(strategy.Option(Track.Clemency), PLD.AID.Clemency, FriendlyTarget(primaryTarget));
+        ExecuteSheltron(strategy.Option(Track.Sheltron), primaryTarget);
+        ExecuteSentinel(strategy.Option(Track.Sentinel));
+        ExecutePassage(strategy.Option(Track.PassageOfArms));
+        ExecuteShieldBash(strategy.Option(Track.ShieldBash), primaryTarget);
+    }
 
-        var shel = strategy.Option(Track.Sheltron);
-        var shelAction = shel.As<ShelOption>() switch
+    private void ExecuteSheltron(in StrategyValues.OptionRef shel, Actor? primaryTarget)
+    {
+        var action = shel.As<ShelOption>() switch
         {
-            ShelOption.HolySheltron => PLD.AID.HolySheltron,
             ShelOption.Sheltron => PLD.AID.Sheltron,
+            ShelOption.HolySheltron => PLD.AID.HolySheltron,
             ShelOption.Intervention => PLD.AID.Intervention,
             _ => default
         };
-        if (shelAction != default)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(shelAction), shelAction == PLD.AID.Intervention ? ResolveTarget(shel.Value) ?? CoTank() : Player, shel.Priority(), shel.Value.ExpireIn); //Sheltron & Intervention execution
-
-        var sent = strategy.Option(Track.Sentinel);
-        var sentAction = sent.As<SentOption>() switch
+        if (action != default)
+            ExecuteAction(shel, action, action == PLD.AID.Intervention ? PartnerTarget(primaryTarget) : Player);
+    }
+    private void ExecuteSentinel(in StrategyValues.OptionRef sent)
+    {
+        var action = sent.As<SentOption>() switch
         {
             SentOption.Sentinel => PLD.AID.Sentinel,
             SentOption.Guardian => PLD.AID.Guardian,
             _ => default
         };
-        if (sentAction != default)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(sentAction), Player, sent.Priority(), sent.Value.ExpireIn); //Sentinel execution
-
-        var poa = strategy.Option(Track.PassageOfArms);
-        if (poa.As<ArmsDirection>() != ArmsDirection.None)
+        if (action != default)
+            ExecuteAction(sent, action, Player);
+    }
+    private void ExecutePassage(in StrategyValues.OptionRef poa)
+    {
+        var direction = poa.As<ArmsDirection>();
+        var angle = direction switch
         {
-            var angle = poa.As<ArmsDirection>() switch
-            {
-                ArmsDirection.CharacterBackward => Player.Rotation + 180.Degrees(),
-                ArmsDirection.CameraForward => World.Client.CameraAzimuth + 180.Degrees(),
-                ArmsDirection.CameraBackward => World.Client.CameraAzimuth,
-                _ => Player.Rotation
-            };
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(PLD.AID.PassageOfArms), Player, poa.Priority(), poa.Value.ExpireIn, facingAngle: angle);
-        }
-
-        var bash = strategy.Option(Track.ShieldBash);
-        if (bash.As<SimpleOption>() == SimpleOption.Use)
-        {
-            var target = ResolveTarget(bash.Value) ?? primaryTarget;
-            if (target?.FindStatus(WAR.SID.Stun) == null)
-                Hints.ActionsToExecute.Push(ActionID.MakeSpell(PLD.AID.ShieldBash), target, ActionQueue.Priority.VeryHigh, bash.Value.ExpireIn);
-        }
+            ArmsDirection.CharacterBackward => Player.Rotation + 180.Degrees(),
+            ArmsDirection.CameraForward => World.Client.CameraAzimuth + 180.Degrees(),
+            ArmsDirection.CameraBackward => World.Client.CameraAzimuth,
+            _ => Player.Rotation
+        };
+        if (direction != ArmsDirection.None)
+            ExecuteAction(poa, PLD.AID.PassageOfArms, Player, angle);
+    }
+    private void ExecuteShieldBash(in StrategyValues.OptionRef bash, Actor? primaryTarget)
+    {
+        var target = ResolveTarget(bash.Value) ?? primaryTarget;
+        if (bash.As<SimpleOption>() == SimpleOption.Use && target?.FindStatus(WAR.SID.Stun) == null)
+            ExecuteAction(bash, PLD.AID.ShieldBash, target);
     }
 }

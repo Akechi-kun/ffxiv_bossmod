@@ -9,17 +9,17 @@ public sealed class ClassDNCUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: DNC", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "xan", RotationModuleQuality.Excellent, BitMask.Build((int)Class.DNC), 100);
+        var res = new RotationModuleDefinition("Utility: DNC", UtilityDescription, UtilityCategory, "xan", RotationModuleQuality.Ok, BitMask.Build((int)Class.DNC), 100);
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.CuringWaltz, "CuringWaltz", "C.Waltz", 400, DNC.AID.CuringWaltz);
 
         res.Define(Track.ShieldSamba).As<SambaOption>("Shield Samba", "S.Samba", 500)
-            .AddOption(SambaOption.None, "Do not use automatically")
-            .AddOption(SambaOption.Use87, "Use Shield Samba (120s CD), regardless if equivalent ranged buff is already active", 120, 15, ActionTargets.Self, 56, 87)
-            .AddOption(SambaOption.Use87IfNotActive, "Use Shield Samba  (120s CD), unless equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 56, 87)
-            .AddOption(SambaOption.Use88, "Use Shield Samba  (90s CD), regardless if equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 88)
-            .AddOption(SambaOption.Use88IfNotActive, "Use Shield Samba  (90s CD), unless equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 88)
+            .AddOption(SambaOption.None, NoUse)
+            .AddOption(SambaOption.Use87, "Use Shield Samba (120s cooldown), even if another ranged mitigation is active", 120, 15, ActionTargets.Self, 56, 87)
+            .AddOption(SambaOption.Use87IfNotActive, "Use Shield Samba (120s cooldown), unless another ranged mitigation is active", 120, 15, ActionTargets.Self, 56, 87)
+            .AddOption(SambaOption.Use88, "Use Shield Samba (90s cooldown), even if another ranged mitigation is active", 90, 15, ActionTargets.Self, 88)
+            .AddOption(SambaOption.Use88IfNotActive, "Use Shield Samba (90s cooldown), unless another ranged mitigation is active", 90, 15, ActionTargets.Self, 88)
             .AddAssociatedActions(DNC.AID.ShieldSamba);
 
         DefineSimpleConfig(res, Track.Improvisation, "Improvisation", "Improv", 300, DNC.AID.Improvisation, 15);
@@ -32,17 +32,18 @@ public sealed class ClassDNCUtility(RotationModuleManager manager, Actor player)
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
         ExecuteSimple(strategy.Option(Track.CuringWaltz), DNC.AID.CuringWaltz, Player);
         ExecuteSimple(strategy.Option(Track.Improvisation), DNC.AID.Improvisation, Player);
+        ExecuteShieldSamba(strategy.Option(Track.ShieldSamba));
+    }
 
-        // TODO: for 'if-not-active' strategy, add configurable min-time-left
-        // TODO: combine 87/88 options
-        var samba = strategy.Option(Track.ShieldSamba);
-        var wantSamba = samba.As<SambaOption>() switch
+    private void ExecuteShieldSamba(in StrategyValues.OptionRef samba)
+    {
+        var condition = samba.As<SambaOption>() switch
         {
             SambaOption.Use87 or SambaOption.Use88 => true,
-            SambaOption.Use87IfNotActive or SambaOption.Use88IfNotActive => Player.FindStatus(BRD.SID.Troubadour) == null && Player.FindStatus(MCH.SID.Tactician) == null && Player.FindStatus(DNC.SID.ShieldSamba) == null,
+            SambaOption.Use87IfNotActive or SambaOption.Use88IfNotActive => !HasRangedMitigation,
             _ => false
         };
-        if (wantSamba)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(DNC.AID.ShieldSamba), Player, samba.Priority(), samba.Value.ExpireIn);
+        if (condition)
+            ExecuteAction(samba, DNC.AID.ShieldSamba, Player);
     }
 }

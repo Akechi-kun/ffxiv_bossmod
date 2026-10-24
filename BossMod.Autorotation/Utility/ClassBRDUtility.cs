@@ -9,17 +9,17 @@ public sealed class ClassBRDUtility(RotationModuleManager manager, Actor player)
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: BRD", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "veyn", RotationModuleQuality.Excellent, BitMask.Build((int)Class.BRD), 100);
+        var res = new RotationModuleDefinition("Utility: BRD", UtilityDescription, UtilityCategory, "veyn", RotationModuleQuality.Ok, BitMask.Build((int)Class.BRD), 100);
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.WardensPaean, "WardensPaean", "Dispel", -10, BRD.AID.WardensPaean, 30);
 
         res.Define(Track.Troubadour).As<TroubOption>("Troubadour", "Troub", 500)
-            .AddOption(TroubOption.None, "Do not use automatically")
-            .AddOption(TroubOption.Use87, "Use Troubadour (120s CD), regardless if equivalent ranged buff is already active", 120, 15, ActionTargets.Self, 62, 87)
-            .AddOption(TroubOption.Use87IfNotActive, "Use Troubadour (120s CD), unless equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 62, 87)
-            .AddOption(TroubOption.Use88, "Use Troubadour (90s CD), regardless if equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 88)
-            .AddOption(TroubOption.Use88IfNotActive, "Use Troubadour (90s CD), unless equivalent ranged buff is already active", 90, 15, ActionTargets.Self, 88)
+            .AddOption(TroubOption.None, NoUse)
+            .AddOption(TroubOption.Use87, "Use Troubadour (120s cooldown), even if another ranged mitigation is active", 120, 15, ActionTargets.Self, 62, 87)
+            .AddOption(TroubOption.Use87IfNotActive, "Use Troubadour (120s cooldown), unless another ranged mitigation is active", 120, 15, ActionTargets.Self, 62, 87)
+            .AddOption(TroubOption.Use88, "Use Troubadour (90s cooldown), even if another ranged mitigation is active", 90, 15, ActionTargets.Self, 88)
+            .AddOption(TroubOption.Use88IfNotActive, "Use Troubadour (90s cooldown), unless another ranged mitigation is active", 90, 15, ActionTargets.Self, 88)
             .AddAssociatedActions(BRD.AID.Troubadour);
 
         DefineSimpleConfig(res, Track.NaturesMinne, "NaturesMinne", "Minne", 400, BRD.AID.NaturesMinne, 15);
@@ -30,19 +30,25 @@ public sealed class ClassBRDUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.WardensPaean), BRD.AID.WardensPaean, ResolveTarget(strategy.Option(Track.WardensPaean).Value) ?? primaryTarget ?? Player);
+        ExecuteWardensPaean(strategy.Option(Track.WardensPaean), primaryTarget);
         ExecuteSimple(strategy.Option(Track.NaturesMinne), BRD.AID.NaturesMinne, Player);
+        ExecuteTroubadour(strategy.Option(Track.Troubadour));
+    }
 
-        // TODO: for 'if-not-active' strategy, add configurable min-time-left
-        // TODO: combine 87/88 options
-        var troub = strategy.Option(Track.Troubadour);
-        var wantTroub = troub.As<TroubOption>() switch
+    private void ExecuteWardensPaean(in StrategyValues.OptionRef paean, Actor? primaryTarget)
+    {
+        if (paean.As<SimpleOption>() == SimpleOption.Use)
+            ExecuteAction(paean, BRD.AID.WardensPaean, EsunaTarget(primaryTarget));
+    }
+    private void ExecuteTroubadour(in StrategyValues.OptionRef troub)
+    {
+        var condition = troub.As<TroubOption>() switch
         {
             TroubOption.Use87 or TroubOption.Use88 => true,
-            TroubOption.Use87IfNotActive or TroubOption.Use88IfNotActive => Player.FindStatus(BRD.SID.Troubadour) == null && Player.FindStatus(MCH.SID.Tactician) == null && Player.FindStatus(DNC.SID.ShieldSamba) == null,
+            TroubOption.Use87IfNotActive or TroubOption.Use88IfNotActive => !HasRangedMitigation,
             _ => false
         };
-        if (wantTroub)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(BRD.AID.Troubadour), Player, troub.Priority(), troub.Value.ExpireIn);
+        if (condition)
+            ExecuteAction(troub, BRD.AID.Troubadour, Player);
     }
 }

@@ -3,21 +3,23 @@
 public sealed class ClassNINUtility(RotationModuleManager manager, Actor player) : RoleMeleeUtility(manager, player)
 {
     public enum Track { ShadeShift = SharedTrack.Count, Shukuchi }
-    public enum DashStrategy { None, GapClose, GapCloseHold1 }
+    public enum DashStrategy { None, GapClose, Five, Ten, Force }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(NIN.AID.Chimatsuri);
 
     public static RotationModuleDefinition Definition()
     {
-        var res = new RotationModuleDefinition("Utility: NIN", "Cooldown Planner support for Utility Actions.\nNOTE: This is NOT a rotation preset! All Utility modules are STRICTLY for cooldown-planning usage.", "Utility for planner", "Akechi", RotationModuleQuality.Good, BitMask.Build((int)Class.NIN), 100);
+        var res = new RotationModuleDefinition("Utility: NIN", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.NIN), 100);
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.ShadeShift, "Shade", "", 400, NIN.AID.ShadeShift, 20);
 
         res.Define(Track.Shukuchi).As<DashStrategy>("Shukuchi", "Dash", 20)
-            .AddOption(DashStrategy.None, "No use.")
-            .AddOption(DashStrategy.GapClose, "Use as gapcloser if outside melee range", 60, 0, ActionTargets.Area, 45)
-            .AddOption(DashStrategy.GapCloseHold1, "Use as gapcloser if outside melee range; conserves 1 charge for manual usage", 60, 0, ActionTargets.Area, 74)
+            .AddOption(DashStrategy.None, NoUse)
+            .AddOption(DashStrategy.GapClose, "Dash to the selected spot when 3y or further", 60, 0, ActionTargets.Area, 40)
+            .AddOption(DashStrategy.Five, "Dash to the selected spot when 5y or further", 60, 0, ActionTargets.Area, 40)
+            .AddOption(DashStrategy.Ten, "Dash to the selected spot when 10y or further", 60, 0, ActionTargets.Area, 40)
+            .AddOption(DashStrategy.Force, "Dash to the selected spot regardless of distance", 60, 0, ActionTargets.Area, 40)
             .AddAssociatedActions(NIN.AID.Shukuchi);
 
         return res;
@@ -27,20 +29,22 @@ public sealed class ClassNINUtility(RotationModuleManager manager, Actor player)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
         ExecuteSimple(strategy.Option(Track.ShadeShift), NIN.AID.ShadeShift, Player);
+        ExecuteShukuchi(strategy.Option(Track.Shukuchi));
+    }
 
-        // TODO: revise, this doesn't look correct (shukuchi is area targeted, so it should use that; probably should expose options to use regardless of melee distance...)
-        var dash = strategy.Option(Track.Shukuchi);
-        var dashStrategy = strategy.Option(Track.Shukuchi).As<DashStrategy>();
+    private void ExecuteShukuchi(in StrategyValues.OptionRef dash)
+    {
+        var option = dash.As<DashStrategy>();
         var distance = Player.DistanceToPoint(ResolveTargetLocation(dash.Value));
-        var cd = World.Client.Cooldowns[ActionDefinitions.Instance.Spell(NIN.AID.Shukuchi)!.MainCooldownGroup].Remaining;
-        var shouldDash = dashStrategy switch
+        var condition = option switch
         {
-            DashStrategy.None => false,
-            DashStrategy.GapClose => distance is > 3f and <= 20f,
-            DashStrategy.GapCloseHold1 => distance is > 3f and <= 20f && cd < 0.6f,
-            _ => false,
+            DashStrategy.GapClose => distance is > 3 and <= 20,
+            DashStrategy.Force => distance <= 20,
+            DashStrategy.Five => distance is > 5 and <= 20,
+            DashStrategy.Ten => distance is > 10 and <= 20,
+            _ => false
         };
-        if (shouldDash)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(NIN.AID.Shukuchi), null, dash.Priority(), dash.Value.ExpireIn, targetPos: ResolveTargetLocation(dash.Value).ToVec3(Player.PosRot.Y));
+        if (condition)
+            ExecuteArea(dash, NIN.AID.Shukuchi);
     }
 }

@@ -1,6 +1,5 @@
 ﻿namespace BossMod.Autorotation;
 
-// base class that simplifies implementation of physical melee dps utility modules, contains shared track definitions
 public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor player) : GenericUtility(manager, player)
 {
     public enum SharedTrack { Sprint, LB, SecondWind, LegSweep, Bloodbath, Feint, ArmsLength, Count }
@@ -14,20 +13,17 @@ public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor play
             .AddAssociatedActions(ClassShared.AID.Braver, ClassShared.AID.Bladedance)
             .AddAssociatedAction(lb3);
 
-        // note: true north is a special case, even though it's a role action, it has custom handling by rotational modules
-        DefineSimpleConfig(def, SharedTrack.SecondWind, "SecondWind", "S.Wind", 20, ClassShared.AID.SecondWind);
-        DefineSimpleConfig(def, SharedTrack.LegSweep, "LegSweep", "Stun", -150, ClassShared.AID.LegSweep, 3);
+        DefineSimpleConfig(def, SharedTrack.SecondWind, "S.Wind", "Second Wind", 20, ClassShared.AID.SecondWind);
+        DefineSimpleConfig(def, SharedTrack.LegSweep, "Stun", "Leg Sweep", -150, ClassShared.AID.LegSweep, 3);
         DefineSimpleConfig(def, SharedTrack.Bloodbath, "Bloodbath", "", -50, ClassShared.AID.Bloodbath, 20);
 
-        // TODO: combine standard/ex options
-        // TODO: add 'if-not-active' strategy with configurable min-time-left
         def.Define(SharedTrack.Feint).As<FeintOption>("Feint", "", 250)
-            .AddOption(FeintOption.None, "Do not use automatically")
+            .AddOption(FeintOption.None, NoUse)
             .AddOption(FeintOption.Use, "Use Feint (10s)", 90, 10, ActionTargets.Hostile, 22, 97)
             .AddOption(FeintOption.UseEx, "Use Feint (15s)", 90, 15, ActionTargets.Hostile, 98)
             .AddAssociatedActions(ClassShared.AID.Feint);
 
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "ArmsL", 300, ClassShared.AID.ArmsLength, 6); // note: secondary effect 15s
+        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsL", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
     }
 
     protected void ExecuteShared(StrategyValues strategy, ActionID lb3, Actor? primaryTarget)
@@ -37,18 +33,13 @@ public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor play
         ExecuteSimple(strategy.Option(SharedTrack.LegSweep), ClassShared.AID.LegSweep, primaryTarget);
         ExecuteSimple(strategy.Option(SharedTrack.Bloodbath), ClassShared.AID.Bloodbath, Player);
         ExecuteSimple(strategy.Option(SharedTrack.ArmsLength), ClassShared.AID.ArmsLength, Player);
+        ExecuteFeint(strategy.Option(SharedTrack.Feint), primaryTarget);
+        ExecuteLimitBreak(strategy.Option(SharedTrack.LB), ClassShared.AID.Braver, ClassShared.AID.Bladedance, lb3, primaryTarget);
+    }
 
-        var lb = strategy.Option(SharedTrack.LB);
-        var lbLevel = LBLevelToExecute(lb.As<LBOption>());
-        if (lbLevel > 0)
-        {
-            var lbAction = lbLevel == 3 ? lb3 : ActionID.MakeSpell(lbLevel == 2 ? ClassShared.AID.Bladedance : ClassShared.AID.Braver);
-            Hints.ActionsToExecute.Push(lbAction, ResolveTarget(lb.Value) ?? primaryTarget, ActionQueue.Priority.VeryHigh, lb.Value.ExpireIn, castTime: ActionDefinitions.Instance[lbAction]!.CastTime);
-        }
-
-        var feint = strategy.Option(SharedTrack.Feint);
+    private void ExecuteFeint(in StrategyValues.OptionRef feint, Actor? primaryTarget)
+    {
         if (feint.As<FeintOption>() != FeintOption.None)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Feint), ResolveTarget(feint.Value) ?? primaryTarget, feint.Priority(), feint.Value.ExpireIn);
-
+            ExecuteAction(feint, ClassShared.AID.Feint, primaryTarget);
     }
 }
