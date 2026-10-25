@@ -77,10 +77,10 @@ public sealed class RolePvPUtility(RotationModuleManager manager, Actor player) 
     }
     private bool EnemiesWithin(float range)
     {
-        var found = false;
         foreach (var enemy in Hints.PotentialTargets)
-            found |= !enemy.Actor.IsDeadOrDestroyed && enemy.Actor.DistanceToHitbox(Player) <= range;
-        return found;
+            if (!enemy.Actor.IsDeadOrDestroyed && enemy.Actor.DistanceToHitbox(Player) <= range)
+                return true;
+        return false;
     }
     private bool HasPurifiableDebuff => Player.FindStatus(ClassShared.SID.StunPvP) != null
         || Player.FindStatus(ClassShared.SID.HeavyPvP) != null

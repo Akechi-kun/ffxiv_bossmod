@@ -12,9 +12,9 @@ public sealed class ClassRPRUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: RPR", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.RPR), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.ArcaneCrest, "Crest", "", 600, RPR.AID.ArcaneCrest, 5);
+        DefineSimpleConfig(res, Track.ArcaneCrest, "Crest", "Arcane Crest", 600, RPR.AID.ArcaneCrest, 5);
 
-        res.Define(Track.Hellsgate).As<HellsgateOption>("Hellsgate", "Dash", 20)
+        res.Define(Track.Hellsgate).As<HellsgateOption>("Hellsgate", "Hell's Ingress/Egress", 20)
             .AddOption(HellsgateOption.None, NoUse)
             .AddOption(HellsgateOption.Ingress, "Use Hell's Ingress (dash 15y forward)", 20, 0, ActionTargets.Self, 20)
             .AddOption(HellsgateOption.Egress, "Use Hell's Egress (dash 15y backward)", 20, 0, ActionTargets.Self, 20)

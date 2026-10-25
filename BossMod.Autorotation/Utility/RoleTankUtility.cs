@@ -8,27 +8,27 @@ public abstract class RoleTankUtility(RotationModuleManager manager, Actor playe
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3, ActionID stanceApply, ActionID stanceRemove)
     {
-        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "", 100, ClassShared.AID.Sprint, 10);
+        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "Sprint", 100, ClassShared.AID.Sprint, 10);
 
         DefineLimitBreak(def, SharedTrack.LB, ActionTargets.Self, 10, 15, 8)
             .AddAssociatedActions(ClassShared.AID.ShieldWall, ClassShared.AID.Stronghold)
             .AddAssociatedAction(lb3);
 
-        DefineSimpleConfig(def, SharedTrack.Rampart, "Rampart", "", 500, ClassShared.AID.Rampart, 20);
-        DefineSimpleConfig(def, SharedTrack.LowBlow, "LowBlow", "Stun", -100, ClassShared.AID.LowBlow, 5);
-        DefineSimpleConfig(def, SharedTrack.Provoke, "Provoke", "", 200, ClassShared.AID.Provoke);
-        DefineSimpleConfig(def, SharedTrack.Interject, "Interject", "Interrupt", -50, ClassShared.AID.Interject);
+        DefineSimpleConfig(def, SharedTrack.Rampart, "Rampart", "Rampart", 500, ClassShared.AID.Rampart, 20);
+        DefineSimpleConfig(def, SharedTrack.LowBlow, "LowBlow", "Low Blow", -100, ClassShared.AID.LowBlow, 5);
+        DefineSimpleConfig(def, SharedTrack.Provoke, "Provoke", "Provoke", 200, ClassShared.AID.Provoke);
+        DefineSimpleConfig(def, SharedTrack.Interject, "Interject", "Interject", -50, ClassShared.AID.Interject);
 
-        def.Define(SharedTrack.Reprisal).As<ReprisalOption>("Reprisal", "", 250)
+        def.Define(SharedTrack.Reprisal).As<ReprisalOption>("Reprisal", "Reprisal", 250)
             .AddOption(ReprisalOption.None, NoUse)
             .AddOption(ReprisalOption.Use, "Use Reprisal (10s)", 60, 10, ActionTargets.Self, 22, 97)
             .AddOption(ReprisalOption.UseEx, "Use Reprisal (15s)", 60, 15, ActionTargets.Self, 98)
             .AddAssociatedActions(ClassShared.AID.Reprisal);
 
-        DefineSimpleConfig(def, SharedTrack.Shirk, "Shirk", "", 150, ClassShared.AID.Shirk);
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsL", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
+        DefineSimpleConfig(def, SharedTrack.Shirk, "Shirk", "Shirk", 150, ClassShared.AID.Shirk);
+        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
 
-        def.Define(SharedTrack.Stance).As<StanceOption>("Stance", "", 5)
+        def.Define(SharedTrack.Stance).As<StanceOption>("Stance", "Tank Stance", 5)
             .AddOption(StanceOption.None, "Do not touch stance")
             .AddOption(StanceOption.Apply, "Turn stance on if it is off", 2)
             .AddOption(StanceOption.Remove, "Turn stance off if it is on", 1)

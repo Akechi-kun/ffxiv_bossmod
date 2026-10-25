@@ -5,6 +5,8 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
 {
     public enum SimpleOption { None, Use }
     public enum LBOption { None, LB3, LB2, LB1, LB2Only, LB1Only, LB12 }
+    public enum SwiftcastOption { None, Use, UseEx }
+    public enum DashOption { None, Opener, GapClose, Five, Ten, GapCloseHold1 }
 
     protected const string UtilityDescription = "Cooldown Planner support for utility actions.\nThis is not a rotation preset; utility modules are meant for cooldown planning only.";
     protected const string UtilityCategory = "Utility for planner";
@@ -25,7 +27,7 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
 
     protected static RotationModuleDefinition.ConfigRef<LBOption> DefineLimitBreak<Index>(RotationModuleDefinition def, Index expectedIndex, ActionTargets allowedTargets, float effectLB1 = 0, float effectLB2 = 0, float effectLB3 = 0) where Index : Enum
     {
-        return def.Define(expectedIndex).As<LBOption>("LB")
+        return def.Define(expectedIndex).As<LBOption>("LB", "Limit Break")
             .AddOption(LBOption.None, NoUse)
             .AddOption(LBOption.LB3, "Use LB3 if available", 0, effectLB3, allowedTargets, defaultPriority: ActionQueue.Priority.VeryHigh)
             .AddOption(LBOption.LB2, "Use LB2 or LB3 if available", 0, effectLB3, allowedTargets, defaultPriority: ActionQueue.Priority.VeryHigh)
@@ -35,10 +37,38 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
             .AddOption(LBOption.LB12, "Use LB1 or LB2 if available, but not LB3", 0, effectLB1, allowedTargets, defaultPriority: ActionQueue.Priority.VeryHigh);
     }
 
+    protected static void DefineSwiftcast<Index>(RotationModuleDefinition def, Index expectedIndex, string displayName) where Index : Enum
+    {
+        def.Define(expectedIndex).As<SwiftcastOption>("Swiftcast", displayName, 20)
+            .AddOption(SwiftcastOption.None, NoUse)
+            .AddOption(SwiftcastOption.Use, "Use Swiftcast (60s cooldown)", 60, 10, ActionTargets.Self, 18, 93)
+            .AddOption(SwiftcastOption.UseEx, "Use Swiftcast (40s cooldown)", 40, 10, ActionTargets.Self, 94)
+            .AddAssociatedActions(ClassShared.AID.Swiftcast);
+    }
+
+    protected static void DefineDash<Index, AID>(RotationModuleDefinition def, Index expectedIndex, string internalName, string displayName, AID aid, ActionTargets targets, string gapCloseDescription = "Use as a gap closer when outside melee range", int hold1MinLevel = 0)
+        where Index : Enum
+        where AID : Enum
+    {
+        var adefs = ActionDefinitions.Instance;
+        var action = ActionID.MakeSpell(aid);
+        var cooldown = adefs[action]!.Cooldown;
+        var minLevel = adefs.ActionMinLevel(action);
+        var dash = def.Define(expectedIndex).As<DashOption>(internalName, displayName, 20)
+            .AddOption(DashOption.None, NoUse)
+            .AddOption(DashOption.Opener, "Use as a gap closer at the start of combat", cooldown, 0, targets, minLevel)
+            .AddOption(DashOption.GapClose, gapCloseDescription, cooldown, 0, targets, minLevel)
+            .AddOption(DashOption.Five, "Use when 5y or further from target", cooldown, 0, targets, minLevel)
+            .AddOption(DashOption.Ten, "Use when 10y or further from target", cooldown, 0, targets, minLevel)
+            .AddAssociatedActions(aid);
+        if (hold1MinLevel > 0)
+            dash.AddOption(DashOption.GapCloseHold1, $"{gapCloseDescription}; conserve one charge", cooldown, 0, targets, hold1MinLevel);
+    }
+
     protected Actor? CoTank() => ActionDefinitions.FindCoTank(World, Player);
     protected Actor FriendlyTarget(Actor? primaryTarget) => primaryTarget is { IsAlly: true } ? primaryTarget : Player;
     protected Actor? PartnerTarget(Actor? primaryTarget) => primaryTarget is { IsAlly: true } && primaryTarget != Player ? primaryTarget : CoTank();
-    protected Actor? EsunaTarget(Actor? primaryTarget) => primaryTarget is { IsAlly: true } ? primaryTarget : ActionDefinitions.FindEsunaTarget(World) ?? null;
+    protected Actor? EsunaTarget(Actor? primaryTarget) => primaryTarget is { IsAlly: true } ? primaryTarget : ActionDefinitions.FindEsunaTarget(World);
 
     protected bool HasStatus<SID>(Actor? target, SID sid) where SID : Enum => target?.FindStatus(sid) != null;
     protected bool HasSwiftcast => HasStatus(Player, ClassShared.SID.Swiftcast);
@@ -48,10 +78,16 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
         var spare = def.MaxChargesAtLevel(Player.Level) - keep - 1;
         return spare >= 0 && def.ChargeCapIn(World.Client.Cooldowns, World.Client.DutyActions, Player.Level) <= spare * def.Cooldown + 0.6f;
     }
-    protected float CastTime(ActionID action) => HasSwiftcast ? 0 : ActionDefinitions.Instance[action]?.CastTime ?? 0;
+    protected float CastTime(ActionID action)
+    {
+        var castTime = ActionDefinitions.Instance[action]?.CastTime ?? 0;
+        if (castTime == 0 || HasSwiftcast || HasStatus(Player, BLM.SID.Triplecast) || HasStatus(Player, RDM.SID.Dualcast))
+            return 0;
+        return HasStatus(Player, AST.SID.Lightspeed) ? Math.Max(castTime - 2.5f, 0) : castTime;
+    }
 
     private static readonly Dictionary<uint, int> MPCosts = [];
-    protected static int MPCost(ActionID action)
+    internal static int MPCost(ActionID action)
     {
         if (action.Type != ActionType.Spell)
             return 0;
@@ -92,17 +128,39 @@ public abstract class GenericUtility(RotationModuleManager manager, Actor player
             ExecuteAction(opt, aid, defaultTarget);
     }
 
+    protected bool IsFirstGCD => !Player.InCombat || (World.CurrentTime - Manager.CombatStart).TotalSeconds < 0.1f;
     protected bool InDashRange(Actor? target, float minDistance, float maxDistance)
     {
-        var distance = target != null ? Player.DistanceToHitbox(target) : 0;
-        return target != null && target != Player && distance > minDistance && distance <= maxDistance;
+        if (target == null || target == Player)
+            return false;
+        var distance = Player.DistanceToHitbox(target);
+        return distance > minDistance && distance <= maxDistance;
     }
-    protected void ExecuteDash<AID>(in StrategyValues.OptionRef opt, AID aid, Actor? target, float minDistance) where AID : Enum
+    protected void ExecuteDash<AID>(in StrategyValues.OptionRef opt, AID aid, Actor? target, float minDistance, int keepCharges = 0) where AID : Enum
     {
         var dashTarget = ResolveTarget(opt.Value) ?? target;
         var range = ActionDefinitions.Instance.Spell(aid)!.Range;
-        if (InDashRange(dashTarget, minDistance, range) && HasCharges(aid, 0))
+        if (InDashRange(dashTarget, minDistance, range) && ValidTarget(ActionID.MakeSpell(aid), dashTarget) && HasCharges(aid, keepCharges))
             Hints.ActionsToExecute.Push(ActionID.MakeSpell(aid), dashTarget, opt.Priority(), opt.Value.ExpireIn);
+    }
+    protected void ExecuteDash<AID>(in StrategyValues.OptionRef opt, AID aid, Actor? target) where AID : Enum
+    {
+        var option = opt.As<DashOption>();
+        var minDistance = option switch
+        {
+            DashOption.Opener or DashOption.GapClose or DashOption.GapCloseHold1 => 3,
+            DashOption.Five => 5,
+            DashOption.Ten => 10,
+            _ => -1
+        };
+        if (minDistance >= 0 && (option != DashOption.Opener || IsFirstGCD))
+            ExecuteDash(opt, aid, target, minDistance, option == DashOption.GapCloseHold1 ? 1 : 0);
+    }
+
+    protected void ExecuteSwiftcast(in StrategyValues.OptionRef swift)
+    {
+        if (swift.As<SwiftcastOption>() != SwiftcastOption.None && !HasSwiftcast)
+            Hints.ActionsToExecute.Push(ActionID.MakeSpell(ClassShared.AID.Swiftcast), Player, swift.Priority(), swift.Value.ExpireIn);
     }
 
     protected int LBLevelToExecute(LBOption option)

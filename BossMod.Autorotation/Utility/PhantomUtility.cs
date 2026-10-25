@@ -24,21 +24,21 @@ public class PhantomUtility(RotationModuleManager manager, Actor player) : Gener
 
         DefineSimpleConfig(def, Track.Guard, "PGuard", "Phantom Guard", -10, PhantomID.PhantomGuard, 10);
         DefineSimpleConfig(def, Track.Pledge, "Pledge", "Pledge", -10, PhantomID.Pledge, 10);
-        DefineSimpleConfig(def, Track.Shirahadori, "Shirahadori", "Shira", -10, PhantomID.Shirahadori, 4);
-        DefineSimpleConfig(def, Track.Unicorn, "Unicorn", "Unicorn", -10, PhantomID.OccultUnicorn, 30);
-        DefineSimpleConfig(def, Track.Bell, "BattleBell", "Bell", -10, PhantomID.BattleBell, 60);
-        DefineSimpleConfig(def, Track.RomeosBallad, "Romeo", "Romeo", -10, PhantomID.RomeosBallad, 3);
-        DefineSimpleConfig(def, Track.MightyMarch, "MightyMarch", "March", -10, PhantomID.MightyMarch, 30);
+        DefineSimpleConfig(def, Track.Shirahadori, "Shirahadori", "Shirahadori", -10, PhantomID.Shirahadori, 4);
+        DefineSimpleConfig(def, Track.Unicorn, "Unicorn", "Occult Unicorn", -10, PhantomID.OccultUnicorn, 30);
+        DefineSimpleConfig(def, Track.Bell, "BattleBell", "Battle Bell", -10, PhantomID.BattleBell, 60);
+        DefineSimpleConfig(def, Track.RomeosBallad, "Romeo", "Romeo's Ballad", -10, PhantomID.RomeosBallad, 3);
+        DefineSimpleConfig(def, Track.MightyMarch, "MightyMarch", "Mighty March", -10, PhantomID.MightyMarch, 30);
         DefineSimpleConfig(def, Track.Predict, "Predict", "Predict", -10, PhantomID.Predict, 16, ActionQueue.Priority.VeryHigh - 10);
-        DefineSimpleConfig(def, Track.Rejuvenation, "Rejuvenation", "Rejuv", -10, PhantomID.PhantomRejuvenation, 20);
-        DefineSimpleConfig(def, Track.Invuln, "Invulnerability", "Invuln", -10, PhantomID.Invulnerability, 8);
+        DefineSimpleConfig(def, Track.Rejuvenation, "Rejuvenation", "Phantom Rejuvenation", -10, PhantomID.PhantomRejuvenation, 20);
+        DefineSimpleConfig(def, Track.Invuln, "Invulnerability", "Invulnerability", -10, PhantomID.Invulnerability, 8);
 
         return def;
     }
 
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
-        var cotank = ActionDefinitions.FindCoTank(World, Player);
+        var cotank = CoTank();
 
         ExecutePhantom(strategy.Option(Track.Guard), PhantomID.PhantomGuard, Player);
         ExecutePhantom(strategy.Option(Track.Pledge), PhantomID.Pledge, cotank);
@@ -54,9 +54,7 @@ public class PhantomUtility(RotationModuleManager manager, Actor player) : Gener
 
     private void ExecutePhantom(in StrategyValues.OptionRef opt, PhantomID pid, Actor? defaultTarget)
     {
-        if (World.Client.DutyActions.All(d => d.Action.ID != (uint)(object)pid))
-            return;
-
-        ExecuteSimple(opt, pid, defaultTarget);
+        if (World.Client.DutyActions.Any(d => d.Action.ID == (uint)pid))
+            ExecuteSimple(opt, pid, defaultTarget);
     }
 }

@@ -3,7 +3,6 @@
 public sealed class ClassSMNUtility(RotationModuleManager manager, Actor player) : RoleCasterUtility(manager, player)
 {
     public enum Track { RadiantAegis = SharedTrack.Count, Rekindle }
-    public enum AegisStrategy { None, Use }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(SMN.AID.Teraflare);
 
@@ -12,12 +11,12 @@ public sealed class ClassSMNUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: SMN", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SMN), 100);
         DefineShared(res, IDLimitBreak3);
 
-        res.Define(Track.RadiantAegis).As<AegisStrategy>("Radiant Aegis", "Aegis", 20)
-            .AddOption(AegisStrategy.None, NoUse)
-            .AddOption(AegisStrategy.Use, "Use Radiant Aegis if the barrier is not already up", 60, 30, ActionTargets.Self, 2)
+        res.Define(Track.RadiantAegis).As<SimpleOption>("Radiant Aegis", "Radiant Aegis", 20)
+            .AddOption(SimpleOption.None, NoUse)
+            .AddOption(SimpleOption.Use, "Use Radiant Aegis if the barrier is not already up", 60, 30, ActionTargets.Self, 2)
             .AddAssociatedActions(SMN.AID.RadiantAegis);
 
-        DefineSimpleConfig(res, Track.Rekindle, "Rekindle", "", 150, SMN.AID.Rekindle, 30);
+        DefineSimpleConfig(res, Track.Rekindle, "Rekindle", "Rekindle", 150, SMN.AID.Rekindle, 30);
 
         return res;
     }
@@ -31,7 +30,7 @@ public sealed class ClassSMNUtility(RotationModuleManager manager, Actor player)
 
     private void ExecuteAegis(in StrategyValues.OptionRef aegis)
     {
-        if (aegis.As<AegisStrategy>() == AegisStrategy.Use && !HasStatus(Player, SMN.SID.RadiantAegis))
+        if (aegis.As<SimpleOption>() == SimpleOption.Use && !HasStatus(Player, SMN.SID.RadiantAegis))
             ExecuteAction(aegis, SMN.AID.RadiantAegis, Player);
     }
 }

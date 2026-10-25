@@ -7,23 +7,23 @@ public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor play
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3)
     {
-        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "", 100, ClassShared.AID.Sprint, 10);
+        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "Sprint", 100, ClassShared.AID.Sprint, 10);
 
         DefineLimitBreak(def, SharedTrack.LB, ActionTargets.Hostile)
             .AddAssociatedActions(ClassShared.AID.Braver, ClassShared.AID.Bladedance)
             .AddAssociatedAction(lb3);
 
-        DefineSimpleConfig(def, SharedTrack.SecondWind, "S.Wind", "Second Wind", 20, ClassShared.AID.SecondWind);
-        DefineSimpleConfig(def, SharedTrack.LegSweep, "Stun", "Leg Sweep", -150, ClassShared.AID.LegSweep, 3);
-        DefineSimpleConfig(def, SharedTrack.Bloodbath, "Bloodbath", "", -50, ClassShared.AID.Bloodbath, 20);
+        DefineSimpleConfig(def, SharedTrack.SecondWind, "SecondWind", "Second Wind", 20, ClassShared.AID.SecondWind);
+        DefineSimpleConfig(def, SharedTrack.LegSweep, "LegSweep", "Leg Sweep", -150, ClassShared.AID.LegSweep, 3);
+        DefineSimpleConfig(def, SharedTrack.Bloodbath, "Bloodbath", "Bloodbath", -50, ClassShared.AID.Bloodbath, 20);
 
-        def.Define(SharedTrack.Feint).As<FeintOption>("Feint", "", 250)
+        def.Define(SharedTrack.Feint).As<FeintOption>("Feint", "Feint", 250)
             .AddOption(FeintOption.None, NoUse)
             .AddOption(FeintOption.Use, "Use Feint (10s)", 90, 10, ActionTargets.Hostile, 22, 97)
             .AddOption(FeintOption.UseEx, "Use Feint (15s)", 90, 15, ActionTargets.Hostile, 98)
             .AddAssociatedActions(ClassShared.AID.Feint);
 
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsL", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
+        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
     }
 
     protected void ExecuteShared(StrategyValues strategy, ActionID lb3, Actor? primaryTarget)

@@ -16,24 +16,24 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: PLD", UtilityDescription, UtilityCategory, "veyn, Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.PLD), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
-        res.Define(Track.Sheltron).As<ShelOption>("Sheltron", "Shel", 350)
+        res.Define(Track.Sheltron).As<ShelOption>("Sheltron", "Sheltron", 350)
             .AddOption(ShelOption.None, NoUse)
             .AddOption(ShelOption.Sheltron, "Use Sheltron", 5, 4, ActionTargets.Self, 35, 81)
             .AddOption(ShelOption.HolySheltron, "Use Holy Sheltron", 5, 4, ActionTargets.Self, 82)
             .AddOption(ShelOption.Intervention, "Use Intervention on a party member (co-tank by default)", 10, 4, ActionTargets.Party, 62)
             .AddAssociatedActions(PLD.AID.Sheltron, PLD.AID.HolySheltron, PLD.AID.Intervention);
 
-        res.Define(Track.Sentinel).As<SentOption>("Sentinel", "Sent", 550)
+        res.Define(Track.Sentinel).As<SentOption>("Sentinel", "Sentinel", 550)
             .AddOption(SentOption.None, NoUse)
             .AddOption(SentOption.Sentinel, "Use Sentinel", 120, 15, ActionTargets.Self, 38, 91)
             .AddOption(SentOption.Guardian, "Use Guardian", 120, 15, ActionTargets.Self, 92)
             .AddAssociatedActions(PLD.AID.Sentinel, PLD.AID.Guardian);
 
-        DefineSimpleConfig(res, Track.Cover, "Cover", "", 320, PLD.AID.Cover, 12);
-        DefineSimpleConfig(res, Track.Bulwark, "Bulwark", "Bul", 450, PLD.AID.Bulwark, 10);
-        DefineSimpleConfig(res, Track.DivineVeil, "DivineVeil", "Veil", 220, PLD.AID.DivineVeil, 30);
+        DefineSimpleConfig(res, Track.Cover, "Cover", "Cover", 320, PLD.AID.Cover, 12);
+        DefineSimpleConfig(res, Track.Bulwark, "Bulwark", "Bulwark", 450, PLD.AID.Bulwark, 10);
+        DefineSimpleConfig(res, Track.DivineVeil, "DivineVeil", "Divine Veil", 220, PLD.AID.DivineVeil, 30);
 
-        res.Define(Track.PassageOfArms).As<ArmsDirection>("PassageOfArms", "PoA", 400)
+        res.Define(Track.PassageOfArms).As<ArmsDirection>("PassageOfArms", "Passage of Arms", 400)
             .AddOption(ArmsDirection.None, NoUse)
             .AddOption(ArmsDirection.CharacterForward, "Face forward relative to the character", 120, 18, ActionTargets.Self, 70)
             .AddOption(ArmsDirection.CharacterBackward, "Face backward relative to the character", 120, 18, ActionTargets.Self, 70)
@@ -41,9 +41,9 @@ public sealed class ClassPLDUtility(RotationModuleManager manager, Actor player)
             .AddOption(ArmsDirection.CameraBackward, "Face backward relative to the camera", 120, 18, ActionTargets.Self, 70)
             .AddAssociatedActions(PLD.AID.PassageOfArms);
 
-        DefineSimpleConfig(res, Track.HallowedGround, "HallowedGround", "Inv", 400, PLD.AID.HallowedGround, 10);
-        DefineSimpleConfig(res, Track.ShieldBash, "ShieldBash", "ShieldBash", 340, PLD.AID.ShieldBash, 6, ActionQueue.Priority.VeryHigh);
-        DefineSimpleConfig(res, Track.Clemency, "Clemency", "", 110, PLD.AID.Clemency, 0, ActionQueue.Priority.VeryHigh);
+        DefineSimpleConfig(res, Track.HallowedGround, "HallowedGround", "Hallowed Ground", 400, PLD.AID.HallowedGround, 10);
+        DefineSimpleConfig(res, Track.ShieldBash, "ShieldBash", "Shield Bash", 340, PLD.AID.ShieldBash, 6, ActionQueue.Priority.VeryHigh);
+        DefineSimpleConfig(res, Track.Clemency, "Clemency", "Clemency", 110, PLD.AID.Clemency, 0, ActionQueue.Priority.VeryHigh);
 
         return res;
     }

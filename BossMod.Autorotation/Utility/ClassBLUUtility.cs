@@ -11,34 +11,34 @@ public sealed class ClassBLUUtility(RotationModuleManager manager, Actor player)
         DefineShared(res, IDLimitBreak3);
 
         DefineSimpleConfig(res, Track.Bristle, "Bristle", "Bristle", 100, BLU.AID.Bristle, 30);
-        DefineSimpleConfig(res, Track.WhiteWind, "White Wind", "W.Wind", 100, BLU.AID.WhiteWind);
-        DefineSimpleConfig(res, Track.IceSpikes, "Ice Spikes", "I.Spikes", 50, BLU.AID.IceSpikes, 15);
-        DefineSimpleConfig(res, Track.OffGuard, "Off Guard", "OffG.", 25, BLU.AID.OffGuard, 15);
-        DefineSimpleConfig(res, Track.Transfusion, "Transfusion", "Transf.", 10, BLU.AID.Transfusion);
-        DefineSimpleConfig(res, Track.Diamondback, "Diamondback", "D.back", 100, BLU.AID.Diamondback, 10);
-        DefineSimpleConfig(res, Track.MightyGuard, "Mighty Guard", "MightyG.", 10, BLU.AID.MightyGuard);
-        DefineSimpleConfig(res, Track.ToadOil, "Toad Oil", "T.Oil", 10, BLU.AID.ToadOil, 180);
-        DefineSimpleConfig(res, Track.MoonFlute, "Moon Flute", "MoonFlute", 100, BLU.AID.MoonFlute, 15);
-        DefineSimpleConfig(res, Track.PeculiarLight, "Peculiar Light", "P.Light", 25, BLU.AID.PeculiarLight, 15);
-        DefineSimpleConfig(res, Track.VeilOfTheWhorl, "Veil Of The Whorl", "V.Whorl", 100, BLU.AID.VeilOfTheWhorl, 30);
-        DefineSimpleConfig(res, Track.EerieSoundwave, "Eerie Soundwave", "Soundwave", 100, BLU.AID.EerieSoundwave);
-        DefineSimpleConfig(res, Track.PomCure, "Pom Cure", "PomCure", 100, BLU.AID.PomCure);
+        DefineSimpleConfig(res, Track.WhiteWind, "White Wind", "White Wind", 100, BLU.AID.WhiteWind);
+        DefineSimpleConfig(res, Track.IceSpikes, "Ice Spikes", "Ice Spikes", 50, BLU.AID.IceSpikes, 15);
+        DefineSimpleConfig(res, Track.OffGuard, "Off Guard", "Off-guard", 25, BLU.AID.OffGuard, 15);
+        DefineSimpleConfig(res, Track.Transfusion, "Transfusion", "Transfusion", 10, BLU.AID.Transfusion);
+        DefineSimpleConfig(res, Track.Diamondback, "Diamondback", "Diamondback", 100, BLU.AID.Diamondback, 10);
+        DefineSimpleConfig(res, Track.MightyGuard, "Mighty Guard", "Mighty Guard", 10, BLU.AID.MightyGuard);
+        DefineSimpleConfig(res, Track.ToadOil, "Toad Oil", "Toad Oil", 10, BLU.AID.ToadOil, 180);
+        DefineSimpleConfig(res, Track.MoonFlute, "Moon Flute", "Moon Flute", 100, BLU.AID.MoonFlute, 15);
+        DefineSimpleConfig(res, Track.PeculiarLight, "Peculiar Light", "Peculiar Light", 25, BLU.AID.PeculiarLight, 15);
+        DefineSimpleConfig(res, Track.VeilOfTheWhorl, "Veil Of The Whorl", "Veil of the Whorl", 100, BLU.AID.VeilOfTheWhorl, 30);
+        DefineSimpleConfig(res, Track.EerieSoundwave, "Eerie Soundwave", "Eerie Soundwave", 100, BLU.AID.EerieSoundwave);
+        DefineSimpleConfig(res, Track.PomCure, "Pom Cure", "Pom Cure", 100, BLU.AID.PomCure);
         DefineSimpleConfig(res, Track.Gobskin, "Gobskin", "Gobskin", 100, BLU.AID.Gobskin, 30);
         DefineSimpleConfig(res, Track.Avail, "Avail", "Avail", 100, BLU.AID.Avail, 12);
-        DefineSimpleConfig(res, Track.FrogLegs, "Frog Legs", "F.Legs", 10, BLU.AID.FrogLegs);
+        DefineSimpleConfig(res, Track.FrogLegs, "Frog Legs", "Frog Legs", 10, BLU.AID.FrogLegs);
         DefineSimpleConfig(res, Track.Whistle, "Whistle", "Whistle", 100, BLU.AID.Whistle, 30);
-        DefineSimpleConfig(res, Track.Cactguard, "Cactguard", "CactG.", 100, BLU.AID.Cactguard, 6);
-        DefineSimpleConfig(res, Track.AngelWhisper, "Angel Whisper", "A.Whisper", 100, BLU.AID.AngelWhisper);
-        DefineSimpleConfig(res, Track.Exuviation, "Exuviation", "Exuvi", 100, BLU.AID.Exuviation);
-        DefineSimpleConfig(res, Track.ColdFog, "Cold Fog", "C.Fog", 50, BLU.AID.ColdFog, 5);
+        DefineSimpleConfig(res, Track.Cactguard, "Cactguard", "Cactguard", 100, BLU.AID.Cactguard, 6);
+        DefineSimpleConfig(res, Track.AngelWhisper, "Angel Whisper", "Angel Whisper", 100, BLU.AID.AngelWhisper);
+        DefineSimpleConfig(res, Track.Exuviation, "Exuviation", "Exuviation", 100, BLU.AID.Exuviation);
+        DefineSimpleConfig(res, Track.ColdFog, "Cold Fog", "Cold Fog", 50, BLU.AID.ColdFog, 5);
         DefineSimpleConfig(res, Track.Stotram, "Stotram (Heal)", "Stotram", 100, BLU.AID.StotramHeal);
-        DefineSimpleConfig(res, Track.AngelsSnack, "Angels Snack", "A.Snack", 100, BLU.AID.AngelsSnack, 15);
-        DefineSimpleConfig(res, Track.ChelonianGate, "Chelonian Gate", "C.Gate", 100, BLU.AID.ChelonianGate, 10);
-        DefineSimpleConfig(res, Track.BasicInstinct, "Basic Instinct", "Instinct", 10, BLU.AID.BasicInstinct);
-        DefineSimpleConfig(res, Track.DragonForce, "Dragon Force", "D.Force", 100, BLU.AID.DragonForce, 15);
-        DefineSimpleConfig(res, Track.Schiltron, "Schiltron", "Schilt", 100, BLU.AID.Schiltron, 15);
-        DefineSimpleConfig(res, Track.Rehydration, "Rehydration", "Rehyd.", 100, BLU.AID.Rehydration);
-        DefineSimpleConfig(res, Track.ForceField, "Force Field", "F.Field", 100, BLU.AID.ForceField, 10);
+        DefineSimpleConfig(res, Track.AngelsSnack, "Angels Snack", "Angel's Snack", 100, BLU.AID.AngelsSnack, 15);
+        DefineSimpleConfig(res, Track.ChelonianGate, "Chelonian Gate", "Chelonian Gate", 100, BLU.AID.ChelonianGate, 10);
+        DefineSimpleConfig(res, Track.BasicInstinct, "Basic Instinct", "Basic Instinct", 10, BLU.AID.BasicInstinct);
+        DefineSimpleConfig(res, Track.DragonForce, "Dragon Force", "Dragon Force", 100, BLU.AID.DragonForce, 15);
+        DefineSimpleConfig(res, Track.Schiltron, "Schiltron", "Schiltron", 100, BLU.AID.Schiltron, 15);
+        DefineSimpleConfig(res, Track.Rehydration, "Rehydration", "Rehydration", 100, BLU.AID.Rehydration);
+        DefineSimpleConfig(res, Track.ForceField, "Force Field", "Force Field", 100, BLU.AID.ForceField, 10);
 
         return res;
     }
@@ -47,34 +47,43 @@ public sealed class ClassBLUUtility(RotationModuleManager manager, Actor player)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
         var ally = primaryTarget is { IsAlly: true } && primaryTarget != Player ? primaryTarget : null;
-        ExecuteSimple(strategy.Option(Track.Bristle), BLU.AID.Bristle, Player);
-        ExecuteSimple(strategy.Option(Track.WhiteWind), BLU.AID.WhiteWind, Player);
-        ExecuteSimple(strategy.Option(Track.IceSpikes), BLU.AID.IceSpikes, Player);
-        ExecuteSimple(strategy.Option(Track.OffGuard), BLU.AID.OffGuard, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.Transfusion), BLU.AID.Transfusion, ally);
-        ExecuteSimple(strategy.Option(Track.Diamondback), BLU.AID.Diamondback, Player);
-        ExecuteSimple(strategy.Option(Track.MightyGuard), BLU.AID.MightyGuard, Player);
-        ExecuteSimple(strategy.Option(Track.ToadOil), BLU.AID.ToadOil, Player);
-        ExecuteSimple(strategy.Option(Track.MoonFlute), BLU.AID.MoonFlute, Player);
-        ExecuteSimple(strategy.Option(Track.PeculiarLight), BLU.AID.PeculiarLight, Player);
-        ExecuteSimple(strategy.Option(Track.VeilOfTheWhorl), BLU.AID.VeilOfTheWhorl, Player);
-        ExecuteSimple(strategy.Option(Track.EerieSoundwave), BLU.AID.EerieSoundwave, Player);
-        ExecuteSimple(strategy.Option(Track.PomCure), BLU.AID.PomCure, FriendlyTarget(primaryTarget));
-        ExecuteSimple(strategy.Option(Track.Gobskin), BLU.AID.Gobskin, Player);
-        ExecuteSimple(strategy.Option(Track.Avail), BLU.AID.Avail, PartnerTarget(primaryTarget));
-        ExecuteSimple(strategy.Option(Track.FrogLegs), BLU.AID.FrogLegs, Player);
-        ExecuteSimple(strategy.Option(Track.Whistle), BLU.AID.Whistle, Player);
-        ExecuteSimple(strategy.Option(Track.Cactguard), BLU.AID.Cactguard, PartnerTarget(primaryTarget));
-        ExecuteSimple(strategy.Option(Track.AngelWhisper), BLU.AID.AngelWhisper, ally);
-        ExecuteSimple(strategy.Option(Track.Exuviation), BLU.AID.Exuviation, Player);
-        ExecuteSimple(strategy.Option(Track.ColdFog), BLU.AID.ColdFog, Player);
-        ExecuteSimple(strategy.Option(Track.Stotram), BLU.AID.StotramHeal, Player);
-        ExecuteSimple(strategy.Option(Track.AngelsSnack), BLU.AID.AngelsSnack, Player);
-        ExecuteSimple(strategy.Option(Track.ChelonianGate), BLU.AID.ChelonianGate, Player);
-        ExecuteSimple(strategy.Option(Track.BasicInstinct), BLU.AID.BasicInstinct, Player);
-        ExecuteSimple(strategy.Option(Track.DragonForce), BLU.AID.DragonForce, Player);
-        ExecuteSimple(strategy.Option(Track.Schiltron), BLU.AID.Schiltron, Player);
-        ExecuteSimple(strategy.Option(Track.Rehydration), BLU.AID.Rehydration, Player);
-        ExecuteSimple(strategy.Option(Track.ForceField), BLU.AID.ForceField, Player);
+        ExecuteSpell(strategy.Option(Track.Bristle), BLU.AID.Bristle, Player);
+        ExecuteSpell(strategy.Option(Track.WhiteWind), BLU.AID.WhiteWind, Player);
+        ExecuteSpell(strategy.Option(Track.IceSpikes), BLU.AID.IceSpikes, Player);
+        ExecuteSpell(strategy.Option(Track.OffGuard), BLU.AID.OffGuard, primaryTarget);
+        ExecuteSpell(strategy.Option(Track.Transfusion), BLU.AID.Transfusion, ally);
+        ExecuteSpell(strategy.Option(Track.Diamondback), BLU.AID.Diamondback, Player);
+        if (!HasStatus(Player, BLU.SID.MightyGuard))
+            ExecuteSpell(strategy.Option(Track.MightyGuard), BLU.AID.MightyGuard, Player);
+        ExecuteSpell(strategy.Option(Track.ToadOil), BLU.AID.ToadOil, Player);
+        ExecuteSpell(strategy.Option(Track.MoonFlute), BLU.AID.MoonFlute, Player);
+        ExecuteSpell(strategy.Option(Track.PeculiarLight), BLU.AID.PeculiarLight, Player);
+        ExecuteSpell(strategy.Option(Track.VeilOfTheWhorl), BLU.AID.VeilOfTheWhorl, Player);
+        ExecuteSpell(strategy.Option(Track.EerieSoundwave), BLU.AID.EerieSoundwave, Player);
+        ExecuteSpell(strategy.Option(Track.PomCure), BLU.AID.PomCure, FriendlyTarget(primaryTarget));
+        ExecuteSpell(strategy.Option(Track.Gobskin), BLU.AID.Gobskin, Player);
+        ExecuteSpell(strategy.Option(Track.Avail), BLU.AID.Avail, PartnerTarget(primaryTarget));
+        ExecuteSpell(strategy.Option(Track.FrogLegs), BLU.AID.FrogLegs, Player);
+        ExecuteSpell(strategy.Option(Track.Whistle), BLU.AID.Whistle, Player);
+        ExecuteSpell(strategy.Option(Track.Cactguard), BLU.AID.Cactguard, PartnerTarget(primaryTarget));
+        ExecuteSpell(strategy.Option(Track.AngelWhisper), BLU.AID.AngelWhisper, ally);
+        ExecuteSpell(strategy.Option(Track.Exuviation), BLU.AID.Exuviation, Player);
+        ExecuteSpell(strategy.Option(Track.ColdFog), BLU.AID.ColdFog, Player);
+        ExecuteSpell(strategy.Option(Track.Stotram), BLU.AID.StotramHeal, Player, BLU.AID.StotramDamage);
+        ExecuteSpell(strategy.Option(Track.AngelsSnack), BLU.AID.AngelsSnack, Player);
+        ExecuteSpell(strategy.Option(Track.ChelonianGate), BLU.AID.ChelonianGate, Player);
+        if (!HasStatus(Player, BLU.SID.BasicInstinct))
+            ExecuteSpell(strategy.Option(Track.BasicInstinct), BLU.AID.BasicInstinct, Player);
+        ExecuteSpell(strategy.Option(Track.DragonForce), BLU.AID.DragonForce, Player);
+        ExecuteSpell(strategy.Option(Track.Schiltron), BLU.AID.Schiltron, Player);
+        ExecuteSpell(strategy.Option(Track.Rehydration), BLU.AID.Rehydration, Player);
+        ExecuteSpell(strategy.Option(Track.ForceField), BLU.AID.ForceField, Player);
+    }
+
+    private void ExecuteSpell(in StrategyValues.OptionRef opt, BLU.AID aid, Actor? target, BLU.AID spellbookAid = BLU.AID.None)
+    {
+        var spell = spellbookAid == BLU.AID.None ? aid : spellbookAid;
+        if (World.Client.BlueMageSpells.Contains((uint)spell))
+            ExecuteSimple(opt, aid, target);
     }
 }

@@ -15,46 +15,46 @@ public sealed class ClassASTUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: AST", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.AST), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.Helios, "Helios", "", 140, AST.AID.Helios);
-        DefineSimpleConfig(res, Track.Lightspeed, "Lightspeed", "L.speed", 140, AST.AID.Lightspeed, 15);
-        DefineSimpleConfig(res, Track.BeneficII, "BeneficII", "Bene2", 100, AST.AID.BeneficII);
-        DefineSimpleConfig(res, Track.EssentialDignity, "EssentialDignity", "E.Dig", 140, AST.AID.EssentialDignity);
-        DefineSimpleConfig(res, Track.AspectedBenefic, "AspectedBenefic", "A.Benefic", 100, AST.AID.AspectedBenefic, 15);
+        DefineSimpleConfig(res, Track.Helios, "Helios", "Helios", 140, AST.AID.Helios);
+        DefineSimpleConfig(res, Track.Lightspeed, "Lightspeed", "Lightspeed", 140, AST.AID.Lightspeed, 15);
+        DefineSimpleConfig(res, Track.BeneficII, "BeneficII", "Benefic II", 100, AST.AID.BeneficII);
+        DefineSimpleConfig(res, Track.EssentialDignity, "EssentialDignity", "Essential Dignity", 140, AST.AID.EssentialDignity);
+        DefineSimpleConfig(res, Track.AspectedBenefic, "AspectedBenefic", "Aspected Benefic", 100, AST.AID.AspectedBenefic, 15);
 
-        res.Define(Track.AspectedHelios).As<HeliosOption>("AspectedHelios", "A.Helios", 130)
+        res.Define(Track.AspectedHelios).As<HeliosOption>("AspectedHelios", "Aspected Helios", 130)
             .AddOption(HeliosOption.None, NoUse)
             .AddOption(HeliosOption.Use, "Use Aspected Helios", 2.5f, 15, ActionTargets.Self, 40, 95)
             .AddOption(HeliosOption.UseEx, "Use Helios Conjunction", 2.5f, 15, ActionTargets.Self, 96)
             .AddAssociatedActions(AST.AID.AspectedHelios, AST.AID.HeliosConjunction);
 
-        DefineSimpleConfig(res, Track.Synastry, "Synastry", "", 200, AST.AID.Synastry, 20);
-        DefineSimpleConfig(res, Track.CollectiveUnconscious, "CollectiveUnconscious", "C.Uncon", 100, AST.AID.CollectiveUnconscious, 5);
-        DefineSimpleConfig(res, Track.CelestialOpposition, "CelestialOpposition", "C.Oppo", 100, AST.AID.CelestialOpposition, 15);
+        DefineSimpleConfig(res, Track.Synastry, "Synastry", "Synastry", 200, AST.AID.Synastry, 20);
+        DefineSimpleConfig(res, Track.CollectiveUnconscious, "CollectiveUnconscious", "Collective Unconscious", 100, AST.AID.CollectiveUnconscious, 5);
+        DefineSimpleConfig(res, Track.CelestialOpposition, "CelestialOpposition", "Celestial Opposition", 100, AST.AID.CelestialOpposition, 15);
 
-        res.Define(Track.EarthlyStar).As<StarOption>("EarthlyStar", "E.Star", 200)
+        res.Define(Track.EarthlyStar).As<StarOption>("EarthlyStar", "Earthly Star", 200)
             .AddOption(StarOption.None, NoUse)
             .AddOption(StarOption.Use, "Place Earthly Star", 60, 20, ActionTargets.Area, 62)
             .AddOption(StarOption.End, "Detonate the star early (Stellar Detonation)", 0, 1, ActionTargets.Self, 62)
             .AddAssociatedActions(AST.AID.EarthlyStar, AST.AID.StellarDetonation);
 
-        DefineSimpleConfig(res, Track.CelestialIntersection, "CelestialIntersection", "C.Inter", 100, AST.AID.CelestialIntersection, 30);
+        DefineSimpleConfig(res, Track.CelestialIntersection, "CelestialIntersection", "Celestial Intersection", 100, AST.AID.CelestialIntersection, 30);
 
-        res.Define(Track.Horoscope).As<HoroscopeOption>("Horoscope", "Horo", 130)
+        res.Define(Track.Horoscope).As<HoroscopeOption>("Horoscope", "Horoscope", 130)
             .AddOption(HoroscopeOption.None, NoUse)
             .AddOption(HoroscopeOption.Use, "Use Horoscope", 60, 10, ActionTargets.Self, 76)
             .AddOption(HoroscopeOption.End, "Trigger the Horoscope heal early", 0, 1, ActionTargets.Self, 76)
             .AddAssociatedActions(AST.AID.Horoscope, AST.AID.HoroscopeEnd);
 
-        DefineSimpleConfig(res, Track.NeutralSect, "NeutralSect", "Sect", 250, AST.AID.NeutralSect, 20);
-        DefineSimpleConfig(res, Track.Exaltation, "Exaltation", "Exalt", 100, AST.AID.Exaltation, 8);
+        DefineSimpleConfig(res, Track.NeutralSect, "NeutralSect", "Neutral Sect", 250, AST.AID.NeutralSect, 20);
+        DefineSimpleConfig(res, Track.Exaltation, "Exaltation", "Exaltation", 100, AST.AID.Exaltation, 8);
 
-        res.Define(Track.Macrocosmos).As<MacrocosmosOption>("Macrocosmos", "Macro", 300)
+        res.Define(Track.Macrocosmos).As<MacrocosmosOption>("Macrocosmos", "Macrocosmos", 300)
             .AddOption(MacrocosmosOption.None, NoUse)
             .AddOption(MacrocosmosOption.Use, "Use Macrocosmos", 180, 15, ActionTargets.Self, 90, defaultPriority: ActionQueue.Priority.ManualGCD - 1)
             .AddOption(MacrocosmosOption.End, "Trigger the heal early (Microcosmos)", 0, 1, ActionTargets.Self, 90)
             .AddAssociatedActions(AST.AID.Macrocosmos, AST.AID.MicrocosmosEnd);
 
-        DefineSimpleConfig(res, Track.SunSign, "SunSign", "", 290, AST.AID.SunSign, 15);
+        DefineSimpleConfig(res, Track.SunSign, "SunSign", "Sun Sign", 290, AST.AID.SunSign, 15);
 
         return res;
     }

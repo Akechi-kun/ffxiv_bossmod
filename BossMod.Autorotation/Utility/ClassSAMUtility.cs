@@ -12,7 +12,7 @@ public sealed class ClassSAMUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: SAM", UtilityDescription, UtilityCategory, "xan, Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SAM), 100);
         DefineShared(res, IDLimitBreak3);
 
-        res.Define(Track.ThirdEye).As<EyeOption>("ThirdEye", "Eye", 600)
+        res.Define(Track.ThirdEye).As<EyeOption>("ThirdEye", "Third Eye", 600)
             .AddOption(EyeOption.None, NoUse)
             .AddOption(EyeOption.ThirdEye, "Use Third Eye", 15, 4, ActionTargets.Self, 6, 81)
             .AddOption(EyeOption.Tengentsu, "Use Tengentsu", 15, 4, ActionTargets.Self, 82)

@@ -12,13 +12,13 @@ public sealed class ClassBLMUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: BLM", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.BLM), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.Manaward, "Manaward", "", 600, BLM.AID.Manaward, 20);
+        DefineSimpleConfig(res, Track.Manaward, "Manaward", "Manaward", 600, BLM.AID.Manaward, 20);
 
-        res.Define(Track.AetherialManipulation).As<DashStrategy>("Dash", "", 20)
+        res.Define(Track.AetherialManipulation).As<DashStrategy>("Dash", "Aetherial Manipulation", 20)
             .AddOption(DashStrategy.None, NoUse)
             .AddOption(DashStrategy.Force, "Dash to the selected party member (or your current ally target if no member selected)", 10, 0, ActionTargets.Party, 50)
-            .AddOption(DashStrategy.Five, "Dash to the party member when 5y or more away", 10, 0, ActionTargets.Party, 50)
-            .AddOption(DashStrategy.Ten, "Dash to the party member when 10y or more away", 10, 0, ActionTargets.Party, 50)
+            .AddOption(DashStrategy.Five, "Dash to the party member when 5y or further away", 10, 0, ActionTargets.Party, 50)
+            .AddOption(DashStrategy.Ten, "Dash to the party member when 10y or further away", 10, 0, ActionTargets.Party, 50)
             .AddAssociatedActions(BLM.AID.AetherialManipulation);
 
         return res;

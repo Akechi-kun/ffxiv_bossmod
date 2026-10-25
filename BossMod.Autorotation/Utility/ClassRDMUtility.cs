@@ -11,8 +11,8 @@ public sealed class ClassRDMUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: RDM", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.RDM), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.MagickBarrier, "Magick Barrier", "Barrier", 600, RDM.AID.MagickBarrier, 10);
-        DefineSimpleConfig(res, Track.Vercure, "Vercure", "", 100, RDM.AID.Vercure, 0, ActionQueue.Priority.VeryHigh);
+        DefineSimpleConfig(res, Track.MagickBarrier, "Magick Barrier", "Magick Barrier", 600, RDM.AID.MagickBarrier, 10);
+        DefineSimpleConfig(res, Track.Vercure, "Vercure", "Vercure", 100, RDM.AID.Vercure, 0, ActionQueue.Priority.VeryHigh);
 
         return res;
     }
