@@ -1,4 +1,6 @@
-﻿namespace BossMod.PLD;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+
+namespace BossMod.PLD;
 
 public enum AID : uint
 {
@@ -159,6 +161,11 @@ public sealed class Definitions : Defs
         };
 
         d.Spell(AID.Intervention)!.SmartTarget = ActionDefinitions.SmartTargetCoTank;
+
+        d.Spell(AID.Sheltron)!.AllowExecute =
+        d.Spell(AID.HolySheltron)!.AllowExecute =
+        d.Spell(AID.Intervention)!.AllowExecute =
+        d.Spell(AID.Cover)!.AllowExecute = (ws, _, _, _) => ws.Client.GetGauge<PaladinGauge>().OathGauge >= 50;
 
         //d.Spell(AID.LastBastion)!.EffectDuration = 8;
         //d.Spell(AID.FightOrFlight)!.EffectDuration = 20;

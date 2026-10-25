@@ -1,4 +1,6 @@
-﻿namespace BossMod.WHM;
+﻿using FFXIVClientStructs.FFXIV.Client.Game.Gauge;
+
+namespace BossMod.WHM;
 
 public enum AID : uint
 {
@@ -230,5 +232,9 @@ public sealed class Definitions : Defs
             ? ws.Client.CameraAzimuth + 180.Degrees()
             : null;
         d.Spell(AID.AetherialShift)!.AllowExecute = ActionPredicate.AllowDashFixed(15);
+
+        d.Spell(AID.AfflatusSolace)!.AllowExecute =
+        d.Spell(AID.AfflatusRapture)!.AllowExecute = (ws, _, _, _) => ws.Client.GetGauge<WhiteMageGauge>().Lily > 0;
+        d.Spell(AID.AfflatusMisery)!.AllowExecute = (ws, _, _, _) => ws.Client.GetGauge<WhiteMageGauge>().BloodLily >= 3;
     }
 }

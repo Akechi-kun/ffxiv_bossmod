@@ -204,5 +204,8 @@ public sealed class Definitions : Defs
         d.RegisterChargeIncreaseTrait(AID.EssentialDignity, TraitID.EnhancedEssentialDignity);
         d.RegisterChargeIncreaseTrait(AID.EssentialDignity, TraitID.EnhancedEssentialDignityII);
         d.RegisterChargeIncreaseTrait(AID.CelestialIntersection, TraitID.EnhancedCelestialIntersection);
+
+        d.Spell(AID.StellarDetonation)!.AllowExecute = (_, player, _, _) => player.FindStatus(SID.EarthlyDominance) != null || player.FindStatus(SID.GiantDominance) != null;
+        d.Spell(AID.SunSign)!.AllowExecute = (_, player, _, _) => player.FindStatus(SID.Suntouched) != null;
     }
 }

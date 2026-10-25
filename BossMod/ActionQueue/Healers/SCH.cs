@@ -172,7 +172,8 @@ public sealed class Definitions : Defs
     private void Customize(ActionDefinitions d)
     {
         d.Spell(AID.SacredSoil)!.AllowExecute =
+        d.Spell(AID.Lustrate)!.AllowExecute = (ws, _, _, _) => ws.Client.GetGauge<ScholarGauge>().Aetherflow > 0;
         d.Spell(AID.Excogitation)!.AllowExecute =
-        d.Spell(AID.Indomitability)!.AllowExecute = (ws, _, _, _) => ws.Client.GetGauge<ScholarGauge>().Aetherflow > 0;
+        d.Spell(AID.Indomitability)!.AllowExecute = (ws, player, _, _) => ws.Client.GetGauge<ScholarGauge>().Aetherflow > 0 || player.FindStatus(SID.Recitation) != null;
     }
 }

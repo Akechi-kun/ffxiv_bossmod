@@ -311,6 +311,8 @@ public sealed class Definitions : Defs
         // note: only works for pov player
         d.Spell(AID.RadiantAegis)!.AllowExecute = (ws, _, _, _) => ws.Actors.Find(ws.Client.ActivePet.InstanceID) is { OID: 0x34BA };
 
+        d.Spell(AID.Rekindle)!.AllowExecute = (_, player, _, _) => player.FindStatus(SID.FirebirdTrance) != null;
+
         d.Spell(AID.CrimsonCyclone)!.AllowExecute = ActionPredicate.AllowDashToTarget;
         d.Spell(AID.CrimsonCyclonePvP)!.AllowExecute = ActionPredicate.AllowDashToTarget;
     }
