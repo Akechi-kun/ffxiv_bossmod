@@ -6,11 +6,33 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace BossMod;
 
+// includes a bunch of random general config options, the name of the class is vestigial
 [ConfigDisplay(Name = "Interface", Order = -10, Group = "General")]
 public sealed class DtrConfig : ConfigNode
 {
     [PropertyDisplay("Hide windows when game UI is hidden")]
     public bool HideWithGameUi = true;
+
+    [PropertyDisplay("Occlude in-world guide elements", tooltip: "If enabled, shapes that BossMod draws in the game world, such as movement hints and deep dungeon trap indicators, will appear 'behind' other objects the same way that native AOE indicators do.", since: "7.5.7.15")]
+    public bool Occlude = false;
+
+    [PropertyDisplay("Occluded item transparency", depends: nameof(Occlude))]
+    [PropertySlider(0, 1)]
+    public float OcclusionAlpha = 0.1f;
+
+    //[PageStart("In-game overlay")]
+    //[PropertyDisplay("Target melee range indicator")]
+    public bool ShowMeleeRing;
+
+    //[PropertyDisplay("Highlight current slice", depends: nameof(ShowMeleeRing))]
+    public bool HighlightSlice = true;
+
+    [PropertyDisplay("Ring color: rear")]
+    public Color RearColor = Color.FromRGBA(0x35DC8BFF);
+    [PropertyDisplay("Ring color: flank")]
+    public Color FlankColor = Color.FromRGBA(0xCFC851FF);
+    [PropertyDisplay("Ring color: front")]
+    public Color FrontColor = Color.FromRGBA(0xE60014FF);
 
     public enum DtrStatus
     {
