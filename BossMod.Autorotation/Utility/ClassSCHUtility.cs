@@ -18,8 +18,8 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: SCH", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.SCH), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.WhisperingDawn, "Whispering Dawn", "Whispering Dawn", 140, SCH.AID.WhisperingDawn, 21);
-        DefineSimpleConfig(res, Track.Adloquium, "Adloquium", "Adloquium", 100, SCH.AID.Adloquium, 30);
+        DefineSimple(res, Track.WhisperingDawn, "Whispering Dawn", "Whispering Dawn", 140, SCH.AID.WhisperingDawn, 21);
+        DefineSimple(res, Track.Adloquium, "Adloquium", "Adloquium", 100, SCH.AID.Adloquium, 30);
 
         res.Define(Track.Succor).As<SuccorOption>("Succor", "Succor", 200)
             .AddOption(SuccorOption.None, NoUse)
@@ -27,8 +27,8 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(SuccorOption.Concitation, "Use Concitation", 2.5f, 30, ActionTargets.Self, 96, defaultPriority: ActionQueue.Priority.VeryHigh)
             .AddAssociatedActions(SCH.AID.Succor, SCH.AID.Concitation);
 
-        DefineSimpleConfig(res, Track.FeyIllumination, "Fey Illumination", "Fey Illumination", 240, SCH.AID.FeyIllumination, 20);
-        DefineSimpleConfig(res, Track.Lustrate, "Lustrate", "Lustrate", 150, SCH.AID.Lustrate);
+        DefineSimple(res, Track.FeyIllumination, "Fey Illumination", "Fey Illumination", 240, SCH.AID.FeyIllumination, 20);
+        DefineSimple(res, Track.Lustrate, "Lustrate", "Lustrate", 150, SCH.AID.Lustrate);
 
         res.Define(Track.SacredSoil).As<SacredSoilOption>("Sacred Soil", "Sacred Soil", 200)
             .AddOption(SacredSoilOption.None, NoUse)
@@ -36,7 +36,7 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(SacredSoilOption.UseEx, "Place Sacred Soil (with regen)", 30, 15, ActionTargets.Area, 78)
             .AddAssociatedActions(SCH.AID.SacredSoil);
 
-        DefineSimpleConfig(res, Track.Indomitability, "Indomitability", "Indomitability", 90, SCH.AID.Indomitability);
+        DefineSimple(res, Track.Indomitability, "Indomitability", "Indomitability", 90, SCH.AID.Indomitability);
 
         res.Define(Track.DeploymentTactics).As<DeployOption>("DeploymentTactics", "Deployment Tactics", 150)
             .AddOption(DeployOption.None, NoUse)
@@ -44,9 +44,9 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(DeployOption.UseEx, "Use Deployment Tactics (90s cooldown)", 90, 0, ActionTargets.Self | ActionTargets.Party, 88)
             .AddAssociatedActions(SCH.AID.DeploymentTactics);
 
-        DefineSimpleConfig(res, Track.EmergencyTactics, "EmergencyTactics", "Emergency Tactics", 100, SCH.AID.EmergencyTactics, 15);
-        DefineSimpleConfig(res, Track.Dissipation, "Dissipation", "Dissipation", 290, SCH.AID.Dissipation, 30);
-        DefineSimpleConfig(res, Track.Excogitation, "Excogitation", "Excogitation", 100, SCH.AID.Excogitation, 45);
+        DefineSimple(res, Track.EmergencyTactics, "EmergencyTactics", "Emergency Tactics", 100, SCH.AID.EmergencyTactics, 15);
+        DefineSimple(res, Track.Dissipation, "Dissipation", "Dissipation", 290, SCH.AID.Dissipation, 30);
+        DefineSimple(res, Track.Excogitation, "Excogitation", "Excogitation", 100, SCH.AID.Excogitation, 45);
 
         res.Define(Track.Aetherpact).As<AetherpactOption>("Aetherpact", "Aetherpact", 300)
             .AddOption(AetherpactOption.None, NoUse)
@@ -60,12 +60,12 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
             .AddOption(RecitationOption.UseEx, "Use Recitation (60s cooldown)", 60, 15, ActionTargets.Self, 98)
             .AddAssociatedActions(SCH.AID.Recitation);
 
-        DefineSimpleConfig(res, Track.FeyBlessing, "FeyBlessing", "Fey Blessing", 120, SCH.AID.FeyBlessing);
-        DefineSimpleConfig(res, Track.Consolation, "Consolation", "Consolation", 80, SCH.AID.Consolation, 30);
-        DefineSimpleConfig(res, Track.Protraction, "Protraction", "Protraction", 110, SCH.AID.Protraction, 10);
-        DefineSimpleConfig(res, Track.Expedient, "Expedient", "Expedient", 200, SCH.AID.Expedient, 20);
-        DefineSimpleConfig(res, Track.Seraphism, "Seraphism", "Seraphism", 300, SCH.AID.Seraphism, 20);
-        DefineSimpleConfig(res, Track.Seraph, "Seraph", "Summon Seraph", 300, SCH.AID.SummonSeraph, 22);
+        DefineSimple(res, Track.FeyBlessing, "FeyBlessing", "Fey Blessing", 120, SCH.AID.FeyBlessing);
+        DefineSimple(res, Track.Consolation, "Consolation", "Consolation", 80, SCH.AID.Consolation, 30);
+        DefineSimple(res, Track.Protraction, "Protraction", "Protraction", 110, SCH.AID.Protraction, 10);
+        DefineSimple(res, Track.Expedient, "Expedient", "Expedient", 200, SCH.AID.Expedient, 20);
+        DefineSimple(res, Track.Seraphism, "Seraphism", "Seraphism", 300, SCH.AID.Seraphism, 20);
+        DefineSimple(res, Track.Seraph, "Seraph", "Summon Seraph", 300, SCH.AID.SummonSeraph, 22);
 
         return res;
     }
@@ -74,7 +74,7 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
     {
         Gauge = World.Client.GetGauge<ScholarGauge>();
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        var healTarget = FriendlyTarget(primaryTarget);
+        var healTarget = AllyOrSelf(primaryTarget);
         ExecuteSimple(strategy.Option(Track.Adloquium), SCH.AID.Adloquium, healTarget);
         ExecuteSimple(strategy.Option(Track.Indomitability), SCH.AID.Indomitability, Player);
         ExecuteSimple(strategy.Option(Track.EmergencyTactics), SCH.AID.EmergencyTactics, Player);
@@ -82,6 +82,10 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         ExecuteSimple(strategy.Option(Track.Protraction), SCH.AID.Protraction, healTarget);
         ExecuteSimple(strategy.Option(Track.Expedient), SCH.AID.Expedient, Player);
         ExecuteSimple(strategy.Option(Track.Lustrate), SCH.AID.Lustrate, healTarget);
+        ExecuteSimple(strategy.Option(Track.Recitation), SCH.AID.Recitation, Player);
+        ExecuteArea(strategy.Option(Track.SacredSoil), SCH.AID.SacredSoil);
+        if (!HasStatus(Player, SCH.SID.Galvanize))
+            ExecuteVariant(strategy.Option(Track.Succor), Player, SCH.AID.Succor, SCH.AID.Concitation);
         if (HasPet)
         {
             ExecuteSimple(strategy.Option(Track.WhisperingDawn), SCH.AID.WhisperingDawn, Player);
@@ -95,51 +99,26 @@ public sealed class ClassSCHUtility(RotationModuleManager manager, Actor player)
         }
         if (Gauge.SeraphTimer > 0)
             ExecuteSimple(strategy.Option(Track.Consolation), SCH.AID.Consolation, Player);
-        ExecuteSuccor(strategy.Option(Track.Succor));
-        ExecuteSoil(strategy.Option(Track.SacredSoil));
         ExecuteDeployment(strategy.Option(Track.DeploymentTactics), healTarget);
         ExecuteAetherpact(strategy.Option(Track.Aetherpact), healTarget);
-        ExecuteRecitation(strategy.Option(Track.Recitation));
     }
 
     private ScholarGauge Gauge;
     private bool HasPet => World.Client.ActivePet.InstanceID != 0xE0000000;
 
-    private void ExecuteSuccor(in StrategyValues.OptionRef succor)
-    {
-        var action = succor.As<SuccorOption>() switch
-        {
-            SuccorOption.Succor => SCH.AID.Succor,
-            SuccorOption.Concitation => SCH.AID.Concitation,
-            _ => default
-        };
-        if (action != default && !HasStatus(Player, SCH.SID.Galvanize))
-            ExecuteAction(succor, action, Player);
-    }
-    private void ExecuteSoil(in StrategyValues.OptionRef soil)
-    {
-        if (soil.As<SacredSoilOption>() != SacredSoilOption.None)
-            ExecuteArea(soil, SCH.AID.SacredSoil);
-    }
     private void ExecuteDeployment(in StrategyValues.OptionRef deploy, Actor healTarget)
     {
-        var target = ResolveTarget(deploy.Value) ?? healTarget;
-        if (deploy.As<DeployOption>() != DeployOption.None && HasStatus(target, SCH.SID.Galvanize))
-            ExecuteOn(deploy, SCH.AID.DeploymentTactics, target);
+        if (HasStatus(ResolveTarget(deploy.Value) ?? healTarget, SCH.SID.Galvanize))
+            ExecuteSimple(deploy, SCH.AID.DeploymentTactics, healTarget);
     }
     private void ExecuteAetherpact(in StrategyValues.OptionRef pact, Actor healTarget)
     {
         var option = pact.As<AetherpactOption>();
         var target = ResolveTarget(pact.Value) ?? healTarget;
-        var bonded = target.FindStatus(SCH.SID.FeyUnion) != null;
+        var bonded = HasStatus(target, SCH.SID.FeyUnion);
         if (option == AetherpactOption.Use && !bonded && HasPet && Gauge.FairyGauge >= 10)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(SCH.AID.Aetherpact), target, pact.Priority(), pact.Value.ExpireIn);
+            ExecuteOn(pact, SCH.AID.Aetherpact, target);
         if (option == AetherpactOption.End && bonded)
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(SCH.AID.DissolveUnion), Player, pact.Priority(), pact.Value.ExpireIn);
-    }
-    private void ExecuteRecitation(in StrategyValues.OptionRef recitation)
-    {
-        if (recitation.As<RecitationOption>() != RecitationOption.None)
-            ExecuteAction(recitation, SCH.AID.Recitation, Player);
+            ExecuteOn(pact, SCH.AID.DissolveUnion, Player);
     }
 }

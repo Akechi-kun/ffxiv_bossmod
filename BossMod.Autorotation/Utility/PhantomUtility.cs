@@ -22,16 +22,16 @@ public class PhantomUtility(RotationModuleManager manager, Actor player) : Gener
     {
         var def = new RotationModuleDefinition("Utility: Phantom Jobs", UtilityDescription, UtilityCategory, "xan", RotationModuleQuality.Ok, new BitMask(~0ul), 100);
 
-        DefineSimpleConfig(def, Track.Guard, "PGuard", "Phantom Guard", -10, PhantomID.PhantomGuard, 10);
-        DefineSimpleConfig(def, Track.Pledge, "Pledge", "Pledge", -10, PhantomID.Pledge, 10);
-        DefineSimpleConfig(def, Track.Shirahadori, "Shirahadori", "Shirahadori", -10, PhantomID.Shirahadori, 4);
-        DefineSimpleConfig(def, Track.Unicorn, "Unicorn", "Occult Unicorn", -10, PhantomID.OccultUnicorn, 30);
-        DefineSimpleConfig(def, Track.Bell, "BattleBell", "Battle Bell", -10, PhantomID.BattleBell, 60);
-        DefineSimpleConfig(def, Track.RomeosBallad, "Romeo", "Romeo's Ballad", -10, PhantomID.RomeosBallad, 3);
-        DefineSimpleConfig(def, Track.MightyMarch, "MightyMarch", "Mighty March", -10, PhantomID.MightyMarch, 30);
-        DefineSimpleConfig(def, Track.Predict, "Predict", "Predict", -10, PhantomID.Predict, 16, ActionQueue.Priority.VeryHigh - 10);
-        DefineSimpleConfig(def, Track.Rejuvenation, "Rejuvenation", "Phantom Rejuvenation", -10, PhantomID.PhantomRejuvenation, 20);
-        DefineSimpleConfig(def, Track.Invuln, "Invulnerability", "Invulnerability", -10, PhantomID.Invulnerability, 8);
+        DefineSimple(def, Track.Guard, "PGuard", "Phantom Guard", -10, PhantomID.PhantomGuard, 10);
+        DefineSimple(def, Track.Pledge, "Pledge", "Pledge", -10, PhantomID.Pledge, 10);
+        DefineSimple(def, Track.Shirahadori, "Shirahadori", "Shirahadori", -10, PhantomID.Shirahadori, 4);
+        DefineSimple(def, Track.Unicorn, "Unicorn", "Occult Unicorn", -10, PhantomID.OccultUnicorn, 30);
+        DefineSimple(def, Track.Bell, "BattleBell", "Battle Bell", -10, PhantomID.BattleBell, 60);
+        DefineSimple(def, Track.RomeosBallad, "Romeo", "Romeo's Ballad", -10, PhantomID.RomeosBallad, 3);
+        DefineSimple(def, Track.MightyMarch, "MightyMarch", "Mighty March", -10, PhantomID.MightyMarch, 30);
+        DefineSimple(def, Track.Predict, "Predict", "Predict", -10, PhantomID.Predict, 16, ActionQueue.Priority.VeryHigh - 10);
+        DefineSimple(def, Track.Rejuvenation, "Rejuvenation", "Phantom Rejuvenation", -10, PhantomID.PhantomRejuvenation, 20);
+        DefineSimple(def, Track.Invuln, "Invulnerability", "Invulnerability", -10, PhantomID.Invulnerability, 8);
 
         return def;
     }

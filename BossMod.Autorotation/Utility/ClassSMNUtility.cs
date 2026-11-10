@@ -16,7 +16,7 @@ public sealed class ClassSMNUtility(RotationModuleManager manager, Actor player)
             .AddOption(SimpleOption.Use, "Use Radiant Aegis if the barrier is not already up", 60, 30, ActionTargets.Self, 2)
             .AddAssociatedActions(SMN.AID.RadiantAegis);
 
-        DefineSimpleConfig(res, Track.Rekindle, "Rekindle", "Rekindle", 150, SMN.AID.Rekindle, 30);
+        DefineSimple(res, Track.Rekindle, "Rekindle", "Rekindle", 150, SMN.AID.Rekindle, 30);
 
         return res;
     }
@@ -24,13 +24,8 @@ public sealed class ClassSMNUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.Rekindle), SMN.AID.Rekindle, PartnerTarget(primaryTarget) ?? Player);
-        ExecuteAegis(strategy.Option(Track.RadiantAegis));
-    }
-
-    private void ExecuteAegis(in StrategyValues.OptionRef aegis)
-    {
-        if (aegis.As<SimpleOption>() == SimpleOption.Use && !HasStatus(Player, SMN.SID.RadiantAegis))
-            ExecuteAction(aegis, SMN.AID.RadiantAegis, Player);
+        ExecuteSimple(strategy.Option(Track.Rekindle), SMN.AID.Rekindle, AllyOrCoTank(primaryTarget) ?? Player);
+        if (!HasStatus(Player, SMN.SID.RadiantAegis))
+            ExecuteSimple(strategy.Option(Track.RadiantAegis), SMN.AID.RadiantAegis, Player);
     }
 }

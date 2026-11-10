@@ -11,7 +11,7 @@ public sealed class ClassDRGUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: DRG", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.DRG), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineDash(res, Track.WingedGlide, "Winged Glide", "Winged Glide", DRG.AID.WingedGlide, ActionTargets.Hostile, "Use when outside melee range of target", 84);
+        DefineDash(res, Track.WingedGlide, "Winged Glide", "Winged Glide", DRG.AID.WingedGlide, ActionTargets.Hostile, "Use when outside melee range of target");
 
         return res;
     }

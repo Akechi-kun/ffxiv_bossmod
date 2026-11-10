@@ -3,7 +3,7 @@
 public sealed class ClassNINUtility(RotationModuleManager manager, Actor player) : RoleMeleeUtility(manager, player)
 {
     public enum Track { ShadeShift = SharedTrack.Count, Shukuchi }
-    public enum DashStrategy { None, GapClose, Five, Ten, Force, Rear, Flank, GapCloseHold1 }
+    public enum DashStrategy { None, GapClose, Five, Ten, Force, Rear, Flank }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(NIN.AID.Chimatsuri);
 
@@ -12,7 +12,7 @@ public sealed class ClassNINUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: NIN", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.NIN), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.ShadeShift, "Shade", "Shade Shift", 400, NIN.AID.ShadeShift, 20);
+        DefineSimple(res, Track.ShadeShift, "Shade", "Shade Shift", 400, NIN.AID.ShadeShift, 20);
 
         res.Define(Track.Shukuchi).As<DashStrategy>("Shukuchi", "Shukuchi", 20)
             .AddOption(DashStrategy.None, NoUse)
@@ -21,9 +21,7 @@ public sealed class ClassNINUtility(RotationModuleManager manager, Actor player)
             .AddOption(DashStrategy.Ten, "Dash to the selected spot when 10y or further", 60, 0, ActionTargets.Area, 40)
             .AddOption(DashStrategy.Force, "Dash to the selected spot, unless already there", 60, 0, ActionTargets.Area, 40)
             .AddOption(DashStrategy.Rear, "Dash to the target's rear, unless already there", 60, 0, ActionTargets.Hostile, 40)
-            .AddOption(DashStrategy.Flank, "Dash to the target's nearest flank, unless already there", 60, 0, ActionTargets.Hostile, 40)
-            .AddOption(DashStrategy.GapCloseHold1, "Dash to the selected spot when 3y or further; conserve one charge", 60, 0, ActionTargets.Area, 74)
-            .AddAssociatedActions(NIN.AID.Shukuchi);
+            .AddOption(DashStrategy.Flank, "Dash to the target's nearest flank, unless already there", 60, 0, ActionTargets.Hostile, 40)            .AddAssociatedActions(NIN.AID.Shukuchi);
 
         return res;
     }
@@ -38,23 +36,18 @@ public sealed class ClassNINUtility(RotationModuleManager manager, Actor player)
     private void ExecuteShukuchi(in StrategyValues.OptionRef dash, Actor? primaryTarget)
     {
         var option = dash.As<DashStrategy>();
-        if (option is DashStrategy.Rear or DashStrategy.Flank)
+        var minDistance = option switch
         {
-            ExecuteShukuchiToPositional(dash, option == DashStrategy.Rear ? Positional.Rear : Positional.Flank, ResolveTarget(dash.Value) ?? primaryTarget);
-            return;
-        }
-
-        var distance = Player.DistanceToPoint(ResolveTargetLocation(dash.Value));
-        var condition = option switch
-        {
-            DashStrategy.GapClose => distance is > 3 and <= 20,
-            DashStrategy.Force => distance is > 1 and <= 20,
-            DashStrategy.Five => distance is > 5 and <= 20,
-            DashStrategy.Ten => distance is > 10 and <= 20,
-            DashStrategy.GapCloseHold1 => distance is > 3 and <= 20 && HasCharges(NIN.AID.Shukuchi, 1),
-            _ => false
+            DashStrategy.GapClose => 3,
+            DashStrategy.Force => 1,
+            DashStrategy.Five => 5,
+            DashStrategy.Ten => 10,
+            _ => -1
         };
-        if (condition)
+        var distance = Player.DistanceToPoint(ResolveTargetLocation(dash.Value));
+        if (option is DashStrategy.Rear or DashStrategy.Flank)
+            ExecuteShukuchiToPositional(dash, option == DashStrategy.Rear ? Positional.Rear : Positional.Flank, ResolveTarget(dash.Value) ?? primaryTarget);
+        else if (minDistance >= 0 && distance > minDistance && distance <= 20)
             ExecuteArea(dash, NIN.AID.Shukuchi);
     }
 

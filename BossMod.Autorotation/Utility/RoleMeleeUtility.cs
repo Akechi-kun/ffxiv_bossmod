@@ -7,15 +7,15 @@ public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor play
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3)
     {
-        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "Sprint", 100, ClassShared.AID.Sprint, 10);
+        DefineSimple(def, SharedTrack.Sprint, "Sprint", "Sprint", 100, ClassShared.AID.Sprint, 10);
 
         DefineLimitBreak(def, SharedTrack.LB, ActionTargets.Hostile)
             .AddAssociatedActions(ClassShared.AID.Braver, ClassShared.AID.Bladedance)
             .AddAssociatedAction(lb3);
 
-        DefineSimpleConfig(def, SharedTrack.SecondWind, "SecondWind", "Second Wind", 20, ClassShared.AID.SecondWind);
-        DefineSimpleConfig(def, SharedTrack.LegSweep, "LegSweep", "Leg Sweep", -150, ClassShared.AID.LegSweep, 3);
-        DefineSimpleConfig(def, SharedTrack.Bloodbath, "Bloodbath", "Bloodbath", -50, ClassShared.AID.Bloodbath, 20);
+        DefineSimple(def, SharedTrack.SecondWind, "SecondWind", "Second Wind", 20, ClassShared.AID.SecondWind);
+        DefineSimple(def, SharedTrack.LegSweep, "LegSweep", "Leg Sweep", -150, ClassShared.AID.LegSweep, 3);
+        DefineSimple(def, SharedTrack.Bloodbath, "Bloodbath", "Bloodbath", -50, ClassShared.AID.Bloodbath, 20);
 
         def.Define(SharedTrack.Feint).As<FeintOption>("Feint", "Feint", 250)
             .AddOption(FeintOption.None, NoUse)
@@ -23,7 +23,7 @@ public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor play
             .AddOption(FeintOption.UseEx, "Use Feint (15s)", 90, 15, ActionTargets.Hostile, 98)
             .AddAssociatedActions(ClassShared.AID.Feint);
 
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
+        DefineSimple(def, SharedTrack.ArmsLength, "ArmsLength", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
     }
 
     protected void ExecuteShared(StrategyValues strategy, ActionID lb3, Actor? primaryTarget)
@@ -33,13 +33,7 @@ public abstract class RoleMeleeUtility(RotationModuleManager manager, Actor play
         ExecuteSimple(strategy.Option(SharedTrack.LegSweep), ClassShared.AID.LegSweep, primaryTarget);
         ExecuteSimple(strategy.Option(SharedTrack.Bloodbath), ClassShared.AID.Bloodbath, Player);
         ExecuteSimple(strategy.Option(SharedTrack.ArmsLength), ClassShared.AID.ArmsLength, Player);
-        ExecuteFeint(strategy.Option(SharedTrack.Feint), primaryTarget);
+        ExecuteSimple(strategy.Option(SharedTrack.Feint), ClassShared.AID.Feint, primaryTarget);
         ExecuteLimitBreak(strategy.Option(SharedTrack.LB), ClassShared.AID.Braver, ClassShared.AID.Bladedance, lb3, primaryTarget);
-    }
-
-    private void ExecuteFeint(in StrategyValues.OptionRef feint, Actor? primaryTarget)
-    {
-        if (feint.As<FeintOption>() != FeintOption.None)
-            ExecuteAction(feint, ClassShared.AID.Feint, primaryTarget);
     }
 }

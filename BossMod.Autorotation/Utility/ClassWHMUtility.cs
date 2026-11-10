@@ -2,7 +2,7 @@
 
 public sealed class ClassWHMUtility(RotationModuleManager manager, Actor player) : RoleHealerUtility(manager, player)
 {
-    public enum Track { PresenceOfMind = SharedTrack.Count, Regen, Cure, Medica, AfflatusSolace, AfflatusRapture, Benediction, Asylum, ThinAir, Tetragrammaton, DivineBenison, PlenaryIndulgence, Temperance, Aquaveil, LiturgyOfTheBell, DivineCaress, AetherialShift }
+    public enum Track { PresenceOfMind = SharedTrack.Count, Regen, Cure, Medica, AfflatusSolace, AfflatusRapture, Benediction, Asylum, ThinAir, Tetragrammaton, DivineBenison, PlenaryIndulgence, Temperance, Aquaveil, LiturgyOfTheBell, DivineCaress }
     public enum CureOption { None, Cure, CureII, CureIII }
     public enum MedicaOption { None, MedicaII, MedicaIII }
     public enum LiturgyOption { None, Use, End }
@@ -14,8 +14,8 @@ public sealed class ClassWHMUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: WHM", UtilityDescription, UtilityCategory, "TrueP", RotationModuleQuality.Ok, BitMask.Build((int)Class.WHM), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.PresenceOfMind, "PresenceOfMind", "Presence of Mind", 220, WHM.AID.PresenceOfMind, 15);
-        DefineSimpleConfig(res, Track.Regen, "Regen", "Regen", 110, WHM.AID.Regen, 18, ActionQueue.Priority.VeryHigh);
+        DefineSimple(res, Track.PresenceOfMind, "PresenceOfMind", "Presence of Mind", 220, WHM.AID.PresenceOfMind, 15);
+        DefineSimple(res, Track.Regen, "Regen", "Regen", 110, WHM.AID.Regen, 18, ActionQueue.Priority.VeryHigh);
 
         res.Define(Track.Cure).As<CureOption>("Cure", "Cure", 100)
             .AddOption(CureOption.None, NoUse)
@@ -30,21 +30,21 @@ public sealed class ClassWHMUtility(RotationModuleManager manager, Actor player)
             .AddOption(MedicaOption.MedicaIII, "Use Medica III", 2.5f, 15, ActionTargets.Self, 96, defaultPriority: ActionQueue.Priority.VeryHigh)
             .AddAssociatedActions(WHM.AID.MedicaII, WHM.AID.MedicaIII);
 
-        DefineSimpleConfig(res, Track.AfflatusSolace, "AfflatusSolace", "Afflatus Solace", 105, WHM.AID.AfflatusSolace, defaultPriority: ActionQueue.Priority.VeryHigh);
-        DefineSimpleConfig(res, Track.AfflatusRapture, "AfflatusRapture", "Afflatus Rapture", 125, WHM.AID.AfflatusRapture, defaultPriority: ActionQueue.Priority.VeryHigh);
-        DefineSimpleConfig(res, Track.Benediction, "Benediction", "Benediction", 300, WHM.AID.Benediction);
+        DefineSimple(res, Track.AfflatusSolace, "AfflatusSolace", "Afflatus Solace", 105, WHM.AID.AfflatusSolace, defaultPriority: ActionQueue.Priority.VeryHigh);
+        DefineSimple(res, Track.AfflatusRapture, "AfflatusRapture", "Afflatus Rapture", 125, WHM.AID.AfflatusRapture, defaultPriority: ActionQueue.Priority.VeryHigh);
+        DefineSimple(res, Track.Benediction, "Benediction", "Benediction", 300, WHM.AID.Benediction);
 
         res.Define(Track.Asylum).As<SimpleOption>("Asylum", "Asylum", 230)
             .AddOption(SimpleOption.None, NoUse)
             .AddOption(SimpleOption.Use, "Use Asylum", 90, 24, ActionTargets.Area, 52)
             .AddAssociatedActions(WHM.AID.Asylum);
 
-        DefineSimpleConfig(res, Track.ThinAir, "ThinAir", "Thin Air", 200, WHM.AID.ThinAir, 12);
-        DefineSimpleConfig(res, Track.Tetragrammaton, "Tetragrammaton", "Tetragrammaton", 150, WHM.AID.Tetragrammaton);
-        DefineSimpleConfig(res, Track.DivineBenison, "DivineBenison", "Divine Benison", 140, WHM.AID.DivineBenison, 15);
-        DefineSimpleConfig(res, Track.PlenaryIndulgence, "PlenaryIndulgence", "Plenary Indulgence", 160, WHM.AID.PlenaryIndulgence, 10);
-        DefineSimpleConfig(res, Track.Temperance, "Temperance", "Temperance", 290, WHM.AID.Temperance, 20);
-        DefineSimpleConfig(res, Track.Aquaveil, "Aquaveil", "Aquaveil", 170, WHM.AID.Aquaveil, 8);
+        DefineSimple(res, Track.ThinAir, "ThinAir", "Thin Air", 200, WHM.AID.ThinAir, 12);
+        DefineSimple(res, Track.Tetragrammaton, "Tetragrammaton", "Tetragrammaton", 150, WHM.AID.Tetragrammaton);
+        DefineSimple(res, Track.DivineBenison, "DivineBenison", "Divine Benison", 140, WHM.AID.DivineBenison, 15);
+        DefineSimple(res, Track.PlenaryIndulgence, "PlenaryIndulgence", "Plenary Indulgence", 160, WHM.AID.PlenaryIndulgence, 10);
+        DefineSimple(res, Track.Temperance, "Temperance", "Temperance", 290, WHM.AID.Temperance, 20);
+        DefineSimple(res, Track.Aquaveil, "Aquaveil", "Aquaveil", 170, WHM.AID.Aquaveil, 8);
 
         res.Define(Track.LiturgyOfTheBell).As<LiturgyOption>("LiturgyOfTheBell", "Liturgy of the Bell", 310)
             .AddOption(LiturgyOption.None, NoUse)
@@ -52,8 +52,7 @@ public sealed class ClassWHMUtility(RotationModuleManager manager, Actor player)
             .AddOption(LiturgyOption.End, "Detonate Liturgy of the Bell early", 0, 1, ActionTargets.Self, 90)
             .AddAssociatedActions(WHM.AID.LiturgyOfTheBell, WHM.AID.LiturgyOfTheBellEnd);
 
-        DefineSimpleConfig(res, Track.DivineCaress, "DivineCaress", "Divine Caress", 280, WHM.AID.DivineCaress, 10);
-        DefineSimpleConfig(res, Track.AetherialShift, "AetherialShift", "Aetherial Shift", 20, WHM.AID.AetherialShift);
+        DefineSimple(res, Track.DivineCaress, "DivineCaress", "Divine Caress", 280, WHM.AID.DivineCaress, 10);
 
         return res;
     }
@@ -61,7 +60,7 @@ public sealed class ClassWHMUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        var healTarget = FriendlyTarget(primaryTarget);
+        var healTarget = AllyOrSelf(primaryTarget);
         ExecuteSimple(strategy.Option(Track.PresenceOfMind), WHM.AID.PresenceOfMind, Player);
         ExecuteSimple(strategy.Option(Track.AfflatusSolace), WHM.AID.AfflatusSolace, healTarget);
         ExecuteSimple(strategy.Option(Track.AfflatusRapture), WHM.AID.AfflatusRapture, Player);
@@ -71,67 +70,30 @@ public sealed class ClassWHMUtility(RotationModuleManager manager, Actor player)
         ExecuteSimple(strategy.Option(Track.PlenaryIndulgence), WHM.AID.PlenaryIndulgence, Player);
         ExecuteSimple(strategy.Option(Track.Temperance), WHM.AID.Temperance, Player);
         ExecuteSimple(strategy.Option(Track.Aquaveil), WHM.AID.Aquaveil, healTarget);
-        ExecuteSimple(strategy.Option(Track.AetherialShift), WHM.AID.AetherialShift, Player);
-        ExecuteThinAir(strategy.Option(Track.ThinAir));
-        ExecuteCure(strategy.Option(Track.Cure), healTarget);
+        ExecuteArea(strategy.Option(Track.Asylum), WHM.AID.Asylum);
+        ExecuteVariant(strategy.Option(Track.Cure), healTarget, WHM.AID.Cure, WHM.AID.CureII, WHM.AID.CureIII);
+        if (!HasStatus(Player, WHM.SID.ThinAir))
+            ExecuteSimple(strategy.Option(Track.ThinAir), WHM.AID.ThinAir, Player);
+        if (!HasStatus(Player, WHM.SID.MedicaII) && !HasStatus(Player, WHM.SID.MedicaIII))
+            ExecuteVariant(strategy.Option(Track.Medica), Player, WHM.AID.MedicaII, WHM.AID.MedicaIII);
+        if (HasStatus(Player, WHM.SID.DivineGrace))
+            ExecuteSimple(strategy.Option(Track.DivineCaress), WHM.AID.DivineCaress, Player);
         ExecuteRegen(strategy.Option(Track.Regen), healTarget);
-        ExecuteMedica(strategy.Option(Track.Medica));
-        ExecuteAsylum(strategy.Option(Track.Asylum));
-        ExecuteCaress(strategy.Option(Track.DivineCaress));
         ExecuteLiturgy(strategy.Option(Track.LiturgyOfTheBell));
     }
 
-    private void ExecuteThinAir(in StrategyValues.OptionRef thinAir)
-    {
-        if (Player.FindStatus(WHM.SID.ThinAir, DateTime.MaxValue) == null)
-            ExecuteSimple(thinAir, WHM.AID.ThinAir, Player);
-    }
-    private void ExecuteCure(in StrategyValues.OptionRef cure, Actor healTarget)
-    {
-        var action = cure.As<CureOption>() switch
-        {
-            CureOption.Cure => WHM.AID.Cure,
-            CureOption.CureII => WHM.AID.CureII,
-            CureOption.CureIII => WHM.AID.CureIII,
-            _ => default
-        };
-        if (action != default)
-            ExecuteAction(cure, action, healTarget);
-    }
     private void ExecuteRegen(in StrategyValues.OptionRef regen, Actor healTarget)
     {
-        var target = ResolveTarget(regen.Value) ?? healTarget;
-        if (regen.As<SimpleOption>() == SimpleOption.Use && !HasStatus(target, WHM.SID.Regen))
-            ExecuteOn(regen, WHM.AID.Regen, target);
-    }
-    private void ExecuteMedica(in StrategyValues.OptionRef medica)
-    {
-        var action = medica.As<MedicaOption>() switch
-        {
-            MedicaOption.MedicaII => WHM.AID.MedicaII,
-            MedicaOption.MedicaIII => WHM.AID.MedicaIII,
-            _ => default
-        };
-        if (action != default && !HasStatus(Player, WHM.SID.MedicaII) && !HasStatus(Player, WHM.SID.MedicaIII))
-            ExecuteAction(medica, action, Player);
-    }
-    private void ExecuteAsylum(in StrategyValues.OptionRef asylum)
-    {
-        if (asylum.As<SimpleOption>() == SimpleOption.Use)
-            ExecuteArea(asylum, WHM.AID.Asylum);
-    }
-    private void ExecuteCaress(in StrategyValues.OptionRef caress)
-    {
-        if (caress.As<SimpleOption>() == SimpleOption.Use && Player.FindStatus(WHM.SID.DivineGrace) != null)
-            ExecuteAction(caress, WHM.AID.DivineCaress, Player);
+        if (!HasStatus(ResolveTarget(regen.Value) ?? healTarget, WHM.SID.Regen))
+            ExecuteSimple(regen, WHM.AID.Regen, healTarget);
     }
     private void ExecuteLiturgy(in StrategyValues.OptionRef liturgy)
     {
         var option = liturgy.As<LiturgyOption>();
-        var hasLiturgy = Player.FindStatus(WHM.SID.LiturgyOfTheBell) != null;
-        if (option == LiturgyOption.Use && !hasLiturgy)
+        var placed = HasStatus(Player, WHM.SID.LiturgyOfTheBell);
+        if (option == LiturgyOption.Use && !placed)
             ExecuteArea(liturgy, WHM.AID.LiturgyOfTheBell);
-        if (option == LiturgyOption.End && hasLiturgy)
-            ExecuteAction(liturgy, WHM.AID.LiturgyOfTheBellEnd, Player);
+        if (option == LiturgyOption.End && placed)
+            ExecuteOn(liturgy, WHM.AID.LiturgyOfTheBellEnd, Player);
     }
 }

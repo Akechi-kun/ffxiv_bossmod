@@ -15,7 +15,7 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: DRK", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.DRK), 100);
         DefineShared(res, IDLimitBreak3, IDStanceApply, IDStanceRemove);
 
-        DefineSimpleConfig(res, Track.DarkMind, "DarkMind", "Dark Mind", 450, DRK.AID.DarkMind, 10);
+        DefineSimple(res, Track.DarkMind, "DarkMind", "Dark Mind", 450, DRK.AID.DarkMind, 10);
 
         res.Define(Track.ShadowWall).As<WallOption>("ShadowWall", "Shadow Wall", 550)
             .AddOption(WallOption.None, NoUse)
@@ -23,7 +23,7 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
             .AddOption(WallOption.ShadowedVigil, "Use Shadowed Vigil", 120, 15, ActionTargets.Self, 92)
             .AddAssociatedActions(DRK.AID.ShadowWall, DRK.AID.ShadowedVigil);
 
-        DefineSimpleConfig(res, Track.LivingDead, "LivingDead", "Living Dead", 400, DRK.AID.LivingDead, 10);
+        DefineSimple(res, Track.LivingDead, "LivingDead", "Living Dead", 400, DRK.AID.LivingDead, 10);
 
         res.Define(Track.TheBlackestNight).As<SimpleOption>("TheBlackestNight", "The Blackest Night", 550)
             .AddOption(SimpleOption.None, NoUse)
@@ -36,9 +36,9 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
             .AddOption(OblationStrategy.Both, "Use Oblation on self and co-tank", 60, 10, ActionTargets.Self, 82)
             .AddAssociatedActions(DRK.AID.Oblation);
 
-        DefineSimpleConfig(res, Track.DarkMissionary, "DarkMissionary", "Dark Missionary", 220, DRK.AID.DarkMissionary, 15);
+        DefineSimple(res, Track.DarkMissionary, "DarkMissionary", "Dark Missionary", 220, DRK.AID.DarkMissionary, 15);
 
-        DefineDash(res, Track.Shadowstride, "Shadowstride", "Shadowstride", DRK.AID.Shadowstride, ActionTargets.Hostile, hold1MinLevel: 84);
+        DefineDash(res, Track.Shadowstride, "Shadowstride", "Shadowstride", DRK.AID.Shadowstride, ActionTargets.Hostile);
 
         return res;
     }
@@ -50,31 +50,18 @@ public sealed class ClassDRKUtility(RotationModuleManager manager, Actor player)
         ExecuteSimple(strategy.Option(Track.LivingDead), DRK.AID.LivingDead, Player);
         ExecuteSimple(strategy.Option(Track.DarkMissionary), DRK.AID.DarkMissionary, Player);
         ExecuteSimple(strategy.Option(Track.TheBlackestNight), DRK.AID.TheBlackestNight, Player);
+        ExecuteVariant(strategy.Option(Track.ShadowWall), Player, DRK.AID.ShadowWall, DRK.AID.ShadowedVigil);
         ExecuteOblation(strategy.Option(Track.Oblation));
-        ExecuteShadowWall(strategy.Option(Track.ShadowWall));
         ExecuteDash(strategy.Option(Track.Shadowstride), DRK.AID.Shadowstride, primaryTarget);
     }
+
     private void ExecuteOblation(in StrategyValues.OptionRef oblation)
     {
-        Actor?[] targets = oblation.As<OblationStrategy>() switch
-        {
-            OblationStrategy.Use => [ResolveTarget(oblation.Value) ?? Player],
-            OblationStrategy.Both => [Player, CoTank()],
-            _ => []
-        };
-        foreach (var target in targets)
-            if (target != null && target.FindStatus(DRK.SID.Oblation, DateTime.MaxValue) == null)
-                Hints.ActionsToExecute.Push(ActionID.MakeSpell(DRK.AID.Oblation), target, oblation.Priority(), oblation.Value.ExpireIn);
-    }
-    private void ExecuteShadowWall(in StrategyValues.OptionRef wall)
-    {
-        var action = wall.As<WallOption>() switch
-        {
-            WallOption.ShadowWall => DRK.AID.ShadowWall,
-            WallOption.ShadowedVigil => DRK.AID.ShadowedVigil,
-            _ => default
-        };
-        if (action != default)
-            ExecuteAction(wall, action, Player);
+        var option = oblation.As<OblationStrategy>();
+        var target = option == OblationStrategy.Both ? Player : ResolveTarget(oblation.Value) ?? Player;
+        if (option != OblationStrategy.None && !HasStatus(target, DRK.SID.Oblation))
+            ExecuteOn(oblation, DRK.AID.Oblation, target);
+        if (option == OblationStrategy.Both && CoTank() is { } coTank && !HasStatus(coTank, DRK.SID.Oblation))
+            ExecuteOn(oblation, DRK.AID.Oblation, coTank);
     }
 }

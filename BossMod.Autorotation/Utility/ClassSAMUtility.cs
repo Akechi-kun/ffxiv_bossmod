@@ -24,18 +24,6 @@ public sealed class ClassSAMUtility(RotationModuleManager manager, Actor player)
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        ExecuteThirdEye(strategy.Option(Track.ThirdEye));
-    }
-
-    private void ExecuteThirdEye(in StrategyValues.OptionRef eye)
-    {
-        var action = eye.As<EyeOption>() switch
-        {
-            EyeOption.ThirdEye => SAM.AID.ThirdEye,
-            EyeOption.Tengentsu => SAM.AID.Tengentsu,
-            _ => default
-        };
-        if (action != default)
-            ExecuteAction(eye, action, Player);
+        ExecuteVariant(strategy.Option(Track.ThirdEye), Player, SAM.AID.ThirdEye, SAM.AID.Tengentsu);
     }
 }

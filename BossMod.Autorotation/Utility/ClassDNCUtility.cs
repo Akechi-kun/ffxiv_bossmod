@@ -11,11 +11,11 @@ public sealed class ClassDNCUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: DNC", UtilityDescription, UtilityCategory, "xan", RotationModuleQuality.Ok, BitMask.Build((int)Class.DNC), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.CuringWaltz, "CuringWaltz", "Curing Waltz", 400, DNC.AID.CuringWaltz);
+        DefineSimple(res, Track.CuringWaltz, "CuringWaltz", "Curing Waltz", 400, DNC.AID.CuringWaltz);
 
         DefineMitigation(res, Track.ShieldSamba, "Shield Samba", "Shield Samba", 500, DNC.AID.ShieldSamba, 56);
 
-        DefineSimpleConfig(res, Track.Improvisation, "Improvisation", "Improvisation", 300, DNC.AID.Improvisation, 15);
+        DefineSimple(res, Track.Improvisation, "Improvisation", "Improvisation", 300, DNC.AID.Improvisation, 15);
 
         return res;
     }

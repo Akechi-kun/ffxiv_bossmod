@@ -7,7 +7,7 @@ public abstract class RoleCasterUtility(RotationModuleManager manager, Actor pla
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3)
     {
-        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "Sprint", 10, ClassShared.AID.Sprint, 10);
+        DefineSimple(def, SharedTrack.Sprint, "Sprint", "Sprint", 10, ClassShared.AID.Sprint, 10);
 
         DefineLimitBreak(def, SharedTrack.LB, ActionTargets.Area, 8)
             .AddAssociatedActions(ClassShared.AID.Skyshard, ClassShared.AID.Starstorm)
@@ -19,12 +19,12 @@ public abstract class RoleCasterUtility(RotationModuleManager manager, Actor pla
             .AddOption(AddleOption.UseEx, "Use Addle (15s)", 90, 15, ActionTargets.Hostile, 98)
             .AddAssociatedActions(ClassShared.AID.Addle);
 
-        DefineSimpleConfig(def, SharedTrack.Sleep, "Sleep", "Sleep", -10, ClassShared.AID.Sleep, 30);
-        DefineSimpleConfig(def, SharedTrack.LucidDreaming, "LucidDreaming", "Lucid Dreaming", 30, ClassShared.AID.LucidDreaming, 21);
+        DefineSimple(def, SharedTrack.Sleep, "Sleep", "Sleep", -10, ClassShared.AID.Sleep, 30);
+        DefineSimple(def, SharedTrack.LucidDreaming, "LucidDreaming", "Lucid Dreaming", 30, ClassShared.AID.LucidDreaming, 21);
 
         DefineSwiftcast(def, SharedTrack.Swiftcast, "Swiftcast");
 
-        DefineSimpleConfig(def, SharedTrack.Surecast, "Surecast", "Surecast", 10, ClassShared.AID.Surecast, 6);
+        DefineSimple(def, SharedTrack.Surecast, "Surecast", "Surecast", 10, ClassShared.AID.Surecast, 6);
     }
 
     protected void ExecuteShared(StrategyValues strategy, ActionID lb3, Actor? primaryTarget)
@@ -33,14 +33,8 @@ public abstract class RoleCasterUtility(RotationModuleManager manager, Actor pla
         ExecuteSimple(strategy.Option(SharedTrack.Sleep), ClassShared.AID.Sleep, primaryTarget);
         ExecuteSimple(strategy.Option(SharedTrack.LucidDreaming), ClassShared.AID.LucidDreaming, Player);
         ExecuteSimple(strategy.Option(SharedTrack.Surecast), ClassShared.AID.Surecast, Player);
-        ExecuteAddle(strategy.Option(SharedTrack.Addle), primaryTarget);
+        ExecuteSimple(strategy.Option(SharedTrack.Addle), ClassShared.AID.Addle, primaryTarget);
         ExecuteSwiftcast(strategy.Option(SharedTrack.Swiftcast));
         ExecuteLimitBreak(strategy.Option(SharedTrack.LB), ClassShared.AID.Skyshard, ClassShared.AID.Starstorm, lb3, null, true);
-    }
-
-    private void ExecuteAddle(in StrategyValues.OptionRef addle, Actor? primaryTarget)
-    {
-        if (addle.As<AddleOption>() != AddleOption.None)
-            ExecuteAction(addle, ClassShared.AID.Addle, primaryTarget);
     }
 }

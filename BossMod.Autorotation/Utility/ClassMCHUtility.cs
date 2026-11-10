@@ -13,7 +13,7 @@ public sealed class ClassMCHUtility(RotationModuleManager manager, Actor player)
 
         DefineMitigation(res, Track.Tactician, "Tactician", "Tactician", 400, MCH.AID.Tactician, 56);
 
-        DefineSimpleConfig(res, Track.Dismantle, "Dismantle", "Dismantle", 500, MCH.AID.Dismantle, 10);
+        DefineSimple(res, Track.Dismantle, "Dismantle", "Dismantle", 500, MCH.AID.Dismantle, 10);
 
         return res;
     }

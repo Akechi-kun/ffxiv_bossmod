@@ -4,13 +4,12 @@ namespace BossMod.Autorotation;
 
 public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player) : RoleHealerUtility(manager, player)
 {
-    public enum Track { Kardia = SharedTrack.Count, Soteria, Physis, Eukrasia, Diagnosis, Prognosis, Druochole, Kerachole, Ixochole, Zoe, Pepsis, Taurochole, Haima, Rhizomata, Holos, Panhaima, Krasis, Pneuma, Philosophia, Icarus }
-    public enum KardiaOption { None, LowestPartyWithSelf, LowestPartyNoSelf, LowestTank, SelfOnly, Kardia, Soteria }
+    public enum Track { Kardia = SharedTrack.Count, Physis, Eukrasia, Diagnosis, Prognosis, Druochole, Kerachole, Ixochole, Zoe, Pepsis, Taurochole, Haima, Rhizomata, Holos, Panhaima, Krasis, Pneuma, Philosophia, Icarus }
+    public enum KardiaOption { None, Kardia, Soteria }
     public enum DiagnosisOption { None, Use, UseED, Force }
     public enum PrognosisOption { None, Use, UseEP, UseEPEx, Force }
     public enum PhysisOption { None, Use, UseEx }
     public enum ZoeOption { None, Use, UseEx, Pneuma, Prognosis }
-    public enum AddersgallOption { None, Use, OvercapParty, OvercapSelf }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(SGE.AID.TechneMakre);
 
@@ -21,15 +20,9 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
 
         res.Define(Track.Kardia).As<KardiaOption>("Kardia", "Kardia", 200)
             .AddOption(KardiaOption.None, NoUse)
-            .AddOption(KardiaOption.LowestPartyWithSelf, "Use Kardia on the party member with lowest HP% (including self)", 5, 0, ActionTargets.Self | ActionTargets.Party, 4)
-            .AddOption(KardiaOption.LowestPartyNoSelf, "Use Kardia on the party member with lowest HP% (excluding self)", 5, 0, ActionTargets.Party, 4)
-            .AddOption(KardiaOption.LowestTank, "Use Kardia on the tank with lowest HP%", 5, 0, ActionTargets.Party, 4)
-            .AddOption(KardiaOption.SelfOnly, "Use Kardia on self", 5, 0, ActionTargets.Self, 4)
-            .AddOption(KardiaOption.Kardia, "Use Kardia on selected party member", 5, 0, ActionTargets.Self | ActionTargets.Party, 4)
+            .AddOption(KardiaOption.Kardia, "Use Kardia on the selected party member, otherwise the lowest HP tank, otherwise self", 5, 0, ActionTargets.Self | ActionTargets.Party, 4)
             .AddOption(KardiaOption.Soteria, "Use Soteria", 60, 15, ActionTargets.Self, 35)
             .AddAssociatedActions(SGE.AID.Kardia, SGE.AID.Soteria);
-
-        DefineSimpleConfig(res, Track.Soteria, "Soteria", "Soteria", 205, SGE.AID.Soteria, 15);
 
         res.Define(Track.Physis).As<PhysisOption>("Physis", "Physis", 200)
             .AddOption(PhysisOption.None, NoUse)
@@ -37,7 +30,7 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
             .AddOption(PhysisOption.UseEx, "Use Physis II", 60, 15, ActionTargets.Self, 60)
             .AddAssociatedActions(SGE.AID.Physis, SGE.AID.PhysisII);
 
-        DefineSimpleConfig(res, Track.Eukrasia, "Eukrasia", "Eukrasia", 110, SGE.AID.Eukrasia);
+        DefineSimple(res, Track.Eukrasia, "Eukrasia", "Eukrasia", 110, SGE.AID.Eukrasia);
 
         res.Define(Track.Diagnosis).As<DiagnosisOption>("Diagnosis", "Diagnosis", 200)
             .AddOption(DiagnosisOption.None, NoUse)
@@ -54,15 +47,10 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
             .AddOption(PrognosisOption.Force, "Use Eukrasian Prognosis regardless of HP & shields on self", 1.5f, 30, ActionTargets.Self, 30)
             .AddAssociatedActions(SGE.AID.Prognosis, SGE.AID.EukrasianPrognosis, SGE.AID.EukrasianPrognosisII);
 
-        res.Define(Track.Druochole).As<AddersgallOption>("Druochole", "Druochole", 150)
-            .AddOption(AddersgallOption.None, NoUse)
-            .AddOption(AddersgallOption.Use, "Use Druochole", 1, 0, ActionTargets.Self | ActionTargets.Party, 45, defaultPriority: 3000)
-            .AddOption(AddersgallOption.OvercapParty, "Use Druochole on lowest HP% party member if about to gain a charge of Addersgall", 1, 0, ActionTargets.Self | ActionTargets.Party, 45, defaultPriority: 3000)
-            .AddOption(AddersgallOption.OvercapSelf, "Use Druochole on self if about to gain a charge of Addersgall", 1, 0, ActionTargets.Self, 45, defaultPriority: 3000)
-            .AddAssociatedActions(SGE.AID.Druochole);
+        DefineSimple(res, Track.Druochole, "Druochole", "Druochole", 150, SGE.AID.Druochole);
 
-        DefineSimpleConfig(res, Track.Kerachole, "Kerachole", "Kerachole", 180, SGE.AID.Kerachole, 15);
-        DefineSimpleConfig(res, Track.Ixochole, "Ixochole", "Ixochole", 190, SGE.AID.Ixochole);
+        DefineSimple(res, Track.Kerachole, "Kerachole", "Kerachole", 180, SGE.AID.Kerachole, 15);
+        DefineSimple(res, Track.Ixochole, "Ixochole", "Ixochole", 190, SGE.AID.Ixochole);
 
         res.Define(Track.Zoe).As<ZoeOption>("Zoe", "Zoe", 200)
             .AddOption(ZoeOption.None, NoUse)
@@ -72,15 +60,15 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
             .AddOption(ZoeOption.Prognosis, "Use Zoe -> Eukrasian Prognosis; will not use if Zoe is unavailable", 90, 30, ActionTargets.Self, 56)
             .AddAssociatedActions(SGE.AID.Zoe);
 
-        DefineSimpleConfig(res, Track.Pepsis, "Pepsis", "Pepsis", 170, SGE.AID.Pepsis);
-        DefineSimpleConfig(res, Track.Taurochole, "Taurochole", "Taurochole", 200, SGE.AID.Taurochole, 15);
-        DefineSimpleConfig(res, Track.Haima, "Haima", "Haima", 100, SGE.AID.Haima, 15);
-        DefineSimpleConfig(res, Track.Rhizomata, "Rhizomata", "Rhizomata", 230, SGE.AID.Rhizomata);
-        DefineSimpleConfig(res, Track.Holos, "Holos", "Holos", 240, SGE.AID.Holos, 20);
-        DefineSimpleConfig(res, Track.Panhaima, "Panhaima", "Panhaima", 250, SGE.AID.Panhaima, 15);
-        DefineSimpleConfig(res, Track.Krasis, "Krasis", "Krasis", 210, SGE.AID.Krasis, 10);
-        DefineSimpleConfig(res, Track.Pneuma, "Pneuma", "Pneuma", 220, SGE.AID.Pneuma);
-        DefineSimpleConfig(res, Track.Philosophia, "Philosophia", "Philosophia", 260, SGE.AID.Philosophia, 20);
+        DefineSimple(res, Track.Pepsis, "Pepsis", "Pepsis", 170, SGE.AID.Pepsis);
+        DefineSimple(res, Track.Taurochole, "Taurochole", "Taurochole", 200, SGE.AID.Taurochole, 15);
+        DefineSimple(res, Track.Haima, "Haima", "Haima", 100, SGE.AID.Haima, 15);
+        DefineSimple(res, Track.Rhizomata, "Rhizomata", "Rhizomata", 230, SGE.AID.Rhizomata);
+        DefineSimple(res, Track.Holos, "Holos", "Holos", 240, SGE.AID.Holos, 20);
+        DefineSimple(res, Track.Panhaima, "Panhaima", "Panhaima", 250, SGE.AID.Panhaima, 15);
+        DefineSimple(res, Track.Krasis, "Krasis", "Krasis", 210, SGE.AID.Krasis, 10);
+        DefineSimple(res, Track.Pneuma, "Pneuma", "Pneuma", 220, SGE.AID.Pneuma);
+        DefineSimple(res, Track.Philosophia, "Philosophia", "Philosophia", 260, SGE.AID.Philosophia, 20);
 
         DefineDash(res, Track.Icarus, "Icarus", "Icarus", SGE.AID.Icarus, ActionTargets.Party | ActionTargets.Hostile, "Use when outside melee range of selected target or party member");
 
@@ -91,125 +79,56 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
     {
         Gauge = World.Client.GetGauge<SageGauge>();
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        var healTarget = FriendlyTarget(primaryTarget);
+        var healTarget = AllyOrSelf(primaryTarget);
         var enemy = primaryTarget is { IsAlly: false } ? primaryTarget : null;
-
-        ExecuteEukrasia(strategy.Option(Track.Eukrasia));
-        ExecuteDruochole(strategy.Option(Track.Druochole), healTarget);
-        ExecuteAddersgall(strategy.Option(Track.Kerachole), SGE.AID.Kerachole, Player);
-        ExecuteAddersgall(strategy.Option(Track.Ixochole), SGE.AID.Ixochole, Player);
-        ExecuteAddersgall(strategy.Option(Track.Taurochole), SGE.AID.Taurochole, healTarget);
         ExecuteSimple(strategy.Option(Track.Haima), SGE.AID.Haima, healTarget);
         ExecuteSimple(strategy.Option(Track.Holos), SGE.AID.Holos, Player);
         ExecuteSimple(strategy.Option(Track.Panhaima), SGE.AID.Panhaima, Player);
         ExecuteSimple(strategy.Option(Track.Krasis), SGE.AID.Krasis, healTarget);
         ExecuteSimple(strategy.Option(Track.Pneuma), SGE.AID.Pneuma, enemy);
         ExecuteSimple(strategy.Option(Track.Philosophia), SGE.AID.Philosophia, Player);
-        ExecuteSoteria(strategy.Option(Track.Soteria));
-        ExecuteRhizomata(strategy.Option(Track.Rhizomata));
-        ExecutePepsis(strategy.Option(Track.Pepsis));
+        ExecuteVariant(strategy.Option(Track.Physis), Player, SGE.AID.Physis, SGE.AID.PhysisII);
+        if (!Gauge.EukrasiaActive)
+            ExecuteSimple(strategy.Option(Track.Eukrasia), SGE.AID.Eukrasia, Player);
+        if (Gauge.Addersgall > 0)
+        {
+            ExecuteSimple(strategy.Option(Track.Druochole), SGE.AID.Druochole, healTarget);
+            ExecuteSimple(strategy.Option(Track.Kerachole), SGE.AID.Kerachole, Player);
+            ExecuteSimple(strategy.Option(Track.Ixochole), SGE.AID.Ixochole, Player);
+            ExecuteSimple(strategy.Option(Track.Taurochole), SGE.AID.Taurochole, healTarget);
+        }
+        if (Gauge.Addersgall < 2 || Gauge.Addersgall == 2 && NextAddersgallIn >= 2.5f)
+            ExecuteSimple(strategy.Option(Track.Rhizomata), SGE.AID.Rhizomata, Player);
+        if (EukrasianShieldNearby)
+            ExecuteSimple(strategy.Option(Track.Pepsis), SGE.AID.Pepsis, Player);
         ExecuteKardia(strategy.Option(Track.Kardia), primaryTarget);
         ExecuteDiagnosis(strategy.Option(Track.Diagnosis), healTarget);
         ExecutePrognosis(strategy.Option(Track.Prognosis));
-        ExecutePhysis(strategy.Option(Track.Physis));
         ExecuteZoe(strategy.Option(Track.Zoe), enemy);
         ExecuteDash(strategy.Option(Track.Icarus), SGE.AID.Icarus, primaryTarget);
     }
 
     private SageGauge Gauge;
-    private int Addersgall => Gauge.Addersgall;
     private float NextAddersgallIn => (20000 - Gauge.AddersgallTimer) * 0.001f;
-    private bool AddersgallCapping => Addersgall >= 3 || Addersgall == 2 && NextAddersgallIn < 3f;
-    private bool HasEukrasia => Gauge.EukrasiaActive;
-    private bool HasZoe => Player.FindStatus(SGE.SID.Zoe) != null;
-    private SGE.AID BestPrognosis => ActionUnlocked(SGE.AID.EukrasianPrognosisII) ? SGE.AID.EukrasianPrognosisII : SGE.AID.EukrasianPrognosis;
-    private bool HasOwnShield(Actor target) => HasStatus(target, SGE.SID.EukrasianDiagnosis) || HasStatus(target, SGE.SID.EukrasianPrognosis);
-    private static bool HasConflictingShield(Actor target)
-        => target.FindStatus(SGE.SID.EukrasianDiagnosis) != null || target.FindStatus(SGE.SID.EukrasianPrognosis) != null || target.FindStatus(SCH.SID.Galvanize) != null;
+    private SGE.AID BestEukrasianPrognosis => ActionUnlocked(SGE.AID.EukrasianPrognosisII) ? SGE.AID.EukrasianPrognosisII : SGE.AID.EukrasianPrognosis;
+    private static bool HasEukrasianShield(Actor actor) => HasStatus(actor, SGE.SID.EukrasianDiagnosis) || HasStatus(actor, SGE.SID.EukrasianPrognosis);
+    private static bool HasAnyShield(Actor actor) => HasEukrasianShield(actor) || HasStatus(actor, SCH.SID.Galvanize);
+    private Actor? LowestHPTank => World.Party.WithoutSlot().Where(member => member.Role == Role.Tank && !member.IsDeadOrDestroyed && Player.DistanceToHitbox(member) <= 30).MinBy(member => member.PendingHPRatio);
+    private bool EukrasianShieldNearby => World.Party.WithoutSlot().Any(member => !member.IsDeadOrDestroyed && Player.DistanceToHitbox(member) <= 20 && HasEukrasianShield(member));
 
-    private void ExecuteEukrasia(in StrategyValues.OptionRef eukrasia)
-    {
-        if (!HasEukrasia)
-            ExecuteSimple(eukrasia, SGE.AID.Eukrasia, Player);
-    }
-    private void ExecuteAddersgall(in StrategyValues.OptionRef opt, SGE.AID aid, Actor target)
-    {
-        if (Addersgall > 0)
-            ExecuteSimple(opt, aid, target);
-    }
-    private void ExecuteDruochole(in StrategyValues.OptionRef druochole, Actor healTarget)
-    {
-        var option = druochole.As<AddersgallOption>();
-        var overcapTarget = option == AddersgallOption.OvercapParty ? LowestHPPartyMember(true, false) ?? Player : Player;
-        if (option == AddersgallOption.Use && Addersgall > 0)
-            ExecuteAction(druochole, SGE.AID.Druochole, healTarget);
-        if (option is AddersgallOption.OvercapParty or AddersgallOption.OvercapSelf && AddersgallCapping)
-            ExecuteOn(druochole, SGE.AID.Druochole, overcapTarget);
-    }
-    private void ExecuteSoteria(in StrategyValues.OptionRef soteria)
-    {
-        if (HasStatus(Player, SGE.SID.Kardia))
-            ExecuteSimple(soteria, SGE.AID.Soteria, Player);
-    }
-    private void ExecuteRhizomata(in StrategyValues.OptionRef rhizomata)
-    {
-        if (Addersgall < 2 || Addersgall == 2 && NextAddersgallIn >= 2.5f)
-            ExecuteSimple(rhizomata, SGE.AID.Rhizomata, Player);
-    }
-    private void ExecutePepsis(in StrategyValues.OptionRef pepsis)
-    {
-        var shielded = false;
-        foreach (var member in World.Party.WithoutSlot())
-            shielded |= !member.IsDeadOrDestroyed && Player.DistanceToHitbox(member) <= 20 && HasOwnShield(member);
-        if (shielded)
-            ExecuteSimple(pepsis, SGE.AID.Pepsis, Player);
-    }
-    private bool KardiaEligible(Actor member, bool includeSelf, bool tanksOnly)
-        => !member.IsDeadOrDestroyed && (includeSelf || member != Player) && (!tanksOnly || member.Role == Role.Tank) && Player.DistanceToHitbox(member) <= 30;
-    private Actor? LowestHPPartyMember(bool includeSelf, bool tanksOnly)
-    {
-        Actor? lowest = null;
-        foreach (var member in World.Party.WithoutSlot())
-            if (KardiaEligible(member, includeSelf, tanksOnly) && (lowest == null || member.PendingHPRatio < lowest.PendingHPRatio))
-                lowest = member;
-        return lowest;
-    }
-    private Actor? KardiaTarget(bool includeSelf, bool tanksOnly)
-    {
-        var lowest = LowestHPPartyMember(includeSelf, tanksOnly);
-        Actor? holder = null;
-        foreach (var member in World.Party.WithoutSlot())
-            if (KardiaEligible(member, includeSelf, tanksOnly) && HasStatus(member, SGE.SID.Kardion))
-                holder = member;
-        return holder != null && lowest != null && lowest.PendingHPRatio > holder.PendingHPRatio - 0.1f ? holder : lowest;
-    }
     private void ExecuteKardia(in StrategyValues.OptionRef kardia, Actor? primaryTarget)
     {
         var option = kardia.As<KardiaOption>();
-        if (option == KardiaOption.Soteria)
-        {
-            if (HasStatus(Player, SGE.SID.Kardia))
-                ExecuteAction(kardia, SGE.AID.Soteria, Player);
-            return;
-        }
-
-        var target = option switch
-        {
-            KardiaOption.LowestPartyWithSelf => KardiaTarget(true, false),
-            KardiaOption.LowestPartyNoSelf => KardiaTarget(false, false),
-            KardiaOption.LowestTank => KardiaTarget(true, true),
-            KardiaOption.SelfOnly => Player,
-            KardiaOption.Kardia => ResolveTarget(kardia.Value) ?? PartnerTarget(primaryTarget) ?? Player,
-            _ => null
-        };
-        if (target != null && !HasStatus(target, SGE.SID.Kardion))
-            Hints.ActionsToExecute.Push(ActionID.MakeSpell(SGE.AID.Kardia), target, kardia.Priority(), kardia.Value.ExpireIn);
+        var target = ResolveTarget(kardia.Value) ?? OtherAlly(primaryTarget) ?? LowestHPTank ?? Player;
+        if (option == KardiaOption.Kardia && !HasStatus(target, SGE.SID.Kardion))
+            ExecuteOn(kardia, SGE.AID.Kardia, target);
+        if (option == KardiaOption.Soteria && HasStatus(Player, SGE.SID.Kardia))
+            ExecuteOn(kardia, SGE.AID.Soteria, Player);
     }
     private void ExecuteEukrasian(in StrategyValues.OptionRef opt, SGE.AID action, Actor? target)
     {
-        var eukrasia = ActionID.MakeSpell(SGE.AID.Eukrasia);
-        if (HasMP(ActionID.MakeSpell(action)))
-            ExecuteOn(opt, HasEukrasia ? ActionID.MakeSpell(action) : eukrasia, HasEukrasia ? target : Player);
+        if (HasMP(action))
+            ExecuteOn(opt, Gauge.EukrasiaActive ? action : SGE.AID.Eukrasia, Gauge.EukrasiaActive ? target : Player);
     }
     private void ExecuteDiagnosis(in StrategyValues.OptionRef diagnosis, Actor healTarget)
     {
@@ -217,7 +136,7 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
         var target = ResolveTarget(diagnosis.Value) ?? healTarget;
         if (option == DiagnosisOption.Use)
             ExecuteOn(diagnosis, SGE.AID.Diagnosis, target);
-        if (option == DiagnosisOption.UseED && !HasConflictingShield(target) || option == DiagnosisOption.Force)
+        if (option == DiagnosisOption.UseED && !HasAnyShield(target) || option == DiagnosisOption.Force)
             ExecuteEukrasian(diagnosis, SGE.AID.EukrasianDiagnosis, target);
     }
     private void ExecutePrognosis(in StrategyValues.OptionRef prognosis)
@@ -227,40 +146,25 @@ public sealed class ClassSGEUtility(RotationModuleManager manager, Actor player)
         {
             PrognosisOption.UseEP => SGE.AID.EukrasianPrognosis,
             PrognosisOption.UseEPEx => SGE.AID.EukrasianPrognosisII,
-            _ => BestPrognosis
+            _ => BestEukrasianPrognosis
         };
         if (option == PrognosisOption.Use)
             ExecuteOn(prognosis, SGE.AID.Prognosis, Player);
-        if (option is PrognosisOption.UseEP or PrognosisOption.UseEPEx && !HasConflictingShield(Player) || option == PrognosisOption.Force)
+        if (option is PrognosisOption.UseEP or PrognosisOption.UseEPEx && !HasAnyShield(Player) || option == PrognosisOption.Force)
             ExecuteEukrasian(prognosis, action, Player);
-    }
-    private void ExecutePhysis(in StrategyValues.OptionRef physis)
-    {
-        var action = physis.As<PhysisOption>() switch
-        {
-            PhysisOption.Use => SGE.AID.Physis,
-            PhysisOption.UseEx => SGE.AID.PhysisII,
-            _ => default
-        };
-        if (action != default)
-            ExecuteAction(physis, action, Player);
     }
     private void ExecuteZoe(in StrategyValues.OptionRef zoe, Actor? enemy)
     {
         var option = zoe.As<ZoeOption>();
-        var followUp = option switch
-        {
-            ZoeOption.Pneuma => SGE.AID.Pneuma,
-            ZoeOption.Prognosis => BestPrognosis,
-            _ => default
-        };
+        var hasZoe = HasStatus(Player, SGE.SID.Zoe);
         var pneumaTarget = ResolveTarget(zoe.Value) ?? enemy;
-        var followUpReady = followUp != default && HasMP(ActionID.MakeSpell(followUp)) && (option != ZoeOption.Pneuma || IsEnemy(pneumaTarget));
-        if (option is ZoeOption.Use or ZoeOption.UseEx || followUpReady && !HasZoe)
+        var followUp = option == ZoeOption.Pneuma ? SGE.AID.Pneuma : BestEukrasianPrognosis;
+        var followUpReady = option is ZoeOption.Pneuma or ZoeOption.Prognosis && HasMP(followUp) && (option != ZoeOption.Pneuma || IsEnemy(pneumaTarget));
+        if (option is ZoeOption.Use or ZoeOption.UseEx || followUpReady && !hasZoe)
             ExecuteOn(zoe, SGE.AID.Zoe, Player);
-        if (followUpReady && HasZoe && option == ZoeOption.Pneuma)
+        if (followUpReady && hasZoe && option == ZoeOption.Pneuma)
             ExecuteOn(zoe, SGE.AID.Pneuma, pneumaTarget);
-        if (followUpReady && HasZoe && option == ZoeOption.Prognosis)
+        if (followUpReady && hasZoe && option == ZoeOption.Prognosis)
             ExecuteEukrasian(zoe, followUp, Player);
     }
 }

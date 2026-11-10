@@ -12,7 +12,7 @@ public sealed class ClassBLMUtility(RotationModuleManager manager, Actor player)
         var res = new RotationModuleDefinition("Utility: BLM", UtilityDescription, UtilityCategory, "Akechi", RotationModuleQuality.Ok, BitMask.Build((int)Class.BLM), 100);
         DefineShared(res, IDLimitBreak3);
 
-        DefineSimpleConfig(res, Track.Manaward, "Manaward", "Manaward", 600, BLM.AID.Manaward, 20);
+        DefineSimple(res, Track.Manaward, "Manaward", "Manaward", 600, BLM.AID.Manaward, 20);
 
         res.Define(Track.AetherialManipulation).As<DashStrategy>("Dash", "Aetherial Manipulation", 20)
             .AddOption(DashStrategy.None, NoUse)
@@ -41,6 +41,6 @@ public sealed class ClassBLMUtility(RotationModuleManager manager, Actor player)
             _ => 0
         };
         if (option != DashStrategy.None)
-            ExecuteDash(dash, BLM.AID.AetherialManipulation, primaryTarget is { IsAlly: true } ? primaryTarget : null, minDistance);
+            ExecuteDashBeyond(dash, BLM.AID.AetherialManipulation, OtherAlly(primaryTarget), minDistance);
     }
 }

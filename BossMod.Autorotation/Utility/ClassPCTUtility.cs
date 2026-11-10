@@ -2,7 +2,7 @@
 
 public sealed class ClassPCTUtility(RotationModuleManager manager, Actor player) : RoleCasterUtility(manager, player)
 {
-    public enum Track { TemperaCoat = SharedTrack.Count, Smudge }
+    public enum Track { TemperaCoat = SharedTrack.Count }
     public enum TemperaCoatOption { None, CoatOnly, CoatGrassaASAP, CoatGrassaWhenever }
 
     public static readonly ActionID IDLimitBreak3 = ActionID.MakeSpell(PCT.AID.ChromaticFantasy);
@@ -19,26 +19,24 @@ public sealed class ClassPCTUtility(RotationModuleManager manager, Actor player)
             .AddOption(TemperaCoatOption.CoatGrassaWhenever, "Use Tempera Coat, then Tempera Grassa, in a weave window", 120, 10, ActionTargets.Self, 88)
             .AddAssociatedActions(PCT.AID.TemperaCoat, PCT.AID.TemperaGrassa);
 
-        DefineSimpleConfig(res, Track.Smudge, "Smudge", "Smudge", 20, PCT.AID.Smudge, 5);
-
         return res;
     }
 
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
         ExecuteShared(strategy, IDLimitBreak3, primaryTarget);
-        ExecuteSimple(strategy.Option(Track.Smudge), PCT.AID.Smudge, Player);
-        ExecuteTempera(strategy.Option(Track.TemperaCoat));
+        ExecuteTempera(strategy.Option(Track.TemperaCoat), estimatedAnimLockDelay);
     }
 
-    private void ExecuteTempera(in StrategyValues.OptionRef tempera)
+    private void ExecuteTempera(in StrategyValues.OptionRef tempera, float animLockDelay)
     {
         var option = tempera.As<TemperaCoatOption>();
         var hasCoat = HasStatus(Player, PCT.SID.TemperaCoat);
         var hasGrassa = HasStatus(Player, PCT.SID.TemperaGrassa);
-        if (option != TemperaCoatOption.None && !hasCoat && !hasGrassa)
+        var whenever = option == TemperaCoatOption.CoatGrassaWhenever;
+        if (option != TemperaCoatOption.None && !hasCoat && !hasGrassa && (!whenever || CanWeave(PCT.AID.TemperaCoat, animLockDelay)))
             ExecuteAction(tempera, PCT.AID.TemperaCoat, Player);
-        if (option is TemperaCoatOption.CoatGrassaASAP or TemperaCoatOption.CoatGrassaWhenever && hasCoat)
+        if (option is TemperaCoatOption.CoatGrassaASAP or TemperaCoatOption.CoatGrassaWhenever && hasCoat && (!whenever || CanWeave(PCT.AID.TemperaGrassa, animLockDelay)))
             ExecuteAction(tempera, PCT.AID.TemperaGrassa, Player);
     }
 }

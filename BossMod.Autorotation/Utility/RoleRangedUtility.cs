@@ -7,17 +7,17 @@ public abstract class RoleRangedUtility(RotationModuleManager manager, Actor pla
 
     protected static void DefineShared(RotationModuleDefinition def, ActionID lb3)
     {
-        DefineSimpleConfig(def, SharedTrack.Sprint, "Sprint", "Sprint", 100, ClassShared.AID.Sprint, 10);
+        DefineSimple(def, SharedTrack.Sprint, "Sprint", "Sprint", 100, ClassShared.AID.Sprint, 10);
 
         DefineLimitBreak(def, SharedTrack.LB, ActionTargets.Hostile)
             .AddAssociatedActions(ClassShared.AID.BigShot, ClassShared.AID.Desperado)
             .AddAssociatedAction(lb3);
 
-        DefineSimpleConfig(def, SharedTrack.LegGraze, "LegGraze", "Leg Graze", -100, ClassShared.AID.LegGraze, 10);
-        DefineSimpleConfig(def, SharedTrack.SecondWind, "SecondWind", "Second Wind", 20, ClassShared.AID.SecondWind);
-        DefineSimpleConfig(def, SharedTrack.FootGraze, "FootGraze", "Foot Graze", -150, ClassShared.AID.FootGraze, 10);
-        DefineSimpleConfig(def, SharedTrack.HeadGraze, "HeadGraze", "Head Graze", -50, ClassShared.AID.HeadGraze);
-        DefineSimpleConfig(def, SharedTrack.ArmsLength, "ArmsLength", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
+        DefineSimple(def, SharedTrack.LegGraze, "LegGraze", "Leg Graze", -100, ClassShared.AID.LegGraze, 10);
+        DefineSimple(def, SharedTrack.SecondWind, "SecondWind", "Second Wind", 20, ClassShared.AID.SecondWind);
+        DefineSimple(def, SharedTrack.FootGraze, "FootGraze", "Foot Graze", -150, ClassShared.AID.FootGraze, 10);
+        DefineSimple(def, SharedTrack.HeadGraze, "HeadGraze", "Head Graze", -50, ClassShared.AID.HeadGraze);
+        DefineSimple(def, SharedTrack.ArmsLength, "ArmsLength", "Arm's Length", 300, ClassShared.AID.ArmsLength, 6);
     }
 
     protected void ExecuteShared(StrategyValues strategy, ActionID lb3, Actor? primaryTarget)
@@ -57,5 +57,5 @@ public abstract class RoleRangedUtility(RotationModuleManager manager, Actor pla
             ExecuteAction(opt, aid, Player);
     }
 
-    protected bool HasRangedMitigation => Player.FindStatus(BRD.SID.Troubadour) != null || Player.FindStatus(MCH.SID.Tactician) != null || Player.FindStatus(DNC.SID.ShieldSamba) != null;
+    protected bool HasRangedMitigation => HasStatus(Player, BRD.SID.Troubadour) || HasStatus(Player, MCH.SID.Tactician) || HasStatus(Player, DNC.SID.ShieldSamba);
 }

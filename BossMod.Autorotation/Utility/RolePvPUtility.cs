@@ -67,27 +67,19 @@ public sealed class RolePvPUtility(RotationModuleManager manager, Actor player) 
     private bool Below(float ratio) => HPRatio > 0 && HPRatio < ratio;
     private bool IsReady(ClassShared.AID aid) => World.Client.Cooldowns[ActionDefinitions.Instance.Spell(aid)!.MainCooldownGroup].Remaining <= 0.2f;
 
-    private int EnemiesTargetingPlayer()
-    {
-        var count = 0;
-        foreach (var enemy in Hints.PotentialTargets)
-            if (!enemy.Actor.IsDeadOrDestroyed && enemy.Actor.TargetID == Player.InstanceID)
-                ++count;
-        return count;
-    }
-    private bool EnemiesWithin(float range)
-    {
-        foreach (var enemy in Hints.PotentialTargets)
-            if (!enemy.Actor.IsDeadOrDestroyed && enemy.Actor.DistanceToHitbox(Player) <= range)
-                return true;
-        return false;
-    }
-    private bool HasPurifiableDebuff => Player.FindStatus(ClassShared.SID.StunPvP) != null
-        || Player.FindStatus(ClassShared.SID.HeavyPvP) != null
-        || Player.FindStatus(ClassShared.SID.BindPvP) != null
-        || Player.FindStatus(ClassShared.SID.SilencePvP) != null
-        || Player.FindStatus(ClassShared.SID.DeepFreezePvP) != null
-        || Player.FindStatus(WHM.SID.MiracleOfNaturePvP) != null;
+    private static readonly uint[] PurifiableDebuffs =
+    [
+        (uint)ClassShared.SID.StunPvP,
+        (uint)ClassShared.SID.HeavyPvP,
+        (uint)ClassShared.SID.BindPvP,
+        (uint)ClassShared.SID.SilencePvP,
+        (uint)ClassShared.SID.DeepFreezePvP,
+        (uint)WHM.SID.MiracleOfNaturePvP
+    ];
+
+    private int EnemiesTargetingPlayer() => Hints.PotentialTargets.Count(enemy => !enemy.Actor.IsDeadOrDestroyed && enemy.Actor.TargetID == Player.InstanceID);
+    private bool EnemiesWithin(float range) => Hints.PotentialTargets.Any(enemy => !enemy.Actor.IsDeadOrDestroyed && enemy.Actor.DistanceToHitbox(Player) <= range);
+    private bool HasPurifiableDebuff => PurifiableDebuffs.Any(sid => Player.FindStatus(sid) != null);
 
     public override void Execute(StrategyValues strategy, ref Actor? primaryTarget, float estimatedAnimLockDelay, bool isMoving)
     {
